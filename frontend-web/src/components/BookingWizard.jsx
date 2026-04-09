@@ -8,12 +8,14 @@ const services = [
   { id: 'srv-4', category: 'Plumber', icon: '🚰', basePrice: '$40/hr', description: 'Emergency leaks and scheduled plumbing maintenance.' }
 ];
 
-const BookingWizard = () => {
+const BookingWizard = ({ onClose, onSuccess }) => {
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
+  const [workerCount, setWorkerCount] = useState(1);
   
   return (
     <div className="wizard-container">
+      <button className="wizard-close-btn" onClick={onClose} aria-label="Close Wizard">✕</button>
       <div className="wizard-header">
         <h2>Book a Service</h2>
         <div className="progress-bar">
@@ -78,9 +80,9 @@ const BookingWizard = () => {
             <div className="form-group">
               <label>Number of Workers Needed</label>
               <div className="counter-input">
-                <button>-</button>
-                <input type="number" readOnly value="1" />
-                <button>+</button>
+                <button onClick={() => setWorkerCount(Math.max(1, workerCount - 1))}>-</button>
+                <input type="number" readOnly value={workerCount} />
+                <button onClick={() => setWorkerCount(workerCount + 1)}>+</button>
               </div>
             </div>
           </div>
@@ -125,7 +127,7 @@ const BookingWizard = () => {
         <div style={{ flex: 1 }}></div>
         <button 
           className="btn-next" 
-          onClick={() => step < 3 ? setStep(step + 1) : alert('Booking Confirmed!')}
+          onClick={() => step < 3 ? setStep(step + 1) : onSuccess()}
           disabled={step === 1 && !selectedService}
         >
           {step === 3 ? 'Confirm Booking' : 'Continue'}
