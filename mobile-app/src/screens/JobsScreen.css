@@ -1,0 +1,112 @@
+.jobs-container {
+  min-height: 100vh;
+  background-color: var(--bg-main);
+  padding: 32px;
+}
+
+.screen-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 32px;
+}
+
+.job-tabs {
+  display: flex;
+  background: white;
+  padding: 6px;
+  border-radius: 16px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: none;
+  font-weight: 700;
+  color: var(--text-soft);
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.3);
+}
+
+/* Job Card Overhaul */
+.job-card {
+  background: white;
+  border-radius: 28px;
+  padding: 32px;
+  margin-bottom: 24px;
+  border: var(--border-glass);
+  box-shadow: var(--shadow-soft);
+}
+
+.job-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.service-badge {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.job-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.job-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+
+/* Action Buttons */
+.job-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.btn-decline {
+  flex: 1;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: var(--text-soft);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-accept {
+  flex: 1.5;
+  padding: 16px;
+  border-radius: 14px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
+}

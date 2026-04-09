@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=facility_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secure_pass_123
+
+  backend:
+    build: ./backend
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://admin:secure_pass_123@db:5432/facility_db
+    depends_on:
+      - db
+
+  frontend:
+    # In production, we'd serve built assets via Nginx
+    # For dev/preview, we can run Vite
+    image: node:18-slim
+    working_dir: /app
+    volumes:
+      - ./frontend-web:/app
+    ports:
+      - "5173:5173"
+    command: npm run dev
+
+volumes:
+  postgres_data:
