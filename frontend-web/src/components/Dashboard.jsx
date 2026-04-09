@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import TrackingMap from './TrackingMap';
 import RatingModal from './RatingModal';
+import BookingWizard from './BookingWizard';
 import './Dashboard.css';
 
 const Dashboard = () => {
