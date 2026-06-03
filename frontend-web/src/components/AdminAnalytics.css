@@ -45,10 +45,10 @@
 
 /* KPI Cards */
 .kpi-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 32px;
-  margin-bottom: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .kpi-card {
@@ -80,9 +80,9 @@
 
 /* Charts Layout */
 .analytics-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   margin-bottom: 40px;
 }
 
@@ -90,7 +90,8 @@
   background: white;
   border-radius: 20px;
   border: 1px solid #e2e8f0;
-  padding: 28px;
+  padding: 20px;
+  width: 100%;
 }
 
 .section-header {
@@ -112,12 +113,12 @@
 
 /* Mock Chart */
 .mock-chart {
-  height: 200px;
+  height: 160px;
   display: flex;
   align-items: flex-end;
-  gap: 40px;
+  gap: 16px;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 10px;
 }
 
 .bar {

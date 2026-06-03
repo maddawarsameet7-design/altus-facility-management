@@ -19,13 +19,14 @@
 
 .verification-layout {
   display: flex;
-  gap: 32px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 24px;
+  align-items: stretch;
 }
 
 /* Glass Sidebar List */
 .verification-list {
-  width: 340px;
+  width: 100%;
   background: var(--surface-glass);
   backdrop-filter: var(--surface-blur);
   border-radius: 28px;
@@ -83,7 +84,7 @@
   padding: 48px;
   border: var(--border-glass);
   box-shadow: var(--shadow-soft);
-  flex: 1;
+  width: 100%;
 }
 
 .detail-header h2 {

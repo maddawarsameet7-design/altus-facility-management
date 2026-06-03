@@ -17,7 +17,7 @@ const AdminAnalytics = () => {
       <div className="kpi-grid">
         <div className="kpi-card">
           <span className="kpi-label">Gross Revenue</span>
-          <h2 className="kpi-value">$42,850.00</h2>
+          <h2 className="kpi-value">₹42,850.00</h2>
           <span className="kpi-trend positive">↑ 12% vs last month</span>
         </div>
         <div className="kpi-card">
@@ -98,14 +98,14 @@ const AdminAnalytics = () => {
               <td>Housekeeping</td>
               <td>John Miller</td>
               <td><span className="status-pill success">Paid</span></td>
-              <td>$450.00</td>
+              <td>₹450.00</td>
             </tr>
             <tr>
               <td>TechPark Tower B</td>
               <td>Security</td>
               <td>Arjun Sharma</td>
               <td><span className="status-pill pending">Invoiced</span></td>
-              <td>$1,200.00</td>
+              <td>₹1,200.00</td>
             </tr>
           </tbody>
         </table>

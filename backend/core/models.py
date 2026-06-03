@@ -5,11 +5,13 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ROLE_CHOICES = [
-        ('CLIENT', 'Client'),
-        ('WORKER', 'Worker'),
-        ('ADMIN', 'Admin')
+        ('MEMBER', 'Society Member'),
+        ('CHAIRMAN', 'Society Chairman'),
+        ('WORKER', 'Facility Worker'),
+        ('SUPERVISOR', 'Facility Supervisor'),
+        ('DIRECTOR', 'Platform Director')
     ]
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='CLIENT')
+    role = models.CharField(max_length=15, choices=ROLE_CHOICES, default='MEMBER')
     
     # Resolving backwards relation clashes for custom users
     groups = models.ManyToManyField(
@@ -37,11 +39,10 @@ class ClientProfile(models.Model):
     phone = models.CharField(max_length=20)
     
     ORG_TYPES = [
-        ('HOSPITAL', 'Hospital'),
         ('SOCIETY', 'Housing Society'),
-        ('OFFICE', 'Commercial Office')
+        ('CORPORATE', 'Commercial Complex')
     ]
-    org_type = models.CharField(max_length=20, choices=ORG_TYPES)
+    org_type = models.CharField(max_length=20, choices=ORG_TYPES, default='SOCIETY')
 
     def __str__(self):
         return self.organization_name
@@ -83,46 +84,60 @@ class Property(models.Model):
 
 
 class ServiceCategory(models.Model):
-    """Types of services offered on the platform"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100) # e.g., Housekeeping, Security
-    description = models.TextField()
-    base_hourly_rate = models.DecimalField(max_digits=10, decimal_places=2)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    base_hourly_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
         return self.name
 
-
-class Booking(models.Model):
-    """A service request from a client for a specific property"""
+class ServiceRequest(models.Model):
+    """A centralized service request or amenity booking within the society"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='bookings')
-    property = models.ForeignKey(Property, on_delete=models.CASCADE)
-    service = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE)
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests_made')
+    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE)
+    
+    location = models.CharField(max_length=255, help_text="e.g., Block A, Main Gate")
+    issue = models.TextField(blank=True, help_text="Description of the requirement")
     
     STATUS_CHOICES = [
-        ('PENDING', 'Pending Assignment'),
-        ('ASSIGNED', 'Worker Assigned'),
-        ('IN_PROGRESS', 'In Progress'),
-        ('COMPLETED', 'Completed'),
-        ('CANCELLED', 'Cancelled')
+        ('Requested', 'Requested'),
+        ('Investigating', 'Investigating'),
+        ('In Progress', 'In Progress'),
+        ('Resolved', 'Resolved'),
+        ('Cancelled', 'Cancelled')
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Requested')
     
-    scheduled_start = models.DateTimeField()
-    scheduled_end = models.DateTimeField()
+    PRIORITY_CHOICES = [
+        ('Normal', 'Normal'),
+        ('Medium', 'Medium'),
+        ('High', 'High'),
+        ('Critical', 'Critical')
+    ]
+    priority = models.CharField(max_length=15, choices=PRIORITY_CHOICES, default='Normal')
+    
+    scheduled_at = models.DateTimeField(null=True, blank=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_paid = models.BooleanField(default=False)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Booking {self.service.name} at {self.property.name}"
+        return f"{self.category.name} - {self.location} ({self.status})"
 
 
 class Assignment(models.Model):
-    """Worker assigned to a specific booking"""
+    """Worker assigned to a specific service request"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='assignments')
+    request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='assignments')
     worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='assignments')
     
     STATUS_CHOICES = [
@@ -140,15 +155,13 @@ class Attendance(models.Model):
     assignment = models.OneToOneField(Assignment, on_delete=models.CASCADE)
     clock_in = models.DateTimeField(null=True, blank=True)
     clock_out = models.DateTimeField(null=True, blank=True)
-    clock_in_lat = models.FloatField(null=True, blank=True)
-    clock_in_lng = models.FloatField(null=True, blank=True)
     proof_of_work_url = models.URLField(max_length=500, null=True, blank=True)
 
 
 class Review(models.Model):
-    """Mutual review system for Clients and Workers"""
+    """Mutual review system for Members and Workers"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='reviews')
+    request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='reviews')
     
     # Reviewer and Reviewee can be Client or Worker
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_given')
@@ -160,3 +173,37 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review for {self.reviewee.username} ({self.rating} stars)"
+
+
+class ChatMessage(models.Model):
+    """Real-time messaging for each service request"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"Msg from {self.sender.username} on {self.request.id}"
+
+
+class PaymentTransaction(models.Model):
+    """Tracks automated payments for services"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request = models.OneToOneField(ServiceRequest, on_delete=models.CASCADE, related_name='transaction')
+    transaction_id = models.CharField(max_length=100, unique=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('SUCCESS', 'Success'),
+        ('FAILED', 'Failed')
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"TX {self.transaction_id} - {self.status}"

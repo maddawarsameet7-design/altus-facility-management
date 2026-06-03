@@ -1,0 +1,21 @@
+{
+  "name": "Altus Facility Marketplace",
+  "short_name": "Altus",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1a1a1a",
+  "description": "Premium facility management marketplace for modern societies.",
+  "icons": [
+    {
+      "src": "/altus-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/altus-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

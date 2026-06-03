@@ -7,7 +7,9 @@ from rest_framework_simplejwt.views import (
 )
 from core.views import (
     ClientProfileViewSet, WorkerViewSet, PropertyViewSet, 
-    ServiceCategoryViewSet, BookingViewSet
+    ServiceCategoryViewSet, ServiceRequestViewSet,
+    ReviewViewSet, ChatMessageViewSet, 
+    UserProfileView, RegisterView, DashboardStatsView
 )
 
 router = DefaultRouter()
@@ -15,13 +17,22 @@ router.register(r'clients', ClientProfileViewSet, basename='client')
 router.register(r'workers', WorkerViewSet, basename='worker')
 router.register(r'properties', PropertyViewSet, basename='property')
 router.register(r'services', ServiceCategoryViewSet, basename='service')
-router.register(r'bookings', BookingViewSet, basename='booking')
+router.register(r'requests', ServiceRequestViewSet, basename='request')
+router.register(r'reviews', ReviewViewSet, basename='review')
+router.register(r'chats', ChatMessageViewSet, basename='chat')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
     
-    # Auth endpoints
+    # Auth endpoints (must be before the router include)
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/register/', RegisterView.as_view(), name='register'),
+    
+    # User profile & dashboard (must be before the router include)
+    path('api/user/me/', UserProfileView.as_view(), name='user_profile'),
+    path('api/dashboard/stats/', DashboardStatsView.as_view(), name='dashboard_stats'),
+    
+    # Router-generated API endpoints
+    path('api/', include(router.urls)),
 ]

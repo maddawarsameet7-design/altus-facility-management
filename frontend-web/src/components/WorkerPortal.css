@@ -1,0 +1,200 @@
+.worker-portal-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #1a1b1e;
+}
+
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  padding: 1.5rem 2rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+}
+
+.portal-header h1 {
+  font-size: 1.8rem;
+  margin: 0;
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-top: 0.4rem;
+  color: #636e72;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-dot.online { background: #00b894; box-shadow: 0 0 10px rgba(0, 184, 148, 0.5); }
+.status-dot.offline { background: #d63031; }
+
+.time-box {
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.digital-clock {
+  font-family: 'Inter', monospace;
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: #0984e3;
+}
+
+.portal-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem;
+  border-radius: 15px;
+  width: fit-content;
+}
+
+.portal-tabs button {
+  padding: 0.8rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: #636e72;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.portal-tabs button.active {
+  background: white;
+  color: #0984e3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.attendance-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+}
+
+.clock-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+}
+
+.clock-face {
+  width: 200px;
+  height: 200px;
+  margin: 2rem auto;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f0f3f6, #ffffff);
+  border: 10px solid #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 20px 20px 60px #d9d9d9, -20px -20px 60px #ffffff;
+}
+
+.timer-val {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.timer-label {
+  font-size: 0.75rem;
+  color: #b2bec3;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.action-btn {
+  width: 100%;
+  padding: 1.2rem;
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-in { background: #0984e3; color: white; }
+.btn-out { background: #d63031; color: white; }
+
+.btn-in:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(9, 132, 227, 0.3); }
+
+.assignment-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  padding: 2rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.job-info-glass {
+  background: rgba(255, 255, 255, 0.5);
+  padding: 1.5rem;
+  border-radius: 18px;
+  border: 1px solid white;
+}
+
+.job-tag {
+  background: #e1f5fe;
+  color: #0288d1;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.job-card-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.3s ease;
+}
+
+.job-card-glass:hover { transform: translateY(-5px); }
+
+.price-tag {
+  background: #55efc4;
+  color: #00b894;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}

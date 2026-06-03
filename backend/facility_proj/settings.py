@@ -6,7 +6,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-production-ready-key-change-this'
 DEBUG = True
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*', 'altsan.com', 'api.altsan.com', '.ngrok-free.app', 'localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://altsan.com', 'https://api.altsan.com', 'https://*.ngrok-free.app']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -15,7 +16,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
@@ -54,8 +55,12 @@ ROOT_URLCONF = 'facility_proj.urls'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'altus',        # must match pgAdmin
+        'USER': 'postgres',
+        'PASSWORD': '1234',     # must match what you set
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -66,7 +71,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # 👈 change this
     ),
 }
 

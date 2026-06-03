@@ -1,200 +1,381 @@
-.dashboard-container {
+.mobile-dashboard {
   display: flex;
   flex-direction: column;
 }
 
-.top-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 64px;
-}
-
-.greeting {
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin-bottom: 8px;
-}
-
-.subtitle {
-  color: var(--text-soft);
-  font-size: 16px;
-}
-
-.dashboard-grid-layout {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 48px;
-  align-items: flex-start;
-}
-
-.left-panel {
+/* Base Utility provided globally, but scoping specific properties here */
+.hero-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-inverse);
   display: flex;
   flex-direction: column;
-}
-
-.right-panel {
-  position: sticky;
-  top: 48px;
-}
-
-/* Stats Styles */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 32px;
-  margin-bottom: 64px;
-}
-
-.stat-card {
-  background: white;
-  padding: 32px;
-  border-radius: 24px;
-  border: var(--border-glass);
-  box-shadow: var(--shadow-soft);
-  display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
+  cursor: pointer;
 }
 
-.stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+.hero-btn-icon {
+  width: 52px;
+  height: 52px;
+  background: #ffffff;
+  color: var(--primary);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  transition: transform 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.stat-icon.blue { background-color: rgba(99, 102, 241, 0.1); }
-.stat-icon.green { background-color: rgba(16, 185, 129, 0.1); }
+.hero-action-btn:hover .hero-btn-icon {
+  transform: scale(1.05);
+}
 
-/* Bookings Section */
-.section-header {
+.hero-action-btn span {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* Amenity / Goal Card */
+.amenity-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.amenity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.amenity-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  gap: 12px;
+  min-width: 0;
 }
 
-.section-header h2 {
-  font-size: 20px;
-  font-weight: 800;
+.amenity-header h3 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px; /* Prevent long names from breaking the card */
 }
 
-.tab-group {
-  display: flex;
-  background: rgba(0,0,0,0.05);
-  padding: 4px;
-  border-radius: 12px;
-}
-
-.tab {
-  border: none;
-  background: transparent;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-soft);
-  cursor: pointer;
-}
-
-.tab.active {
-  background: white;
-  color: var(--primary);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.booking-card {
-  background: white;
-  border-radius: 24px;
-  padding: 32px;
-  border: var(--border-glass);
-  box-shadow: var(--shadow-soft);
-  margin-bottom: 24px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.booking-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -20px rgba(0,0,0,0.08);
-}
-
-.booking-header {
+/* Section Title Utility */
+.section-title {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
   margin-bottom: 16px;
 }
 
-.booking-id {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--primary);
-  background: rgba(99, 102, 241, 0.1);
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-.status-badge {
-  padding: 6px 14px;
-  border-radius: 100px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.status-badge.assigned { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-.status-badge.pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-
-.service-title {
+.section-title span {
   font-size: 18px;
   font-weight: 800;
-  margin-bottom: 12px;
+  letter-spacing: -0.5px;
 }
 
-.booking-details {
+.section-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
   display: flex;
-  gap: 24px;
-  font-size: 14px;
-  color: var(--text-soft);
+  align-items: center;
+  gap: 4px;
 }
 
-/* Promotions */
-.promotion-card {
-  margin-top: 32px;
-  padding: 40px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 32px;
-  color: white;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.4);
+/* Thick Progress Bar */
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(0,0,0,0.05);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
   position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Worker Assignment UI */
+.worker-assignment-pane {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.worker-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.worker-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.worker-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.worker-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.worker-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
+.worker-call-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-main);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.worker-call-btn:active {
+  transform: scale(0.9);
+  background: var(--primary);
+  color: white;
+}
+
+.mini-map-container {
+  width: 100%;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.map-overlay-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  z-index: 1000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-rate-now {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-rate-now:active {
+  transform: scale(0.98);
+  background: #000;
+}
+
+.worker-chat-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.worker-chat-btn:active {
+  transform: scale(0.9);
+  background: #2563eb;
+}
+
+.btn-pay-now {
+  flex: 1;
+  background: var(--accent-green);
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pay-now:active {
+  transform: scale(0.98);
+  background: #059669;
+}
+
+/* Chat Overlays */
+.chat-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80vh;
+  z-index: 10001;
+  display: flex;
+  justify-content: center;
+}
+
+.chat-container {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: 32px 32px 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
   overflow: hidden;
 }
 
-.promotion-card h3 {
-  font-size: 22px;
-  font-weight: 800;
-  margin-bottom: 12px;
-  color: #818cf8;
-}
-
-.promotion-card p {
-  font-size: 14px;
-  opacity: 0.7;
-  margin-bottom: 32px;
-  line-height: 1.6;
-}
-
-.btn-secondary {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.1);
+.chat-header {
+  padding: 24px;
+  background: var(--primary);
   color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-icon-bg {
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.msg-wrapper {
+  display: flex;
+  width: 100%;
+}
+
+.msg-wrapper.me { justify-content: flex-end; }
+.msg-wrapper.them { justify-content: flex-start; }
+
+.msg-bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 20px;
+  position: relative;
+}
+
+.me .msg-bubble {
+  background: var(--primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.them .msg-bubble {
+  background: #f3f4f6;
+  color: var(--text-main);
+  border-bottom-left-radius: 4px;
+}
+
+.msg-content { font-size: 14px; line-height: 1.5; }
+.msg-time { font-size: 9px; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
+
+.chat-input-area {
+  padding: 16px 24px 32px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.chat-input-area input {
+  flex: 1;
+  padding: 14px 20px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+}
+
+/* Payment Checkout Extra Styles */
+.primary-pay-btn {
+  width: 100%;
+  padding: 18px;
+  background: var(--accent-green);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
   font-weight: 700;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }

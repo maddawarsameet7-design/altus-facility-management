@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from .models import User, ClientProfile, WorkerProfile, Property, ServiceCategory, Booking, Assignment, Attendance, Review
+from .models import (
+    User, ClientProfile, WorkerProfile, Property, 
+    ServiceCategory, ServiceRequest, Assignment, 
+    Attendance, Review, ChatMessage, PaymentTransaction
+)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,28 +53,48 @@ class AssignmentSerializer(serializers.ModelSerializer):
         fields = ['id', 'worker', 'status', 'assigned_at', 'attendance']
         read_only_fields = ['id', 'assigned_at']
 
-class BookingSerializer(serializers.ModelSerializer):
-    client = ClientProfileSerializer(read_only=True)
-    client_id = serializers.UUIDField(write_only=True)
-    
-    property = PropertySerializer(read_only=True)
-    property_id = serializers.UUIDField(write_only=True)
-    
-    service = ServiceCategorySerializer(read_only=True)
-    service_id = serializers.UUIDField(write_only=True)
-    
-    assignments = AssignmentSerializer(many=True, read_only=True)
+class ChatMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.ReadOnlyField(source='sender.username')
 
     class Meta:
-        model = Booking
+        model = ChatMessage
+        fields = ['id', 'request', 'sender', 'sender_name', 'content', 'timestamp']
+        read_only_fields = ['id', 'timestamp']
+
+
+class PaymentTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentTransaction
+        fields = ['id', 'request', 'transaction_id', 'amount', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class ServiceRequestSerializer(serializers.ModelSerializer):
+    reporter = UserSerializer(read_only=True)
+    
+    category = ServiceCategorySerializer(read_only=True)
+    category_id = serializers.UUIDField(write_only=True)
+    
+    assignments = AssignmentSerializer(many=True, read_only=True)
+    messages = ChatMessageSerializer(many=True, read_only=True)
+    transaction = PaymentTransactionSerializer(read_only=True)
+
+    class Meta:
+        model = ServiceRequest
         fields = [
-            'id', 'client', 'client_id', 'property', 'property_id', 
-            'service', 'service_id', 'status', 'scheduled_start', 
-            'scheduled_end', 'total_amount', 'created_at', 'assignments'
+            'id', 'reporter', 'category', 'category_id', 
+            'location', 'issue', 'status', 'priority',
+            'scheduled_at', 'total_amount', 'is_paid', 
+            'created_at', 'updated_at', 'assignments',
+            'messages', 'transaction'
         ]
-        read_only_fields = ['id', 'created_at', 'status', 'total_amount']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'status', 'is_paid']
 
     def create(self, validated_data):
+        category_id = validated_data.pop('category_id', None)
+        if category_id:
+            from .models import ServiceCategory
+            validated_data['category'] = ServiceCategory.objects.get(id=category_id)
         return super().create(validated_data)
 
 
@@ -81,7 +105,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = [
-            'id', 'booking', 'reviewer', 'reviewer_name', 
+            'id', 'request', 'reviewer', 'reviewer_name', 
             'reviewee', 'reviewee_name', 'rating', 'comment', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
