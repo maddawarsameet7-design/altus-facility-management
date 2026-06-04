@@ -6,3 +6,6 @@ psycopg2-binary
 python-dotenv
 django-storages
 boto3
+gunicorn
+dj-database-url
+whitenoise
