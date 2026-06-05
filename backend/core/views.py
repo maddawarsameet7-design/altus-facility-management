@@ -15,7 +15,7 @@ from .serializers import (
     UserSerializer, ClientProfileSerializer, WorkerProfileSerializer, 
     PropertySerializer, ServiceCategorySerializer, ServiceRequestSerializer, 
     AssignmentSerializer, ReviewSerializer, ChatMessageSerializer, 
-    PaymentTransactionSerializer
+    PaymentTransactionSerializer, DeviceTokenSerializer
 )
 
 
@@ -69,6 +69,29 @@ class RegisterView(APIView):
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
+class DeviceTokenView(APIView):
+    """Register or update an FCM device token for push notifications."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get('token')
+        device_type = request.data.get('device_type', 'web')
+        
+        if not token:
+            return Response({"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Update or create the token for the user
+        from .models import DeviceToken
+        device_token, created = DeviceToken.objects.update_or_create(
+            token=token,
+            defaults={
+                'user': request.user,
+                'device_type': device_type
+            }
+        )
+        
+        return Response({"message": "Token registered successfully"}, status=status.HTTP_200_OK)
 
 # ─── DASHBOARD & ANALYTICS ────────────────────────────────────
 

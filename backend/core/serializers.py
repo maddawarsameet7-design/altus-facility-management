@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     User, ClientProfile, WorkerProfile, Property, 
     ServiceCategory, ServiceRequest, Assignment, 
-    Attendance, Review, ChatMessage, PaymentTransaction
+    Attendance, Review, ChatMessage, PaymentTransaction, DeviceToken
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -109,3 +109,10 @@ class ReviewSerializer(serializers.ModelSerializer):
             'reviewee', 'reviewee_name', 'rating', 'comment', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
+class DeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceToken
+        fields = ['id', 'user', 'token', 'device_type', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+

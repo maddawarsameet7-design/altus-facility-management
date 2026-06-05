@@ -9,7 +9,7 @@ from core.views import (
     ClientProfileViewSet, WorkerViewSet, PropertyViewSet, 
     ServiceCategoryViewSet, ServiceRequestViewSet,
     ReviewViewSet, ChatMessageViewSet, 
-    UserProfileView, RegisterView, DashboardStatsView
+    UserProfileView, RegisterView, DashboardStatsView, DeviceTokenView
 )
 from core.views_payments import CreateRazorpayOrderView, VerifyRazorpayPaymentView
 
@@ -32,6 +32,7 @@ urlpatterns = [
     
     # User profile & dashboard (must be before the router include)
     path('api/user/me/', UserProfileView.as_view(), name='user_profile'),
+    path('api/user/device-token/', DeviceTokenView.as_view(), name='device_token'),
     path('api/dashboard/stats/', DashboardStatsView.as_view(), name='dashboard_stats'),
     
     # Payments

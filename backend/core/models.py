@@ -61,6 +61,11 @@ class WorkerProfile(models.Model):
         ('SUSPENDED', 'Suspended')
     ]
     verification_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    
+    # Document Verification
+    id_document = models.FileField(upload_to='worker_docs/', null=True, blank=True)
+    profile_photo = models.ImageField(upload_to='worker_photos/', null=True, blank=True)
+    
     average_rating = models.FloatField(default=0.0)
     current_lat = models.FloatField(null=True, blank=True)
     current_lng = models.FloatField(null=True, blank=True)
@@ -156,6 +161,7 @@ class Attendance(models.Model):
     clock_in = models.DateTimeField(null=True, blank=True)
     clock_out = models.DateTimeField(null=True, blank=True)
     proof_of_work_url = models.URLField(max_length=500, null=True, blank=True)
+    photo_proof = models.ImageField(upload_to='attendance_proofs/', null=True, blank=True)
 
 
 class Review(models.Model):
@@ -207,3 +213,15 @@ class PaymentTransaction(models.Model):
 
     def __str__(self):
         return f"TX {self.transaction_id} - {self.status}"
+
+class DeviceToken(models.Model):
+    """Stores FCM device tokens for sending push notifications"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='device_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    device_type = models.CharField(max_length=20, choices=[('ios', 'iOS'), ('android', 'Android'), ('web', 'Web')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.device_type}"
