@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, BarChart3, Building2, MoreVertical, Shield } from 'lucide-react';
-import './Dashboard.css';
+import { 
+  TrendingUp, Building2, Shield, Users, Activity,
+  Briefcase, ArrowUpRight, DollarSign
+} from 'lucide-react';
+import './DirectorPortal.css';
 
 const DirectorPortal = () => {
-  // Mock data for the bar charts
   const analyticsData = [
     { month: 'Jan', val: 40 },
     { month: 'Feb', val: 70 },
@@ -15,99 +17,125 @@ const DirectorPortal = () => {
   ];
 
   const topAgencies = [
-    { name: 'Elite Cleaners Corp', rating: 4.9, cost: '₹2,400', color: 'var(--accent-green)' },
-    { name: 'Society Shine Plumbers', rating: 4.7, cost: '₹1,850', color: 'var(--accent-orange)' },
-    { name: 'City Secure Guards', rating: 4.8, cost: '₹3,200', color: 'var(--accent-blue)' }
+    { name: 'Elite Cleaners Corp', rating: 4.9, cost: '₹2,400', color: '#10b981', category: 'Cleaning' },
+    { name: 'Society Shine Plumbers', rating: 4.7, cost: '₹1,850', color: '#f59e0b', category: 'Maintenance' },
+    { name: 'City Secure Guards', rating: 4.8, cost: '₹3,200', color: '#3b82f6', category: 'Security' }
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="mobile-dashboard">
-      
-      {/* Dark Hero Card for Total Revenue */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="hero-card shadow-glass"
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-           <div style={{ background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '100px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Building2 size={14}/>
-              <span>Society Management Overview</span>
-           </div>
-           <MoreVertical size={20} style={{ color: 'rgba(255,255,255,0.6)' }} />
+    <div className="executive-dashboard-light">
+      <header className="ed-header">
+        <div className="ed-header-left">
+          <Activity size={28} className="text-blue" />
+          <div>
+            <h1>Executive Dashboard</h1>
+            <p>Altsan Platform Overview</p>
+          </div>
         </div>
-
-        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '4px' }}>Total Society Budget (YTD)</p>
-           <h2 style={{ fontSize: '42px', fontWeight: '800', letterSpacing: '-1px' }}>₹1,240,500</h2>
-           
-           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', color: 'var(--accent-green)', marginTop: '8px' }}>
-              <TrendingUp size={16} />
-              <span style={{ fontSize: '14px', fontWeight: '700' }}>+12.4% vs last quarter</span>
-           </div>
+        <div className="ed-date-pill">
+          As of June 2026
         </div>
-      </motion.div>
+      </header>
 
-      {/* Financial Analytics Chart Card */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="white-card"
-        style={{ padding: '24px' }}
+        className="ed-grid"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
       >
-         <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>Financial Analytics</h3>
-         <p style={{ color: 'var(--text-soft)', fontSize: '13px', marginBottom: '24px' }}>Average net profit per month <span style={{fontWeight: '700', color: 'var(--text-main)'}}>₹42,000</span></p>
-         
-         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', paddingBottom: '16px', borderBottom: '1px solid rgba(0,0,0,0.05)', marginBottom: '12px' }}>
-           {analyticsData.map((data, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                {/* Thick vertical bar per reference */}
+        {/* Main Financial Hero */}
+        <motion.div variants={itemVariants} className="ed-card ed-hero">
+          <div className="ed-hero-bg"></div>
+          <div className="ed-hero-content">
+            <div className="hero-top">
+              <span className="hero-badge"><Building2 size={14}/> Society Budget (YTD)</span>
+            </div>
+            <div className="hero-main">
+              <h2>₹1,240,500</h2>
+              <div className="hero-trend">
+                <ArrowUpRight size={16} />
+                <span>+12.4% vs last quarter</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Quick Stats Grid */}
+        <motion.div variants={itemVariants} className="ed-card stat-card">
+          <div className="stat-icon-wrap text-blue"><Users size={20} /></div>
+          <div className="stat-details">
+            <span className="stat-label">Active Members</span>
+            <span className="stat-value">2,845</span>
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="ed-card stat-card">
+          <div className="stat-icon-wrap text-green"><DollarSign size={20} /></div>
+          <div className="stat-details">
+            <span className="stat-label">Net Profit / Mo</span>
+            <span className="stat-value">₹42k</span>
+          </div>
+        </motion.div>
+
+        {/* Financial Analytics Chart */}
+        <motion.div variants={itemVariants} className="ed-card chart-card">
+          <div className="card-header">
+            <h3>Revenue Analytics</h3>
+            <button className="btn-filter">Last 6 Months</button>
+          </div>
+          <div className="chart-container">
+            {analyticsData.map((data, i) => (
+              <div key={i} className="chart-bar-wrap">
                 <motion.div 
+                  className="chart-bar"
                   initial={{ height: 0 }}
                   animate={{ height: `${data.val}%` }}
                   transition={{ duration: 1, delay: 0.2 + (i * 0.1), type: 'spring' }}
-                  style={{ width: '28px', background: 'var(--primary)', borderRadius: '100px', minHeight: '10px' }} 
                 />
-                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>{data.month}</span>
+                <span className="chart-label">{data.month}</span>
               </div>
-           ))}
-         </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Top Agencies */}
+        <motion.div variants={itemVariants} className="ed-card agencies-card">
+          <div className="card-header">
+            <h3>Top Performing Agencies</h3>
+            <span className="view-all">View All</span>
+          </div>
+          <div className="agencies-list">
+            {topAgencies.map((agency, idx) => (
+              <div key={idx} className="agency-row">
+                <div className="agency-left">
+                  <div className="agency-icon" style={{ color: agency.color, background: `${agency.color}15` }}>
+                    {agency.category === 'Security' ? <Shield size={20} /> : <Briefcase size={20} />}
+                  </div>
+                  <div className="agency-info">
+                    <h4>{agency.name}</h4>
+                    <span>{agency.category} • ⭐ {agency.rating}</span>
+                  </div>
+                </div>
+                <div className="agency-right">
+                  <strong>{agency.cost}</strong>
+                  <span>Paid / Month</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
       </motion.div>
-
-      <div className="section-title">
-        <span>Top Performing Agencies</span>
-      </div>
-      
-      {/* List format similar to goals in reference */}
-      <div className="amenities-list">
-        {topAgencies.map((agency, idx) => (
-           <motion.div 
-             key={idx}
-             initial={{ opacity: 0, x: -20 }}
-             animate={{ opacity: 1, x: 0 }}
-             transition={{ delay: 0.3 + (idx * 0.1) }}
-             className="white-card amenity-card"
-           >
-             <div className="amenity-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                   <div style={{ padding: '10px', background: 'rgba(0,0,0,0.03)', borderRadius: '12px', color: agency.color }}>
-                     <Shield size={20} />
-                   </div>
-                   <div>
-                     <h3 style={{ fontSize: '15px', fontWeight: '700' }}>{agency.name}</h3>
-                     <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Rating: ⭐ {agency.rating}</p>
-                   </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                   <span style={{ display: 'block', fontSize: '14px', fontWeight: '700' }}>{agency.cost}</span>
-                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Paid Month</span>
-                </div>
-             </div>
-           </motion.div>
-        ))}
-      </div>
-
     </div>
   );
 };
