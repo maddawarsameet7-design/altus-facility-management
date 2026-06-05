@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Power, MapPin, Clock, CheckCircle2, ChevronRight, Activity, 
   AlertCircle, Wifi, QrCode, Camera, UploadCloud, X, Wallet, TrendingUp,
-  Map, Fingerprint
+  Map, Fingerprint, Award, Star
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import './WorkerPortal.css';
 
 const WorkerPortal = ({ requests, onUpdate }) => {
@@ -53,6 +54,14 @@ const WorkerPortal = ({ requests, onUpdate }) => {
     onUpdate(id, 'Resolved');
     setShowProofUpload(false);
     setProofFile(null);
+    
+    // Trigger Gamification Confetti
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#10b981', '#3b82f6', '#f59e0b']
+    });
   };
 
   useEffect(() => {
@@ -97,6 +106,9 @@ const WorkerPortal = ({ requests, onUpdate }) => {
           <button className={`t-tab ${activeTab === 'jobs' ? 'active' : ''}`} onClick={() => setActiveTab('jobs')}>
             Job Board
             {availableJobs.length > 0 && <span className="job-badge">{availableJobs.length}</span>}
+          </button>
+          <button className={`t-tab ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>
+            Rankings
           </button>
           <button className={`t-tab ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => setActiveTab('earnings')}>
             Shift & Payout
@@ -279,6 +291,54 @@ const WorkerPortal = ({ requests, onUpdate }) => {
                      </div>
                   ))}
                </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'rankings' && (
+            <motion.div key="rankings" initial="hidden" animate="visible" exit={{ opacity: 0, y: -20 }} className="t-pane">
+              <div className="rankings-hero">
+                <div className="rank-badge gold glow-gold">
+                  <Award size={40} />
+                </div>
+                <h2>Elite Technician</h2>
+                <p>Top 5% of network responders</p>
+                
+                <div className="xp-bar-container">
+                  <div className="xp-labels">
+                    <span>Rank: Silver</span>
+                    <span>1,250 / 2,000 XP to Gold</span>
+                  </div>
+                  <div className="xp-track">
+                    <div className="xp-fill" style={{ width: '62%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="leaderboard-section">
+                <div className="mission-header">
+                  <Star size={18} className="mission-icon text-orange" />
+                  <h3>Weekly Leaderboard</h3>
+                </div>
+                <div className="leaderboard-list">
+                  {[
+                    { rank: 1, name: 'Marcus D.', jobs: 42, score: '9,450', isMe: false },
+                    { rank: 2, name: 'Sarah M.', jobs: 38, score: '8,120', isMe: false },
+                    { rank: 3, name: 'You', jobs: 35, score: '7,800', isMe: true },
+                    { rank: 4, name: 'David K.', jobs: 31, score: '6,900', isMe: false },
+                  ].map((user) => (
+                    <div key={user.rank} className={`lb-row ${user.isMe ? 'lb-me' : ''}`}>
+                      <div className="lb-left">
+                        <div className={`lb-rank rank-${user.rank}`}>{user.rank}</div>
+                        <strong>{user.name}</strong>
+                      </div>
+                      <div className="lb-right">
+                        <span className="lb-jobs">{user.jobs} jobs</span>
+                        <span className="lb-score">{user.score} XP</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

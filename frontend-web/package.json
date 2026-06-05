@@ -16,6 +16,7 @@
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
     "axios": "^1.15.0",
+    "canvas-confetti": "^1.9.4",
     "framer-motion": "^10.16.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
