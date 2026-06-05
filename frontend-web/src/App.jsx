@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { requestApi, reviewApi } from './utils/api';
+import useStore from './store/useStore';
 import { 
   Home,
   Briefcase,
@@ -74,7 +75,9 @@ const MainLayout = () => {
   const [currentUser, setCurrentUser] = useState(localStorage.getItem('altsan_user') || null);
   const navigate = useNavigate();
 
-  const [globalRequests, setGlobalRequests] = useState([]);
+  // Consume Global State
+  const { requests: globalRequests, setRequests } = useStore();
+
   const [showReviewFor, setShowReviewFor] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [activeCheckout, setActiveCheckout] = useState(null);
@@ -123,12 +126,11 @@ const MainLayout = () => {
         };
       });
       
-      console.log("Mapped requests:", mapped.length);
-      setGlobalRequests(mapped);
+      setRequests(mapped);
     } catch (err) {
       console.error("API Fetch Error:", err);
     }
-  }, []);
+  }, [setRequests]);
 
   useEffect(() => {
     if (isAuthenticated) {

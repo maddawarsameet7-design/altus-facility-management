@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import useStore from '../store/useStore';
 import { categoryApi } from '../utils/api';
 import { 
   Sparkles, Shield, Zap, Droplets, ChevronRight, ChevronLeft, X,
@@ -35,30 +36,23 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState('Block A Lobby');
   const [workerCount, setWorkerCount] = useState(1);
-  const [loading, setLoading] = useState(true);
+  
+  const { services: rawServices, servicesLoading: loading, fetchServices } = useStore();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const response = await categoryApi.getAll();
-        const enriched = response.data.map(cat => ({
-          ...cat,
-          category: cat.name,
-          ...getStyleForCategory(cat.name),
-          basePrice: `₹${cat.base_hourly_rate}/hr`
-        }));
-        setServices(enriched);
-      } catch (err) {
-        console.error("Failed to load categories");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadCategories();
-  }, []);
+    fetchServices();
+  }, [fetchServices]);
+
+  // Enrich the raw services with our UI styles
+  const services = rawServices.map(cat => ({
+    ...cat,
+    category: cat.name,
+    ...getStyleForCategory(cat.name),
+    basePrice: `₹${cat.base_hourly_rate}/hr`
+  }));
   
   const currentService = services.find(s => s.id === selectedService);
   const isMarketplaceFlow = currentService?.category === 'Housekeeping';

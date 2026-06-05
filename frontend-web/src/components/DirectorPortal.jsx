@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { dashboardApi } from '../utils/api';
 import { 
   TrendingUp, Building2, Shield, Users, Activity,
   Briefcase, ArrowUpRight, DollarSign, BellRing, ChevronRight,
@@ -9,6 +10,19 @@ import IsometricMap from './IsometricMap';
 import './DirectorPortal.css';
 
 const DirectorPortal = () => {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await dashboardApi.stats();
+        setStats(res.data);
+      } catch (err) {
+        console.error("Failed to fetch dashboard stats", err);
+      }
+    };
+    fetchStats();
+  }, []);
   const analyticsData = [
     { month: 'Jan', val: 40 },
     { month: 'Feb', val: 70 },
@@ -67,7 +81,7 @@ const DirectorPortal = () => {
               <span className="hero-badge"><Building2 size={14}/> Society Budget (YTD)</span>
             </div>
             <div className="hero-main">
-              <h2>₹12,40,500</h2>
+              <h2>{stats?.total_revenue ? `₹${stats.total_revenue.toLocaleString()}` : '₹0'}</h2>
               <div className="hero-trend">
                 <ArrowUpRight size={18} />
                 <span>+12.4% vs last quarter</span>
@@ -77,12 +91,11 @@ const DirectorPortal = () => {
           </div>
         </motion.div>
 
-        {/* Quick Stats Grid */}
         <motion.div variants={itemVariants} className="ed-card stat-card glass-card">
-          <div className="stat-icon-wrap text-blue glow-blue"><Users size={24} /></div>
+          <div className="stat-icon-wrap text-blue glow-blue"><Activity size={24} /></div>
           <div className="stat-details">
-            <span className="stat-label">Active Members</span>
-            <span className="stat-value">2,845</span>
+            <span className="stat-label">Total Requests</span>
+            <span className="stat-value">{stats?.total_requests || 0}</span>
           </div>
         </motion.div>
 

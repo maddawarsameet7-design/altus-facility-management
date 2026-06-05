@@ -72,8 +72,8 @@ export const workerApi = {
   verify: (id, action) => api.post(`workers/${id}/verify/`, { action }),
 };
 
-export const categoryApi = {
-  getAll: () => api.get('services/'),
+export const serviceApi = {
+  list: () => api.get('services/'),
 };
 
 export default api;
