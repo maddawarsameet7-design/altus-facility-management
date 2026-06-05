@@ -2,25 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { categoryApi } from '../utils/api';
 import { 
-  Sparkles, 
-  Shield, 
-  Zap, 
-  Droplets, 
-  ChevronRight, 
-  ChevronLeft, 
-  X,
-  Calendar,
-  Clock,
-  Building2,
-  Users,
-  Award,
-  Star,
-  Leaf,
-  Trash2,
-  Film,
-  Music,
-  Activity,
-  FileText
+  Sparkles, Shield, Zap, Droplets, ChevronRight, ChevronLeft, X,
+  Calendar, Clock, Building2, Users, Award, Star, Leaf, Trash2,
+  FileText, CheckCircle2
 } from 'lucide-react';
 import './BookingWizard.css';
 
@@ -39,16 +23,22 @@ const getStyleForCategory = (name) => {
     'Electrician': { icon: Zap, color: '#F59E0B', roles: ['member'] },
     'Plumber': { icon: Droplets, color: '#0EA5E9', roles: ['member'] }
   };
-  return map[name] || { icon: FileText, color: '#666', roles: ['member'] };
+  return map[name] || { icon: FileText, color: '#9CA3AF', roles: ['member'] };
 };
+
+const locations = ['Block A Lobby', 'Block B Corridor', 'Main Gate', 'Resident Flat'];
 
 const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
   const [step, setStep] = useState(1);
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState('Block A Lobby');
   const [workerCount, setWorkerCount] = useState(1);
   const [loading, setLoading] = useState(true);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -73,26 +63,22 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
   const currentService = services.find(s => s.id === selectedService);
   const isMarketplaceFlow = currentService?.category === 'Housekeeping';
   const totalSteps = isMarketplaceFlow ? 4 : 3;
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleConfirmOrder = () => {
     setIsSubmitting(true);
-    // Real API integration handled in App.jsx onSuccess
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
       setTimeout(() => {
         onSuccess(currentService);
-      }, 1500);
-    }, 1000);
+      }, 2000);
+    }, 1500);
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2, ease: "easeIn" } }
+  const drawerVariants = {
+    hidden: { y: "100%", opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", damping: 25, stiffness: 200 } },
+    exit: { y: "100%", opacity: 0, transition: { duration: 0.3 } }
   };
 
   const stepVariants = {
@@ -101,184 +87,149 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
     exit: { x: -20, opacity: 0, transition: { duration: 0.3, ease: "easeIn" } }
   };
 
+  const listVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1 }
+  };
+
   return (
-    <div className="modal-overlay">
+    <div className="drawer-overlay">
+      <div className="drawer-backdrop" onClick={onClose} />
+      
       <motion.div 
-        className="wizard-container"
-        variants={containerVariants}
+        className="drawer-container dark-glass-theme"
+        variants={drawerVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
       >
-        <button type="button" className="wizard-close-btn" onClick={onClose} aria-label="Close Wizard">
-          <X size={20} style={{ pointerEvents: 'none' }} />
+        <div className="drawer-handle" />
+        <button type="button" className="drawer-close-btn" onClick={onClose}>
+          <X size={20} />
         </button>
         
-          <div className="wizard-header">
-            <h2>Book a Service</h2>
-            <div className="progress-container">
-              <div className="progress-bar-wrapper">
-                <div className="progress-bar-track">
-                    <motion.div 
-                      className="progress-bar-fill" 
-                      initial={{ width: `${(1 / totalSteps) * 100}%` }}
-                      animate={{ width: `${(isSuccess ? totalSteps : step) / totalSteps * 100}%` }}
-                      style={{ backgroundColor: isSuccess ? '#10B981' : 'var(--primary)' }}
-                    />
-                  </div>
-                </div>
-                <div className="progress-steps-labels">
-                  <span className={step >= 1 ? 'active' : ''}>Service</span>
-                  {isMarketplaceFlow && <span className={step >= 2 ? 'active' : ''}>Partner</span>}
-                  <span className={step >= (isMarketplaceFlow ? 3 : 2) ? 'active' : ''}>Schedule</span>
-                  <span className={step >= totalSteps || isSuccess ? 'active' : ''}>Review</span>
-                </div>
-            </div>
+        <div className="drawer-header">
+          <h2>Book a Service</h2>
+          <div className="modern-progress">
+            {Array.from({ length: totalSteps }).map((_, idx) => (
+              <div key={idx} className={`progress-segment ${step > idx ? 'active' : ''} ${step === idx + 1 ? 'current' : ''}`} />
+            ))}
           </div>
+        </div>
 
-        <div className="wizard-body">
+        <div className="drawer-body">
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <motion.div 
-                key="step1"
-                variants={stepVariants}
-                initial="initial"
-                animate="enter"
-                exit="exit"
-                className="step-content"
-              >
-                <div className="step-header">
-                  <h3>Select a Service Category</h3>
-                  <p className="subtitle">Choose the type of professional required for the facility.</p>
+              <motion.div key="step1" variants={stepVariants} initial="initial" animate="enter" exit="exit" className="step-content">
+                <div className="step-title-area">
+                  <h3>Select Category</h3>
+                  <p>What kind of professional do you need?</p>
                 </div>
                 
-                <div className="services-grid">
+                <motion.div className="premium-services-grid" variants={listVariants} initial="hidden" animate="visible">
                   {services.filter(s => currentRole === 'chairman' ? s.roles.includes('chairman') : s.roles.includes('member')).map(service => {
                     const Icon = service.icon;
+                    const isSelected = selectedService === service.id;
                     return (
                       <motion.div 
                         key={service.id}
-                        whileHover={{ y: -5 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`service-card ${selectedService === service.id ? 'selected' : ''}`}
+                        variants={itemVariants}
+                        whileTap={{ scale: 0.95 }}
+                        className={`premium-service-card ${isSelected ? 'selected' : ''}`}
+                        style={{ '--accent': service.color }}
                         onClick={() => setSelectedService(service.id)}
                       >
-                        <div className="service-icon-box" style={{ backgroundColor: `${service.color}15`, color: service.color }}>
-                          <Icon size={28} />
+                        <div className="card-bg-glow" style={{ background: service.color }} />
+                        <div className="p-icon-box" style={{ color: service.color }}>
+                          <Icon size={32} />
                         </div>
-                        <div className="service-info">
+                        <div className="p-info">
                           <h4>{service.category}</h4>
-                          <p>{service.description}</p>
+                          <span>from {service.basePrice}</span>
                         </div>
-                        <div className="service-price-tag">
-                          <span>from</span>
-                          <strong>{service.basePrice}</strong>
-                        </div>
-                        {selectedService === service.id && (
-                          <div className="selection-badge">
-                            <Shield size={12} fill="currentColor" />
-                          </div>
-                        )}
+                        {isSelected && <div className="p-check"><CheckCircle2 size={20} fill={service.color} stroke="#111" /></div>}
                       </motion.div>
                     );
                   })}
-                </div>
+                </motion.div>
               </motion.div>
             )}
 
             {step === 2 && isMarketplaceFlow && (
-              <motion.div 
-                key="step-vendor"
-                variants={stepVariants}
-                initial="initial"
-                animate="enter"
-                exit="exit"
-                className="step-content"
-              >
-                <div className="step-header">
-                  <h3>Select a Service Partner</h3>
-                  <p className="subtitle">Choose a curated vendor for your facility's housekeeping needs.</p>
+              <motion.div key="step-vendor" variants={stepVariants} initial="initial" animate="enter" exit="exit" className="step-content">
+                <div className="step-title-area">
+                  <h3>Select Partner</h3>
+                  <p>Choose an elite vendor for your facility.</p>
                 </div>
                 
-                <div className="vendors-list-layout">
+                <motion.div className="vip-vendor-list" variants={listVariants} initial="hidden" animate="visible">
                   {vendors.map(vendor => (
                     <motion.div 
                       key={vendor.id}
-                      whileHover={{ scale: 1.01 }}
-                      className={`vendor-select-card ${selectedVendor === vendor.id ? 'active' : ''}`}
+                      variants={itemVariants}
+                      whileTap={{ scale: 0.98 }}
+                      className={`vip-vendor-card ${selectedVendor === vendor.id ? 'selected' : ''}`}
                       onClick={() => setSelectedVendor(vendor.id)}
                     >
-                      <div className="vendor-card-header">
-                        <div className="v-icon-box">
-                          {(() => {
-                            const Icon = vendor.icon;
-                            return <Icon size={20} />;
-                          })()}
-                        </div>
-                        <div className="v-core-info">
-                          <h4>{vendor.name}</h4>
-                          <span className="v-spec">{vendor.specialization}</span>
-                        </div>
-                        <div className="v-rating"><Star size={14} fill="currentColor" stroke="none" /> {vendor.rating}</div>
+                      <div className="vip-avatar">
+                        {(() => { const Icon = vendor.icon; return <Icon size={24} />; })()}
                       </div>
-                      <div className="vendor-card-footer">
-                        <span className="v-rate-label">Standard Rate:</span>
-                        <span className="v-price">{vendor.price}</span>
+                      <div className="vip-details">
+                        <h4>{vendor.name}</h4>
+                        <p>{vendor.specialization}</p>
+                      </div>
+                      <div className="vip-stats">
+                        <div className="vip-rating"><Star size={12} fill="#F59E0B" stroke="none" /> {vendor.rating}</div>
+                        <div className="vip-price">{vendor.price}</div>
                       </div>
                     </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </motion.div>
             )}
 
             {step === (isMarketplaceFlow ? 3 : 2) && (
-              <motion.div 
-                key="step-schedule"
-                variants={stepVariants}
-                initial="initial"
-                animate="enter"
-                exit="exit"
-                className="step-content"
-              >
-                <div className="step-header">
+              <motion.div key="step-schedule" variants={stepVariants} initial="initial" animate="enter" exit="exit" className="step-content">
+                <div className="step-title-area">
                   <h3>Schedule & Details</h3>
-                  <p className="subtitle">Set the timeframe and specific facility location.</p>
+                  <p>When and where do you need them?</p>
                 </div>
                 
-                <div className="form-layout">
-                  {selectedService?.id === 'srv-4' ? (
-                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', fontWeight: 'bold' }}>
-                      Waste collection is a complimentary service scheduled automatically everyday at 09:00 AM.
+                <div className="modern-form">
+                  <div className="form-group">
+                    <label><Calendar size={16} /> Date & Time</label>
+                    <div className="input-split">
+                      <input type="date" className="sleek-input" defaultValue={new Date().toISOString().split('T')[0]} />
+                      <input type="time" className="sleek-input" defaultValue="09:00" />
                     </div>
-                  ) : (
-                    <div className="form-row">
-                      <div className="form-field glass-input">
-                        <label><Calendar size={14} /> Date</label>
-                        <input type="date" />
-                      </div>
-                      <div className="form-field glass-input">
-                        <label><Clock size={14} /> Start Time</label>
-                        <input type="time" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="form-field glass-input">
-                    <label><Building2 size={14} /> Select Property Facility</label>
-                    <select>
-                      <option>Block A Common Area</option>
-                      <option>Block B Corridors</option>
-                      <option>Main Entrance Gate</option>
-                      <option>Resident Flat</option>
-                    </select>
                   </div>
 
-                  <div className="form-field glass-input">
-                    <label><Users size={14} /> Number of Workers Needed</label>
-                    <div className="counter-horizontal">
-                      <button onClick={() => setWorkerCount(Math.max(1, workerCount - 1))} className="counter-btn">-</button>
-                      <div className="counter-display">{workerCount}</div>
-                      <button onClick={() => setWorkerCount(workerCount + 1)} className="counter-btn">+</button>
+                  <div className="form-group">
+                    <label><Building2 size={16} /> Location</label>
+                    <div className="touch-pill-grid">
+                      {locations.map(loc => (
+                        <div 
+                          key={loc} 
+                          className={`touch-pill ${selectedLocation === loc ? 'active' : ''}`}
+                          onClick={() => setSelectedLocation(loc)}
+                        >
+                          {loc}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label><Users size={16} /> Professional Count</label>
+                    <div className="sleek-counter">
+                      <button onClick={() => setWorkerCount(Math.max(1, workerCount - 1))}>-</button>
+                      <span>{workerCount}</span>
+                      <button onClick={() => setWorkerCount(workerCount + 1)}>+</button>
                     </div>
                   </div>
                 </div>
@@ -286,54 +237,46 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
             )}
 
             {step === totalSteps && !isSuccess && !isSubmitting && (
-              <motion.div 
-                key="step-review"
-                variants={stepVariants}
-                initial="initial"
-                animate="enter"
-                exit="exit"
-                className="step-content"
-              >
-                <div className="step-header">
-                  <h3>Final Review</h3>
-                  <p className="subtitle">Verify the details before submitting the request.</p>
+              <motion.div key="step-review" variants={stepVariants} initial="initial" animate="enter" exit="exit" className="step-content">
+                <div className="step-title-area">
+                  <h3>Review Order</h3>
+                  <p>Your digital service receipt.</p>
                 </div>
 
-                <div className="glass-summary-card">
-                  <div className="summary-main">
-                    <div className="summary-item">
-                      <span className="label">Category</span>
-                      <span className="value">{currentService?.category}</span>
+                <div className="digital-receipt">
+                  <div className="receipt-header">
+                    <div className="r-icon" style={{ color: currentService?.color }}>
+                      {(() => { const Icon = currentService?.icon; return <Icon size={32} />; })()}
                     </div>
+                    <div>
+                      <h4>{currentService?.category}</h4>
+                      <p>{workerCount} Professional(s)</p>
+                    </div>
+                  </div>
+                  
+                  <div className="receipt-body">
                     {isMarketplaceFlow && selectedVendor && (
-                       <div className="summary-item">
-                         <span className="label">Partner Vendor</span>
-                         <span className="value">{vendors.find(v => v.id === selectedVendor)?.name}</span>
+                       <div className="r-row">
+                         <span>Partner</span>
+                         <strong>{vendors.find(v => v.id === selectedVendor)?.name}</strong>
                        </div>
                     )}
-                    <div className="summary-item">
-                      <span className="label">Location</span>
-                      <span className="value">City Care Hospital</span>
+                    <div className="r-row">
+                      <span>Location</span>
+                      <strong>{selectedLocation}</strong>
                     </div>
-                    <div className="summary-item">
-                      <span className="label">Staff Count</span>
-                      <span className="value">{workerCount} Professional(s)</span>
-                    </div>
-                  </div>
-                  <div className="summary-footer">
-                    <div className="price-estimation">
-                      <span className="est-label">Estimated Rate</span>
-                      <span className="est-value">
-                         {isMarketplaceFlow && selectedVendor ? vendors.find(v => v.id === selectedVendor).price : currentService?.basePrice}
-                         <small> /hour</small>
-                      </span>
+                    <div className="r-row">
+                      <span>Date & Time</span>
+                      <strong>Today, 09:00 AM</strong>
                     </div>
                   </div>
-                </div>
-
-                <div className="policy-note">
-                  <Shield size={16} className="note-icon" />
-                  <p>Invoices are generated upon completion based on verified logged hours.</p>
+                  
+                  <div className="receipt-footer">
+                    <span>Estimated Rate</span>
+                    <div className="r-total">
+                      {isMarketplaceFlow && selectedVendor ? vendors.find(v => v.id === selectedVendor).price : currentService?.basePrice}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -341,25 +284,28 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
             {(isSubmitting || isSuccess) && (
               <motion.div 
                 key="success-state"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="step-content"
-                style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="step-content center-success"
               >
                 {!isSuccess ? (
-                   <>
-                     <div className="dot" style={{ width: '48px', height: '48px', background: 'var(--primary)', marginBottom: '16px' }}></div>
-                     <h3 style={{ fontSize: '24px', fontWeight: '800' }}>Confirming Details...</h3>
-                     <p className="subtitle">Securely placing your request over the Altsan network.</p>
-                   </>
+                   <div className="processing-state">
+                     <div className="glowing-spinner" />
+                     <h3>Securing Request...</h3>
+                     <p>Connecting to the Altsan network.</p>
+                   </div>
                 ) : (
-                   <>
-                     <div style={{ color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '16px', borderRadius: '50%', marginBottom: '16px' }}>
-                       <Sparkles size={48} />
+                   <motion.div 
+                     initial={{ scale: 0.8, opacity: 0 }} 
+                     animate={{ scale: 1, opacity: 1 }} 
+                     className="success-state"
+                   >
+                     <div className="success-icon-burst">
+                       <CheckCircle2 size={64} color="#10B981" />
                      </div>
-                     <h3 style={{ fontSize: '24px', fontWeight: '800' }}>Service Requested!</h3>
-                     <p className="subtitle">Your booking has been confirmed and placed in the queue.</p>
-                   </>
+                     <h3>Order Confirmed!</h3>
+                     <p>Professionals are en route to your location.</p>
+                   </motion.div>
                 )}
               </motion.div>
             )}
@@ -367,20 +313,19 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
         </div>
 
         {!isSubmitting && !isSuccess && (
-          <div className="wizard-footer">
-            {step > 1 && (
-              <button className="btn-ghost" onClick={() => setStep(step - 1)}>
-                <ChevronLeft size={18} /> Back
-              </button>
-            )}
-            <div className="flex-spacer" />
+          <div className="drawer-footer">
             <button 
-              className="btn-primary-large" 
+              className="drawer-btn-back" 
+              onClick={() => step > 1 ? setStep(step - 1) : onClose()}
+            >
+              {step > 1 ? 'Back' : 'Cancel'}
+            </button>
+            <button 
+              className="drawer-btn-next" 
               onClick={() => step < totalSteps ? setStep(step + 1) : handleConfirmOrder()}
               disabled={(step === 1 && !selectedService) || (step === 2 && isMarketplaceFlow && !selectedVendor)}
             >
-              {step === totalSteps ? 'Confirm Order' : 'Continue'}
-              {step < totalSteps && <ChevronRight size={18} />}
+              {step === totalSteps ? 'Confirm' : 'Next'}
             </button>
           </div>
         )}
