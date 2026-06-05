@@ -31,6 +31,7 @@ import ChatWindow from './components/ChatWindow';
 import PaymentCheckout from './components/PaymentCheckout';
 import TrackingMap from './components/TrackingMap';
 import NotificationCenter from './components/NotificationCenter';
+import ProductTour from './components/ProductTour';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { Bell, Sun, Moon } from 'lucide-react';
 import './App.css';
@@ -352,6 +353,9 @@ const MainLayout = () => {
         isOpen={showNotifications} 
         onClose={() => setShowNotifications(false)} 
       />
+
+      {/* Global Product Tour */}
+      <ProductTour />
 
     </div>
   );

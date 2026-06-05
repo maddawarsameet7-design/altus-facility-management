@@ -267,6 +267,37 @@
   animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Biometric Scanner Styles */
+.biometric-scanner {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+@keyframes scanLaser {
+  0% { transform: translateY(-50px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(50px); opacity: 0; }
+}
+
+.scanner-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #3b82f6;
+  box-shadow: 0 0 15px 4px rgba(59, 130, 246, 0.6);
+  animation: scanLaser 2s infinite ease-in-out;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

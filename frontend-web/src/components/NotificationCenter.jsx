@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bell, Info, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { X, Bell, Info, AlertTriangle, CheckCircle, Clock, Smartphone } from 'lucide-react';
 import './NotificationCenter.css';
 
 const NotificationCenter = ({ isOpen, onClose }) => {
@@ -45,6 +45,31 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       case 'alert': return <AlertTriangle size={20} className="text-orange" />;
       case 'success': return <CheckCircle size={20} className="text-green" />;
       default: return <Info size={20} className="text-blue" />;
+    }
+  };
+
+  const requestPushPermission = async () => {
+    if (!('Notification' in window)) {
+      alert("This browser does not support desktop notification");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      // Send a test notification via Service Worker
+      if (navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification('Altsan Push Enabled', {
+            body: 'You will now receive priority alerts instantly.',
+            icon: '/logo192.png',
+            badge: '/logo192.png'
+          });
+        });
+      } else {
+        new Notification('Altsan Push Enabled', {
+          body: 'You will now receive priority alerts instantly.'
+        });
+      }
     }
   };
 
@@ -101,6 +126,9 @@ const NotificationCenter = ({ isOpen, onClose }) => {
             </div>
             
             <div className="nc-footer">
+              <button className="view-all-btn push-btn" onClick={requestPushPermission} style={{ marginBottom: '8px', background: '#e0e7ff', color: '#4338ca' }}>
+                <Smartphone size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }}/> Enable Push Notifications
+              </button>
               <button className="view-all-btn">View All History</button>
             </div>
           </motion.div>

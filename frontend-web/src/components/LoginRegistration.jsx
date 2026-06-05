@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ScanFace } from 'lucide-react';
 import { authApi, userApi } from '../utils/api';
 import './Auth.css';
 
@@ -13,8 +13,8 @@ const LoginRegistration = ({ onLoginSuccess }) => {
     password: '',
     role: 'MEMBER'
   });
-
   const [loading, setLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -22,8 +22,12 @@ const LoginRegistration = ({ onLoginSuccess }) => {
     setLoading(true);
     setError('');
     
-    try {
       if (isLogin) {
+        setIsScanning(true);
+        // Simulate biometric scan for 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setIsScanning(false);
+        
         // Step 1: Authenticate and get JWT tokens
         const response = await authApi.login({
           username: formData.username,
@@ -100,11 +104,43 @@ const LoginRegistration = ({ onLoginSuccess }) => {
       console.error(err);
     } finally {
       setLoading(false);
+      setIsScanning(false);
     }
   };
 
   return (
     <div className="auth-container">
+      {/* Biometric Scanning Overlay */}
+      <AnimatePresence>
+        {isScanning && (
+          <motion.div 
+            className="registration-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+             <div className="biometric-scanner">
+               <ScanFace size={64} className="text-blue" />
+               <div className="scanner-laser"></div>
+             </div>
+             <motion.h2 
+               initial={{ y: 10, opacity: 0 }} 
+               animate={{ y: 0, opacity: 1 }} 
+               transition={{ delay: 0.2 }}
+             >
+               Verifying Identity
+             </motion.h2>
+             <motion.p
+               initial={{ y: 10, opacity: 0 }} 
+               animate={{ y: 0, opacity: 1 }} 
+               transition={{ delay: 0.3 }}
+             >
+               Please look at the screen...
+             </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Registration Success Overlay */}
       <AnimatePresence>
         {isRegisterSuccess && (

@@ -5,6 +5,7 @@ import {
   Briefcase, ArrowUpRight, DollarSign, BellRing, ChevronRight,
   Filter, Download, Share2
 } from 'lucide-react';
+import IsometricMap from './IsometricMap';
 import './DirectorPortal.css';
 
 const DirectorPortal = () => {
@@ -91,6 +92,14 @@ const DirectorPortal = () => {
             <span className="stat-label">Net Profit / Mo</span>
             <span className="stat-value">₹42k</span>
           </div>
+        </motion.div>
+
+        {/* 3D Incident Map */}
+        <motion.div variants={itemVariants} className="ed-card map-card glass-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-header">
+            <h3><Building2 size={18} className="text-blue" style={{marginRight: '8px', display: 'inline'}} /> Property Command Map</h3>
+          </div>
+          <IsometricMap requests={[{ id: 99, service: 'Generator Failure', location: 'Tower B', status: 'Active' }]} />
         </motion.div>
 
         {/* Active Alerts - NEW SECTION */}
