@@ -50,6 +50,12 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.5px;
 }
 
+@keyframes gradientMesh {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 /* App Main Wrapper - Mobile Centered Column for Desktop */
 .app-main-wrapper {
   display: flex;
@@ -60,8 +66,10 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 500px;
   margin: 0 auto;
   position: relative;
-  background: var(--bg-main);
-  box-shadow: 0 0 50px rgba(0,0,0,0.05);
+  background: linear-gradient(-45deg, #f3f4f6, #ffffff, #e5e7eb, #f8fafc);
+  background-size: 400% 400%;
+  animation: gradientMesh 12s ease infinite;
+  box-shadow: 0 0 50px rgba(0,0,0,0.08);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -78,8 +86,10 @@ h1, h2, h3, h4, h5, h6 {
 .header-user-info .greeting {
   font-family: 'Outfit', sans-serif;
   font-size: 24px;
-  font-weight: 700;
-  color: var(--text-main);
+  font-weight: 800;
+  background: linear-gradient(135deg, #111827 0%, #4b5563 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin-bottom: 4px;
 }
 
@@ -99,18 +109,20 @@ h1, h2, h3, h4, h5, h6 {
   height: 48px;
   border-radius: 50%;
   border: 1px solid rgba(0,0,0,0.05);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
   color: var(--text-main);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .header-action-btn:hover {
-  background: var(--card-bg);
-  box-shadow: var(--shadow-subtle);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
 }
 
 /* Main Viewport */
@@ -136,12 +148,14 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--primary); /* Dark grey/black */
+  background: rgba(26, 26, 26, 0.85); /* Dark glass */
   padding: 8px;
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-floating);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.1);
   pointer-events: auto; /* Re-enable clicks exactly on the pill */
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bottom-nav-item {
@@ -176,22 +190,37 @@ h1, h2, h3, h4, h5, h6 {
 
 /* High-End Common Card Utilities */
 .hero-card {
-  background: var(--hero-bg);
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   color: var(--text-inverse);
   border-radius: var(--radius-xl);
   padding: 24px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 20px 30px rgba(0,0,0,0.15);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.1);
   margin-bottom: 24px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.hero-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.2);
 }
 
 .white-card {
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-lg);
   padding: 20px;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.04);
   margin-bottom: 16px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+.white-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
 }
 
 .section-title {
@@ -427,6 +456,17 @@ h1, h2, h3, h4, h5, h6 {
 .chat-input-area button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.auth-logo {
+  font-family: 'Outfit', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #111827 0%, #374151 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 16px;
+  letter-spacing: -1px;
 }
 
 /* ─── PAYMENT CHECKOUT ─── */
