@@ -66,7 +66,7 @@ const DirectorPortal = () => {
               <span className="hero-badge"><Building2 size={14}/> Society Budget (YTD)</span>
             </div>
             <div className="hero-main">
-              <h2>₹1,240,500</h2>
+              <h2>₹12,40,500</h2>
               <div className="hero-trend">
                 <ArrowUpRight size={18} />
                 <span>+12.4% vs last quarter</span>

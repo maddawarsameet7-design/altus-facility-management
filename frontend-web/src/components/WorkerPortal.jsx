@@ -215,8 +215,8 @@ const WorkerPortal = ({ requests, onUpdate }) => {
                <div className="earnings-summary">
                   <div className="e-card main">
                      <Wallet size={24} className="e-icon" />
-                     <span>This Week</span>
-                     <h2>$485.50</h2>
+                     <span className="balance-label">Available Balance</span>
+                     <h2>₹48,550.00</h2>
                   </div>
                   <div className="e-card side">
                      <TrendingUp size={20} className="e-icon text-emerald" />
@@ -232,9 +232,9 @@ const WorkerPortal = ({ requests, onUpdate }) => {
                   </div>
                   
                   {[
-                     { day: 'Today', hours: '6.5 hrs', earned: '$130.00', status: 'Pending' },
-                     { day: 'Yesterday', hours: '8.0 hrs', earned: '$160.00', status: 'Paid' },
-                     { day: 'Mon, Oct 12', hours: '7.2 hrs', earned: '$144.00', status: 'Paid' }
+                     { day: 'Today', hours: '6.5 hrs', earned: '₹1,300.00', status: 'Pending' },
+                     { day: 'Yesterday', hours: '8.0 hrs', earned: '₹1,600.00', status: 'Paid' },
+                     { day: 'Mon, Oct 12', hours: '7.2 hrs', earned: '₹1,440.00', status: 'Paid' }
                   ].map((shift, idx) => (
                      <div key={idx} className="shift-row">
                         <div className="s-left">
