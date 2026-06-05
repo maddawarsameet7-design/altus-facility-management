@@ -31,7 +31,8 @@ import ChatWindow from './components/ChatWindow';
 import PaymentCheckout from './components/PaymentCheckout';
 import TrackingMap from './components/TrackingMap';
 import NotificationCenter from './components/NotificationCenter';
-import { Bell } from 'lucide-react';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { Bell, Sun, Moon } from 'lucide-react';
 import './App.css';
 
 // New Mobile-First Floating Pill Navigation Item
@@ -77,6 +78,7 @@ const MainLayout = () => {
   const [activeChat, setActiveChat] = useState(null);
   const [activeCheckout, setActiveCheckout] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -233,6 +235,9 @@ const MainLayout = () => {
           <span className="role-badge">{currentRole}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="header-action-btn theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
+             {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <button className="header-action-btn notif-btn" onClick={() => setShowNotifications(true)} aria-label="Notifications" style={{ position: 'relative' }}>
              <Bell size={20} />
              <span className="notif-badge"></span>
@@ -354,9 +359,11 @@ const MainLayout = () => {
 
 const App = () => {
   return (
-    <Router>
-      <MainLayout />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <MainLayout />
+      </Router>
+    </ThemeProvider>
   );
 };
 
