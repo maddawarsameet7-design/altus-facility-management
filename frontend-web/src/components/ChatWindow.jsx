@@ -1,11 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import useWebSocket from 'react-use-websocket';
 import { Send, X, MessageCircle, Paperclip, CheckCheck, User } from 'lucide-react';
 import './ChatWindow.css';
 
-const ChatWindow = ({ request, currentUser, messages, onSendMessage, onClose }) => {
+const ChatWindow = ({ request, currentUser, messages: initialMessages = [], onSendMessage, onClose }) => {
   const [text, setText] = useState('');
+  const [messages, setMessages] = useState(initialMessages);
   const scrollRef = useRef(null);
+
+  // Initialize WebSocket connection to Django Channels
+  const WS_URL = `ws://localhost:8000/ws/chat/${request.id}/`;
+  
+  const { sendMessage } = useWebSocket(WS_URL, {
+    onOpen: () => console.log('WebSocket connected'),
+    onMessage: (event) => {
+      const data = JSON.parse(event.data);
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        sender_name: data.sender,
+        content: data.message,
+        timestamp: new Date().toISOString()
+      }]);
+    },
+    shouldReconnect: (closeEvent) => true,
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -16,7 +35,13 @@ const ChatWindow = ({ request, currentUser, messages, onSendMessage, onClose }) 
   const handleSend = (e) => {
     e.preventDefault();
     if (!text.trim()) return;
-    onSendMessage(text);
+
+    // Send through WebSocket instead of traditional API call
+    sendMessage(JSON.stringify({
+      message: text,
+      sender: currentUser
+    }));
+    
     setText('');
   };
 

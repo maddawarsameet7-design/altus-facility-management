@@ -1,26 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, ChevronRight, CheckCircle2, Loader2, Lock, CreditCard, Apple, Smartphone, Fingerprint } from 'lucide-react';
+import { paymentApi } from '../utils/api';
 import './PaymentCheckout.css';
 
 const PaymentCheckout = ({ request, onPaymentSuccess, onClose }) => {
   const [step, setStep] = useState('review'); // review -> auth -> processing -> success
   const amount = request.total_amount || 450;
 
-  const handlePay = () => {
-    setStep('auth');
-    setTimeout(() => {
-      setStep('processing');
-      setTimeout(() => {
-        setStep('success');
-        setTimeout(() => {
-          onPaymentSuccess({ 
-            transaction_id: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-            amount: amount
-          });
-        }, 2000);
-      }, 2500);
-    }, 1500);
+  const handlePay = async () => {
+    setStep('processing');
+    try {
+      // 1. Create Order on Django Backend
+      const orderRes = await paymentApi.createOrder({
+        request_id: request.id,
+        amount: amount
+      });
+      const orderData = orderRes.data;
+
+      // 2. Initialize Razorpay Options
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Altsan Facility Services",
+        description: `Payment for Request #${request.id}`,
+        order_id: orderData.order_id,
+        handler: async function (response) {
+          try {
+            // 3. Verify Payment Signature on Backend
+            await paymentApi.verify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              request_id: request.id
+            });
+            setStep('success');
+            setTimeout(() => {
+              onPaymentSuccess({ 
+                transaction_id: response.razorpay_payment_id,
+                amount: amount
+              });
+            }, 2000);
+          } catch (err) {
+            console.error("Signature verification failed", err);
+            setStep('review');
+            alert("Payment verification failed. Please contact support.");
+          }
+        },
+        prefill: {
+          name: "Resident",
+          email: "resident@altsan.com",
+          contact: "9999999999"
+        },
+        theme: {
+          color: "#000000"
+        },
+        modal: {
+          ondismiss: function() {
+            setStep('review');
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response){
+        console.error("Payment Failed", response.error);
+        setStep('review');
+        alert(`Payment failed: ${response.error.description}`);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error("Order creation failed", err);
+      setStep('review');
+      alert("Could not initialize payment. Please try again.");
+    }
   };
 
   return (
