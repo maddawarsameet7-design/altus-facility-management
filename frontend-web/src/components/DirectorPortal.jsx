@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   TrendingUp, Building2, Shield, Users, Activity,
-  Briefcase, ArrowUpRight, DollarSign, BellRing, ChevronRight
+  Briefcase, ArrowUpRight, DollarSign, BellRing, ChevronRight,
+  Filter, Download, Share2
 } from 'lucide-react';
 import './DirectorPortal.css';
 
@@ -169,6 +170,29 @@ const DirectorPortal = () => {
         </motion.div>
 
       </motion.div>
+
+      {/* 1-Handed Bottom Command Bar */}
+      <motion.div 
+        className="ed-bottom-command-bar"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 200, delay: 0.5 }}
+      >
+        <button className="command-btn primary-action">
+          <Filter size={20} />
+          <span>Filters</span>
+        </button>
+        
+        <div className="command-secondary-actions">
+          <button className="command-icon-btn">
+            <Download size={18} />
+          </button>
+          <button className="command-icon-btn">
+            <Share2 size={18} />
+          </button>
+        </div>
+      </motion.div>
+
     </div>
   );
 };

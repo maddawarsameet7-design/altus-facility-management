@@ -8,6 +8,7 @@
   position: relative;
   overflow-x: hidden;
   background: #f8fafc;
+  padding-bottom: 120px; /* Space for the bottom command bar */
 }
 
 /* Beautiful Animated Background Mesh */
@@ -484,5 +485,74 @@
   .ed-grid { display: flex; flex-direction: column; }
   .ed-hero { min-height: 200px; padding: 24px; }
   .hero-main h2 { font-size: 48px; }
-  .executive-dashboard-light { padding: 16px; }
+  .executive-dashboard-light { padding: 16px; padding-bottom: 120px; }
+}
+
+/* 1-Handed Bottom Command Bar */
+.ed-bottom-command-bar {
+  position: fixed;
+  bottom: 80px; /* Sits above the main app bottom nav if present, or just at bottom */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 12px 16px;
+  border-radius: 100px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  z-index: 1000;
+  width: max-content;
+  max-width: 90%;
+}
+
+.command-btn.primary-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 100px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s;
+}
+
+.command-btn.primary-action:active {
+  transform: scale(0.95);
+}
+
+.command-secondary-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.command-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.command-icon-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.command-icon-btn:active {
+  transform: scale(0.95);
 }
