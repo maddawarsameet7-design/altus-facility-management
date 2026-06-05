@@ -161,6 +161,7 @@ const MainLayout = () => {
       navigate('/');
     } catch (err) {
       console.error("Booking Error:", err);
+      alert("Failed to create booking: " + (err.response?.data?.error || err.message));
     }
   };
 
