@@ -1,46 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, CreditCard, ChevronRight, CheckCircle2, Loader2, Lock } from 'lucide-react';
+import { ShieldCheck, ChevronRight, CheckCircle2, Loader2, Lock, CreditCard, Apple, Smartphone, Fingerprint } from 'lucide-react';
+import './PaymentCheckout.css';
 
 const PaymentCheckout = ({ request, onPaymentSuccess, onClose }) => {
-  const [step, setStep] = useState('review'); // review -> processing -> success
+  const [step, setStep] = useState('review'); // review -> auth -> processing -> success
   const amount = request.total_amount || 450;
 
   const handlePay = () => {
-    setStep('processing');
+    setStep('auth');
     setTimeout(() => {
-      setStep('success');
+      setStep('processing');
       setTimeout(() => {
-        onPaymentSuccess({ 
-          transaction_id: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          amount: amount
-        });
-      }, 2000);
-    }, 2500);
+        setStep('success');
+        setTimeout(() => {
+          onPaymentSuccess({ 
+            transaction_id: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            amount: amount
+          });
+        }, 2000);
+      }, 2500);
+    }, 1500);
   };
 
   return (
     <motion.div 
-      className="modal-overlay"
+      className="checkout-overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div 
-        className="checkout-pane hero-card"
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        style={{ maxWidth: '400px', width: '90%', padding: '0', overflow: 'hidden' }}
+        className="checkout-sheet"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       >
-        <div className="checkout-header" style={{ padding: '24px', background: 'rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Lock size={14} color="var(--accent-green)" />
-              <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--accent-green)' }}>Secure Payment</span>
+        <div className="sheet-handle"></div>
+
+        <div className="checkout-header">
+           <div className="header-brand">
+              <div className="secure-badge">
+                <Lock size={12} className="text-green" />
+              </div>
+              <span>Secure Checkout</span>
            </div>
-           {step !== 'processing' && <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>Close</button>}
+           {step === 'review' && <button onClick={onClose} className="close-sheet-btn">Cancel</button>}
         </div>
 
-        <div className="checkout-content" style={{ padding: '32px 24px' }}>
+        <div className="checkout-content">
           <AnimatePresence mode="wait">
             {step === 'review' && (
               <motion.div 
@@ -48,24 +57,69 @@ const PaymentCheckout = ({ request, onPaymentSuccess, onClose }) => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
+                className="step-review"
               >
-                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '4px' }}>Paying to Altsan Facility</p>
-                <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '24px' }}>₹{amount}</h2>
-                
-                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '16px', marginBottom: '32px' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>Service</span>
-                      <span style={{ fontWeight: '600' }}>{request.service}</span>
+                <div className="amount-display">
+                  <p>Altsan Facility Services</p>
+                  <h2>₹{amount.toLocaleString('en-IN')}</h2>
+                </div>
+
+                <div className="virtual-card-wrapper">
+                  <div className="virtual-card">
+                    <div className="card-top">
+                      <CreditCard size={24} color="rgba(255,255,255,0.8)" />
+                      <span className="card-type">VISA</span>
+                    </div>
+                    <div className="card-chip"></div>
+                    <div className="card-number">
+                      <span>****</span><span>****</span><span>****</span><span>4242</span>
+                    </div>
+                    <div className="card-bottom">
+                      <div className="card-holder">SAMEET MADDAWAR</div>
+                      <div className="card-expiry">12/28</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="order-summary">
+                   <div className="summary-row">
+                      <span className="label">Service</span>
+                      <span className="value">{request.service}</span>
                    </div>
-                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>Request ID</span>
-                      <span style={{ fontWeight: '600', fontSize: '12px' }}>#{request.id.substr(0,8)}</span>
+                   <div className="summary-row">
+                      <span className="label">Request ID</span>
+                      <span className="value">#{request.id.substr(0,8)}</span>
+                   </div>
+                   <div className="summary-divider"></div>
+                   <div className="summary-row total">
+                      <span className="label">Total to Pay</span>
+                      <span className="value">₹{amount.toLocaleString('en-IN')}</span>
                    </div>
                 </div>
 
-                <button className="primary-pay-btn" onClick={handlePay}>
-                  Proceed to Pay <ChevronRight size={18} />
+                <button className="apple-pay-btn" onClick={handlePay}>
+                  <Apple size={18} fill="currentColor" style={{marginRight: '6px'}}/> Pay
                 </button>
+
+                <button className="primary-pay-btn" onClick={handlePay}>
+                  Pay with Card <ChevronRight size={18} />
+                </button>
+              </motion.div>
+            )}
+
+            {step === 'auth' && (
+              <motion.div 
+                key="auth"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="step-auth"
+              >
+                <div className="auth-scanner">
+                  <Fingerprint size={64} className="fingerprint-icon scanning" />
+                  <div className="scan-line"></div>
+                </div>
+                <h3>Authenticate Payment</h3>
+                <p>Verify your identity to proceed</p>
               </motion.div>
             )}
 
@@ -74,11 +128,13 @@ const PaymentCheckout = ({ request, onPaymentSuccess, onClose }) => {
                 key="processing"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                style={{ textAlign: 'center', padding: '40px 0' }}
+                className="step-processing"
               >
-                <Loader2 size={48} className="spinner" style={{ margin: '0 auto 24px', color: 'var(--accent-blue)' }} />
-                <h3 style={{ fontSize: '20px', fontWeight: '700' }}>Processing Payment</h3>
-                <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>Please do not refresh or close the app</p>
+                <div className="spinner-ring">
+                  <Loader2 size={48} className="spinner" />
+                </div>
+                <h3>Processing Payment</h3>
+                <p>Contacting your bank securely...</p>
               </motion.div>
             )}
 
@@ -87,22 +143,31 @@ const PaymentCheckout = ({ request, onPaymentSuccess, onClose }) => {
                 key="success"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                style={{ textAlign: 'center', padding: '40px 0' }}
+                className="step-success"
               >
-                <div style={{ width: 80, height: 80, background: 'var(--accent-green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                <motion.div 
+                  className="success-circle"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                >
                   <CheckCircle2 size={48} color="white" />
+                </motion.div>
+                <h3>Payment Successful</h3>
+                <p>Transaction ID: TXN-{Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+                
+                <div className="receipt-pill">
+                  Receipt sent to your email
                 </div>
-                <h3 style={{ fontSize: '24px', fontWeight: '800' }}>Payment Successful</h3>
-                <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>Transaction ID: TXN-4920192</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        <div style={{ padding: '16px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: 0.5 }}>
+        <div className="checkout-footer">
+           <div className="security-badges">
               <ShieldCheck size={14} />
-              <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase' }}>PCI-DSS Level 1 Encrypted</span>
+              <span>PCI-DSS Level 1 Encrypted</span>
            </div>
         </div>
       </motion.div>
