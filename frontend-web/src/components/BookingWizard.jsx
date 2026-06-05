@@ -47,14 +47,14 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
   }, [fetchServices]);
 
   // Enrich the raw services with our UI styles
-  const services = rawServices.map(cat => ({
+  const enrichedServices = rawServices.map(cat => ({
     ...cat,
     category: cat.name,
     ...getStyleForCategory(cat.name),
     basePrice: `₹${cat.base_hourly_rate}/hr`
   }));
   
-  const currentService = services.find(s => s.id === selectedService);
+  const currentService = enrichedServices.find(s => s.id === selectedService);
   const isMarketplaceFlow = currentService?.category === 'Housekeeping';
   const totalSteps = isMarketplaceFlow ? 4 : 3;
 
@@ -126,7 +126,7 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
                 </div>
                 
                 <motion.div className="premium-services-grid" variants={listVariants} initial="hidden" animate="visible">
-                  {services.filter(s => currentRole === 'chairman' ? s.roles.includes('chairman') : s.roles.includes('member')).map(service => {
+                  {enrichedServices.filter(s => currentRole === 'chairman' ? s.roles.includes('chairman') : s.roles.includes('member')).map(service => {
                     const Icon = service.icon;
                     const isSelected = selectedService === service.id;
                     return (

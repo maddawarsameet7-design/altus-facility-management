@@ -131,6 +131,12 @@ CORS_ALLOWED_ORIGINS = [
     'https://www.altsan.com',
     'https://api.altsan.com',
 ]
+if DEBUG:
+    CORS_ALLOWED_ORIGINS.extend([
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ])
+
 if RENDER_EXTERNAL_HOSTNAME:
     CORS_ALLOWED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 

@@ -22,6 +22,7 @@ const LoginRegistration = ({ onLoginSuccess }) => {
     setLoading(true);
     setError('');
     
+    try {
       if (isLogin) {
         setIsScanning(true);
         // Simulate biometric scan for 2 seconds
