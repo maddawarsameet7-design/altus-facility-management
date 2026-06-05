@@ -216,6 +216,7 @@ const LoginRegistration = ({ onLoginSuccess }) => {
                   <option value="MEMBER">Resident / Facility Member</option>
                   <option value="CHAIRMAN">Chairman / Manager</option>
                   <option value="WORKER">Service Provider / Worker</option>
+                  <option value="DIRECTOR">Executive Director</option>
                 </select>
               </motion.div>
             )}
