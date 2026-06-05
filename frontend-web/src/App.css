@@ -117,6 +117,18 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.notif-badge {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #fff;
 }
 
 .header-action-btn:hover {
@@ -345,6 +357,8 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(255,255,255,0.2);
   color: white;
 }
+
+
 
 .chat-messages {
   flex: 1;

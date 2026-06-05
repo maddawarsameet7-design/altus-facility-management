@@ -30,6 +30,8 @@ import ReviewModal from './components/ReviewModal';
 import ChatWindow from './components/ChatWindow';
 import PaymentCheckout from './components/PaymentCheckout';
 import TrackingMap from './components/TrackingMap';
+import NotificationCenter from './components/NotificationCenter';
+import { Bell } from 'lucide-react';
 import './App.css';
 
 // New Mobile-First Floating Pill Navigation Item
@@ -74,6 +76,7 @@ const MainLayout = () => {
   const [showReviewFor, setShowReviewFor] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [activeCheckout, setActiveCheckout] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -229,9 +232,15 @@ const MainLayout = () => {
           <p className="greeting">Welcome, {currentUser || 'User'}</p>
           <span className="role-badge">{currentRole}</span>
         </div>
-        <button className="header-action-btn" onClick={handleSignOut} aria-label="Sign Out">
-           <LogOut size={20} />
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="header-action-btn notif-btn" onClick={() => setShowNotifications(true)} aria-label="Notifications" style={{ position: 'relative' }}>
+             <Bell size={20} />
+             <span className="notif-badge"></span>
+          </button>
+          <button className="header-action-btn" onClick={handleSignOut} aria-label="Sign Out">
+             <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       <main className="app-viewport">
@@ -333,6 +342,11 @@ const MainLayout = () => {
           />
         )}
       </AnimatePresence>
+
+      <NotificationCenter 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
 
     </div>
   );

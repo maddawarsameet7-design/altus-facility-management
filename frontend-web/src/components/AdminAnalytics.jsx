@@ -2,8 +2,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   TrendingUp, TrendingDown, DollarSign, PieChart, 
-  Wallet, FileSpreadsheet, Download, Activity, ArrowRight
+  Wallet, FileSpreadsheet, Download, Activity, ArrowRight, Loader2
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import './AdminAnalytics.css';
 
 const AdminAnalytics = () => {
@@ -17,6 +19,30 @@ const AdminAnalytics = () => {
     visible: { opacity: 1, y: 0 }
   };
 
+  const [isGenerating, setIsGenerating] = React.useState(false);
+
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    const element = document.getElementById('report-content');
+    
+    try {
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('Altsan_PnL_Report.pdf');
+    } catch (error) {
+      console.error("PDF Generation failed", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Mock P&L Data
   const monthlyData = [
     { month: 'Jan', revenue: 120, expense: 80 },
@@ -28,7 +54,7 @@ const AdminAnalytics = () => {
   ];
 
   return (
-    <div className="pl-analytics-container">
+    <div className="pl-analytics-container" id="report-content">
       <div className="pl-bg-glow"></div>
       
       <header className="pl-header">
@@ -45,8 +71,9 @@ const AdminAnalytics = () => {
           <button className="pl-btn secondary">
             <FileSpreadsheet size={16} /> Export CSV
           </button>
-          <button className="pl-btn primary">
-            <Download size={16} /> Download Report
+          <button className="pl-btn primary" onClick={generatePDF} disabled={isGenerating}>
+            {isGenerating ? <Loader2 size={16} className="spinner" /> : <Download size={16} />} 
+            {isGenerating ? 'Generating...' : 'Download Report'}
           </button>
         </div>
       </header>

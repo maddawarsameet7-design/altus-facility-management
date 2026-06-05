@@ -2,14 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Power, MapPin, Clock, CheckCircle2, ChevronRight, Activity, 
-  AlertCircle, Wifi, QrCode, Camera, UploadCloud, X, Wallet, TrendingUp 
+  AlertCircle, Wifi, QrCode, Camera, UploadCloud, X, Wallet, TrendingUp,
+  Map, Fingerprint
 } from 'lucide-react';
 import './WorkerPortal.css';
 
 const WorkerPortal = ({ requests, onUpdate }) => {
   const [activeTab, setActiveTab] = useState('attendance');
   const [isClockedIn, setIsClockedIn] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [shiftStart, setShiftStart] = useState(null);
   
   // New State for Photo Proof
   const [showProofUpload, setShowProofUpload] = useState(false);
@@ -18,6 +21,20 @@ const WorkerPortal = ({ requests, onUpdate }) => {
 
   const availableJobs = requests.filter(r => r.status === 'Requested');
   const activeAssignment = requests.find(r => r.status === 'In Progress' || r.status === 'Investigating');
+
+  const handleClockToggle = () => {
+    if (isClockedIn) {
+      setIsClockedIn(false);
+      setShiftStart(null);
+    } else {
+      setIsVerifying(true);
+      setTimeout(() => {
+        setIsVerifying(false);
+        setIsClockedIn(true);
+        setShiftStart(new Date());
+      }, 2500);
+    }
+  };
 
   const handleAcceptJob = (id) => {
     if (!isClockedIn) {
@@ -42,6 +59,15 @@ const WorkerPortal = ({ requests, onUpdate }) => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const getShiftDuration = () => {
+    if (!shiftStart) return "00:00:00";
+    const diff = Math.floor((currentTime - shiftStart) / 1000);
+    const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+    const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+    const s = String(diff % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -86,18 +112,23 @@ const WorkerPortal = ({ requests, onUpdate }) => {
               <div className="clock-section">
                 <div className="clock-status-ring">
                   <motion.button 
-                    whileTap={{ scale: 0.95 }}
-                    className={`power-btn ${isClockedIn ? 'on' : 'off'}`}
-                    onClick={() => setIsClockedIn(!isClockedIn)}
+                    whileTap={!isVerifying ? { scale: 0.95 } : {}}
+                    className={`power-btn ${isClockedIn ? 'on' : 'off'} ${isVerifying ? 'verifying' : ''}`}
+                    onClick={handleClockToggle}
+                    disabled={isVerifying}
                   >
-                    <Power size={48} />
+                    {isVerifying ? <Fingerprint size={48} className="scanning-icon" /> : <Power size={48} />}
                   </motion.button>
                 </div>
                 <div className="clock-status-text">
-                  <h2 style={{ color: isClockedIn ? '#10B981' : '#6B7280' }}>
-                    {isClockedIn ? 'SYSTEM ACTIVE' : 'SYSTEM STANDBY'}
+                  <h2 style={{ color: isVerifying ? '#3b82f6' : isClockedIn ? '#10B981' : '#6B7280' }}>
+                    {isVerifying ? 'VERIFYING GPS...' : isClockedIn ? 'SYSTEM ACTIVE' : 'SYSTEM STANDBY'}
                   </h2>
-                  <p>{isClockedIn ? 'You are currently on duty.' : 'Tap the core to clock in.'}</p>
+                  <p>
+                    {isVerifying ? 'Locating device in geofence...' : 
+                     isClockedIn ? `Shift Duration: ${getShiftDuration()}` : 
+                     'Tap the core to clock in.'}
+                  </p>
                 </div>
               </div>
 
