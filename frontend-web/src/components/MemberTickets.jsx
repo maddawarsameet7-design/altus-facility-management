@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { 
   FileText, Clock, CheckCircle2, AlertCircle, Zap, Shield
 } from 'lucide-react';
@@ -92,6 +93,11 @@ const MemberTickets = ({ currentRole, requests = [] }) => {
                    {ticket.status}
                  </span>
                  <span className="dt-id">{ticket.id}</span>
+                 {(ticket.status === 'In Progress' || ticket.status === 'Investigating') && (
+                   <Link to="/tracking" className="btn-track-unit" style={{ marginTop: '12px', fontSize: '11px', fontWeight: '700', padding: '6px 12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '100px', textDecoration: 'none' }}>
+                     Track Unit
+                   </Link>
+                 )}
                </div>
              </motion.div>
           ))}

@@ -29,6 +29,7 @@ import DirectorPortal from './components/DirectorPortal';
 import ReviewModal from './components/ReviewModal';
 import ChatWindow from './components/ChatWindow';
 import PaymentCheckout from './components/PaymentCheckout';
+import TrackingMap from './components/TrackingMap';
 import './App.css';
 
 // New Mobile-First Floating Pill Navigation Item
@@ -263,6 +264,7 @@ const MainLayout = () => {
           <Route path="/director" element={<DirectorPortal />} />
           <Route path="/admin/verification" element={<WorkerVerification />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/tracking" element={<TrackingMap />} />
         </Routes>
       </main>
 
