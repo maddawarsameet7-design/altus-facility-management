@@ -1,77 +1,101 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FileText, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle 
+  FileText, Clock, CheckCircle2, AlertCircle, Zap, Shield
 } from 'lucide-react';
-import './Dashboard.css'; // Inheriting the mobile UI layouts
+import './MemberTickets.css';
 
 const MemberTickets = ({ currentRole, requests = [] }) => {
-  // Mapping global requests to the history list format
   const tickets = requests.map(req => ({
     id: req.id,
     type: req.category === 'Security' || req.category === 'Housekeeping' ? 'Maintenance' : 'Amenity',
     title: req.issue || req.service,
     status: req.status,
     date: req.time,
-    color: req.status === 'Resolved' ? 'var(--text-soft)' : (req.status === 'Requested' ? 'var(--accent-blue)' : 'var(--accent-orange)')
+    color: req.status === 'Resolved' ? '#94a3b8' : (req.status === 'Requested' ? '#3b82f6' : '#f59e0b')
   }));
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const ticketVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <div className="mobile-dashboard">
+    <div className="tickets-dashboard">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="section-title"
-        style={{ marginTop: '12px' }}
+        className="tickets-header"
       >
-        <span>My History & Tickets</span>
-        <FileText size={18} style={{ color: 'var(--text-muted)' }} />
+        <h2>My History & Tickets</h2>
+        <p>Track all your service requests.</p>
       </motion.div>
 
-      <div className="amenities-list">
-        {tickets.map((ticket, idx) => (
-           <motion.div 
-             key={ticket.id}
-             initial={{ opacity: 0, x: -20 }}
-             animate={{ opacity: 1, x: 0 }}
-             transition={{ delay: idx * 0.1 }}
-             className="white-card amenity-card"
-             style={{ padding: '20px' }}
-           >
-             <div className="amenity-header" style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                   <span style={{ fontSize: '11px', fontWeight: '700', color: ticket.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                     {ticket.type} • {ticket.id}
-                   </span>
-                   <h3 style={{ fontSize: '15px', fontWeight: '700' }}>{ticket.title}</h3>
-                </div>
-                {ticket.status === 'Resolved' || ticket.status === 'Confirmed' ? (
-                  <CheckCircle2 size={24} style={{ color: ticket.color }} />
-                ) : (
-                  <Clock size={24} style={{ color: ticket.color }} />
-                )}
-             </div>
-             
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.04)', paddingTop: '12px' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Clock size={12}/> {ticket.date}
-                </span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: ticket.status === 'Resolved' ? 'var(--text-soft)' : 'var(--text-main)' }}>
-                  {ticket.status}
-                </span>
-             </div>
-           </motion.div>
-        ))}
-      </div>
+      {tickets.length === 0 ? (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="empty-tickets"
+        >
+          <div className="empty-icon-ring">
+            <FileText size={32} />
+          </div>
+          <h3>No Active Tickets</h3>
+          <p>You haven't requested any services yet.</p>
+        </motion.div>
+      ) : (
+        <motion.div 
+          className="digital-tickets-list"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {tickets.map((ticket) => (
+             <motion.div 
+               key={ticket.id}
+               variants={ticketVariants}
+               className={`digital-ticket ${ticket.status === 'Resolved' ? 'resolved' : 'active'}`}
+               style={{ '--ticket-color': ticket.color }}
+             >
+               <div className="dt-left">
+                 <div className="dt-type">
+                   {ticket.type === 'Maintenance' ? <Zap size={12} /> : <Shield size={12} />}
+                   {ticket.type}
+                 </div>
+                 <h3 className="dt-title">{ticket.title}</h3>
+                 <div className="dt-date">
+                   <Clock size={12} /> {ticket.date}
+                 </div>
+               </div>
+               
+               {/* Perforated Divider */}
+               <div className="dt-divider">
+                 <div className="notch top" />
+                 <div className="dash-line" />
+                 <div className="notch bottom" />
+               </div>
 
-      {tickets.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-          <AlertCircle size={32} style={{ margin: '0 auto 12px auto', opacity: 0.5 }} />
-          <p>No tickets or requests found.</p>
-        </div>
+               <div className="dt-right">
+                 <div className="dt-status-icon" style={{ color: ticket.color }}>
+                   {ticket.status === 'Resolved' || ticket.status === 'Confirmed' ? (
+                     <CheckCircle2 size={28} />
+                   ) : (
+                     <Clock size={28} className="pulse-icon" />
+                   )}
+                 </div>
+                 <span className="dt-status-text" style={{ color: ticket.color }}>
+                   {ticket.status}
+                 </span>
+                 <span className="dt-id">{ticket.id}</span>
+               </div>
+             </motion.div>
+          ))}
+        </motion.div>
       )}
     </div>
   );
