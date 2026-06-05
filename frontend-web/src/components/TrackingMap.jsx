@@ -1,17 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
+import useWebSocket from 'react-use-websocket';
 import { Building2, Navigation2, Clock, Phone, MessageSquare, ShieldCheck, MapPin } from 'lucide-react';
 import './TrackingMap.css';
 
 const TrackingMap = () => {
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(0); // Optional fallback if no WS
+  const [locationData, setLocationData] = useState(null);
+
+  const searchParams = new URLSearchParams(useLocation().search);
+  const workerUsername = searchParams.get('worker');
+  const jobId = searchParams.get('job');
+
+  const WS_URL = workerUsername ? `ws://localhost:8000/ws/location/${workerUsername}/` : null;
+
+  useWebSocket(WS_URL, {
+    onOpen: () => console.log('TrackingMap: GPS WebSocket connected'),
+    onMessage: (event) => {
+      const data = JSON.parse(event.data);
+      if (data.latitude && data.longitude) {
+        setLocationData({ lat: data.latitude, lng: data.longitude });
+        // Calculate a rough "progress" to move the car visually based on coordinates
+        // Here we just map it loosely to show movement 
+        setProgress((prev) => (prev >= 100 ? 0 : prev + 1));
+      }
+    },
+    shouldReconnect: () => true,
+  });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(prev => (prev >= 100 ? 0 : prev + 0.5));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    // Fallback static animation if no worker specified
+    if (!workerUsername) {
+      const interval = setInterval(() => {
+        setProgress(prev => (prev >= 100 ? 0 : prev + 0.5));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [workerUsername]);
 
   return (
     <div className="uber-tracking-container">

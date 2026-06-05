@@ -276,7 +276,7 @@ const MainLayout = () => {
             } 
           />
           <Route path="/tickets" element={<MemberTickets currentRole={currentRole} requests={globalRequests} />} />
-          <Route path="/worker" element={<WorkerPortal requests={globalRequests} onUpdate={updateRequestStatus} />} />
+          <Route path="/worker" element={<WorkerPortal requests={globalRequests} onUpdate={updateRequestStatus} currentUser={currentUser} />} />
           <Route path="/supervisor" element={<SupervisorConsole requests={globalRequests} onUpdate={updateRequestStatus} />} />
           <Route path="/director" element={<DirectorPortal />} />
           <Route path="/admin/verification" element={<WorkerVerification />} />

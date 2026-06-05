@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useWebSocket from 'react-use-websocket';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Power, MapPin, Clock, CheckCircle2, ChevronRight, Activity, 
@@ -8,7 +9,7 @@ import {
 import confetti from 'canvas-confetti';
 import './WorkerPortal.css';
 
-const WorkerPortal = ({ requests, onUpdate }) => {
+const WorkerPortal = ({ requests, onUpdate, currentUser }) => {
   const [activeTab, setActiveTab] = useState('attendance');
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -22,6 +23,34 @@ const WorkerPortal = ({ requests, onUpdate }) => {
 
   const availableJobs = requests.filter(r => r.status === 'Requested');
   const activeAssignment = requests.find(r => r.status === 'In Progress' || r.status === 'Investigating');
+
+  // WebSocket for Live GPS Streaming
+  const workerIdentifier = currentUser?.username || 'unknown_worker';
+  const WS_URL = `ws://localhost:8000/ws/location/${workerIdentifier}/`;
+  const { sendMessage } = useWebSocket(WS_URL, {
+    onOpen: () => console.log('GPS WebSocket connected'),
+    shouldReconnect: (closeEvent) => true,
+  });
+
+  // Watch GPS Position when clocked in
+  useEffect(() => {
+    let watchId;
+    if (isClockedIn && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          sendMessage(JSON.stringify({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          }));
+        },
+        (error) => console.warn('GPS Error:', error),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      );
+    }
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isClockedIn, sendMessage]);
 
   const handleClockToggle = () => {
     if (isClockedIn) {

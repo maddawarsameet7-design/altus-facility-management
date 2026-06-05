@@ -17,6 +17,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import useWebSocket from 'react-use-websocket';
 import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
 import ReportIssueModal from './ReportIssueModal';
@@ -143,73 +144,13 @@ const Dashboard = ({ currentRole, requests, onBookingSuccess, setShowReviewFor, 
 
               {/* LIVE TRACKING & WORKER INFO */}
               {item.worker && (
-                <div className="worker-assignment-pane animate-slide-up">
-                  <div className="worker-info-row">
-                    <div className="worker-avatar">
-                      {item.worker.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="worker-meta">
-                      <span className="worker-name">{item.worker.name}</span>
-                      <div className="worker-stats">
-                        <StarIcon size={12} fill="var(--accent-orange)" color="transparent" />
-                        <span>{item.worker.rating}</span>
-                        <span className="dot">•</span>
-                        <span>Verified Professional</span>
-                      </div>
-                    </div>
-                    <a href={`tel:${item.worker.phone}`} className="worker-call-btn" title="Call Worker">
-                      <Phone size={16} />
-                    </a>
-                    <button 
-                      className="worker-chat-btn" 
-                      onClick={(e) => { e.stopPropagation(); setActiveChat(item); }}
-                      title="Chat with Worker"
-                    >
-                      <MessageCircle size={16} />
-                    </button>
-                  </div>
-
-                  {/* MINI MAP VIEW */}
-                  {item.status === 'In Progress' && item.worker.location && (
-                    <div className="mini-map-container">
-                      <MapContainer 
-                        center={[item.worker.location.lat || 19.076, item.worker.location.lng || 72.877]} 
-                        zoom={15} 
-                        scrollWheelZoom={false}
-                        style={{ height: '120px', width: '100%', borderRadius: '12px' }}
-                        zoomControl={false}
-                        attributionControl={false}
-                      >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <Marker position={[item.worker.location.lat || 19.076, item.worker.location.lng || 72.877]} icon={customIcon}>
-                          <Popup>Worker is here</Popup>
-                        </Marker>
-                      </MapContainer>
-                      <div className="map-overlay-badge">Live Tracking</div>
-                    </div>
-                  )}
-
-                  {/* ACTIONS FOR RESOLVED JOBS */}
-                  {item.status === 'Resolved' && (
-                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                      {!item.is_paid ? (
-                        <button 
-                          className="btn-pay-now"
-                          onClick={(e) => { e.stopPropagation(); setActiveCheckout(item); }}
-                        >
-                          Pay {item.cost} <CreditCard size={16} style={{ marginLeft: '8px' }} />
-                        </button>
-                      ) : (
-                        <button 
-                          className="btn-rate-now"
-                          onClick={(e) => { e.stopPropagation(); setShowReviewFor(item); }}
-                        >
-                          Rate Service <StarIcon size={16} style={{ marginLeft: '8px' }} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <WorkerAssignmentPane 
+                  item={item} 
+                  customIcon={customIcon} 
+                  setActiveChat={setActiveChat} 
+                  setActiveCheckout={setActiveCheckout} 
+                  setShowReviewFor={setShowReviewFor}
+                />
               )}
             </motion.div>
           )
@@ -236,6 +177,104 @@ const Dashboard = ({ currentRole, requests, onBookingSuccess, setShowReviewFor, 
         )}
       </AnimatePresence>
 
+    </div>
+  );
+};
+
+// Extracted into a sub-component so useWebSocket can be used per-item
+const WorkerAssignmentPane = ({ item, customIcon, setActiveChat, setActiveCheckout, setShowReviewFor }) => {
+  const [workerLocation, setWorkerLocation] = useState(
+    item.worker.location || { lat: 19.076, lng: 72.877 }
+  );
+
+  const WS_URL = `ws://localhost:8000/ws/location/${item.worker.username || item.worker.name.toLowerCase().replace(' ', '_')}/`;
+  
+  useWebSocket(WS_URL, {
+    onOpen: () => console.log(`Listening for ${item.worker.name}'s location...`),
+    onMessage: (event) => {
+      const data = JSON.parse(event.data);
+      if (data.latitude && data.longitude) {
+        setWorkerLocation({ lat: data.latitude, lng: data.longitude });
+      }
+    },
+    shouldReconnect: () => true,
+  });
+
+  return (
+    <div className="worker-assignment-pane animate-slide-up">
+      <div className="worker-info-row">
+        <div className="worker-avatar">
+          {item.worker.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="worker-meta">
+          <span className="worker-name">{item.worker.name}</span>
+          <div className="worker-stats">
+            <StarIcon size={12} fill="var(--accent-orange)" color="transparent" />
+            <span>{item.worker.rating}</span>
+            <span className="dot">•</span>
+            <span>Verified Professional</span>
+          </div>
+        </div>
+        <a href={`tel:${item.worker.phone}`} className="worker-call-btn" title="Call Worker">
+          <Phone size={16} />
+        </a>
+        <button 
+          className="worker-chat-btn" 
+          onClick={(e) => { e.stopPropagation(); setActiveChat(item); }}
+          title="Chat with Worker"
+        >
+          <MessageCircle size={16} />
+        </button>
+      </div>
+
+          {/* MINI MAP VIEW */}
+      {item.status === 'In Progress' && (
+        <div 
+          className="mini-map-container"
+          onClick={() => {
+            // Navigate to full-screen tracking map
+            window.location.href = `/tracking?worker=${item.worker.username || item.worker.name.toLowerCase().replace(' ', '_')}&job=${item.id}`;
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <MapContainer 
+            center={[workerLocation.lat, workerLocation.lng]} 
+            zoom={15} 
+            scrollWheelZoom={false}
+            style={{ height: '120px', width: '100%', borderRadius: '12px' }}
+            zoomControl={false}
+            attributionControl={false}
+            key={`${workerLocation.lat}-${workerLocation.lng}`} // Force re-render of map on location change to recenter
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={[workerLocation.lat, workerLocation.lng]} icon={customIcon}>
+              <Popup>Worker is here</Popup>
+            </Marker>
+          </MapContainer>
+          <div className="map-overlay-badge">Live Tracking</div>
+        </div>
+      )}
+
+      {/* ACTIONS FOR RESOLVED JOBS */}
+      {item.status === 'Resolved' && (
+        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+          {!item.is_paid ? (
+            <button 
+              className="btn-pay-now"
+              onClick={(e) => { e.stopPropagation(); setActiveCheckout(item); }}
+            >
+              Pay {item.cost} <CreditCard size={16} style={{ marginLeft: '8px' }} />
+            </button>
+          ) : (
+            <button 
+              className="btn-rate-now"
+              onClick={(e) => { e.stopPropagation(); setShowReviewFor(item); }}
+            >
+              Rate Service <StarIcon size={16} style={{ marginLeft: '8px' }} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

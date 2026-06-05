@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { dashboardApi } from '../utils/api';
 import { 
   TrendingUp, TrendingDown, DollarSign, PieChart, 
   Wallet, FileSpreadsheet, Download, Activity, ArrowRight, Loader2
@@ -43,15 +44,36 @@ const AdminAnalytics = () => {
     }
   };
 
-  // Mock P&L Data
-  const monthlyData = [
-    { month: 'Jan', revenue: 120, expense: 80 },
-    { month: 'Feb', revenue: 145, expense: 90 },
-    { month: 'Mar', revenue: 130, expense: 85 },
-    { month: 'Apr', revenue: 170, expense: 100 },
-    { month: 'May', revenue: 190, expense: 110 },
-    { month: 'Jun', revenue: 210, expense: 125 }
-  ];
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    dashboardApi.stats().then(res => {
+      setStats(res.data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading || !stats) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' }}><Loader2 size={48} className="spinner text-indigo" /></div>;
+  }
+
+  // Derive P&L Data from real stats (Assuming 55% goes to workers)
+  const grossRev = stats.total_revenue || 0;
+  const expenses = grossRev * 0.55; 
+  const netProfit = grossRev - expenses;
+  const netMargin = grossRev > 0 ? ((netProfit / grossRev) * 100).toFixed(1) : 0;
+
+  // Derive Monthly Chart from real trends
+  // Assume avg ticket is ₹1500
+  const monthlyData = stats.monthly_trend ? stats.monthly_trend.map(t => ({
+    month: t.month,
+    revenue: t.count * 1500,
+    expense: (t.count * 1500) * 0.55
+  })) : [];
 
   return (
     <div className="pl-analytics-container" id="report-content">
@@ -87,19 +109,19 @@ const AdminAnalytics = () => {
         {/* Top KPI Cards */}
         <motion.div variants={itemVariants} className="pl-card kpi-master">
           <div className="kpi-header">Gross Revenue</div>
-          <div className="kpi-value">₹12,45,000</div>
-          <div className="kpi-trend positive"><TrendingUp size={14} /> +18.2% YTD</div>
+          <div className="kpi-value">₹{grossRev.toLocaleString('en-IN')}</div>
+          <div className="kpi-trend positive"><TrendingUp size={14} /> Based on {stats.resolved_requests} completed jobs</div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="pl-card kpi-master">
           <div className="kpi-header">Total Expenses (Payouts)</div>
-          <div className="kpi-value text-red">₹8,10,200</div>
-          <div className="kpi-trend negative"><TrendingDown size={14} /> +4.5% YTD</div>
+          <div className="kpi-value text-red">₹{expenses.toLocaleString('en-IN')}</div>
+          <div className="kpi-trend negative"><TrendingDown size={14} /> 55% standard cut</div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="pl-card kpi-master highlight-kpi">
           <div className="kpi-header text-white">Net Profit Margin</div>
-          <div className="kpi-value text-white">34.9%</div>
+          <div className="kpi-value text-white">{netMargin}%</div>
           <div className="kpi-trend text-green-light"><TrendingUp size={14} /> +2.1% Margin Growth</div>
           <div className="kpi-bg-accent"></div>
         </motion.div>
@@ -121,14 +143,14 @@ const AdminAnalytics = () => {
                   <motion.div 
                     className="bar-rev"
                     initial={{ height: 0 }}
-                    animate={{ height: `${(data.revenue / 250) * 100}%` }}
+                    animate={{ height: `${Math.max((data.revenue / 20000) * 100, 5)}%` }}
                     transition={{ duration: 1, delay: 0.1 * i }}
                   />
                   {/* Expense Bar */}
                   <motion.div 
                     className="bar-exp"
                     initial={{ height: 0 }}
-                    animate={{ height: `${(data.expense / 250) * 100}%` }}
+                    animate={{ height: `${Math.max((data.expense / 20000) * 100, 5)}%` }}
                     transition={{ duration: 1, delay: 0.2 + (0.1 * i) }}
                   />
                 </div>

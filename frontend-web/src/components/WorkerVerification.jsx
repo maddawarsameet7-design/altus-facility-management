@@ -1,29 +1,48 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { workerApi } from '../utils/api';
 import { ShieldAlert, FileSearch, CheckCircle2, XCircle, Clock, UserCheck, FileText, ChevronRight, X } from 'lucide-react';
 import './WorkerVerification.css';
 
 const WorkerVerification = () => {
-  const [pendingWorkers, setPendingWorkers] = useState([
-    {
-      id: "W-502",
-      name: "John Miller",
-      skills: ["Housekeeping", "Maintenance"],
-      submittedAt: "2 hours ago",
-      documents: ["ID_Proof.pdf", "Background_Check.pdf", "Experience_Letter.pdf"],
-      riskScore: "Low"
-    },
-    {
-      id: "W-505",
-      name: "Arjun Sharma",
-      skills: ["Electrician", "Plumbing"],
-      submittedAt: "5 hours ago",
-      documents: ["ID_Proof.jpg", "Certification.pdf"],
-      riskScore: "Medium"
-    }
-  ]);
-
+  const [pendingWorkers, setPendingWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPending = async () => {
+    try {
+      const res = await workerApi.pending();
+      const mapped = res.data.map(w => ({
+        id: `W-${w.id}`,
+        dbId: w.id,
+        name: w.user.username,
+        skills: ["Facility Management"], // Could map from backend tags if added
+        submittedAt: new Date(w.created_at || Date.now()).toLocaleDateString(),
+        documents: ["ID_Proof.pdf"],
+        riskScore: "Low"
+      }));
+      setPendingWorkers(mapped);
+    } catch (err) {
+      console.error("Failed to fetch pending workers", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPending();
+  }, []);
+
+  const handleVerify = async (workerId, action) => {
+    try {
+      await workerApi.verify(workerId, action);
+      setSelectedWorker(null);
+      fetchPending(); // Refresh list
+    } catch (err) {
+      console.error(`Failed to ${action} worker`, err);
+      alert(`Could not ${action} worker. Please try again.`);
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -150,10 +169,10 @@ const WorkerVerification = () => {
 
               {/* Action Buttons at the very bottom (thumb reach) */}
               <div className="spl-drawer-footer">
-                <button className="spl-btn-reject" onClick={() => setSelectedWorker(null)}>
+                <button className="spl-btn-reject" onClick={() => handleVerify(selectedWorker.dbId, 'reject')}>
                   Reject
                 </button>
-                <button className="spl-btn-approve" onClick={() => setSelectedWorker(null)}>
+                <button className="spl-btn-approve" onClick={() => handleVerify(selectedWorker.dbId, 'approve')}>
                   <CheckCircle2 size={18} /> Approve
                 </button>
               </div>
