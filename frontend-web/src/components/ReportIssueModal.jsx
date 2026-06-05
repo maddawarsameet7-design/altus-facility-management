@@ -1,22 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, 
-  UploadCloud, 
-  MapPin, 
-  AlertTriangle,
-  Send,
-  Image as ImageIcon,
-  CheckCircle2
+  X, UploadCloud, MapPin, AlertTriangle, Send, Image as ImageIcon, CheckCircle2 
 } from 'lucide-react';
 import './ReportIssueModal.css';
 
 const ReportIssueModal = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
-    title: '',
     category: 'maintenance',
-    location: '',
     severity: 'low',
+    location: '',
     description: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,7 +22,6 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call to supervisor console queue
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
@@ -63,16 +55,26 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const drawerVariants = {
+    hidden: { y: "100%", opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", damping: 25, stiffness: 200 } },
+    exit: { y: "100%", opacity: 0, transition: { duration: 0.3 } }
+  };
+
   return (
-    <div className="modal-overlay">
+    <div className="report-drawer-overlay">
+      <div className="report-drawer-backdrop" onClick={onClose} />
+      
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="report-modal"
+        className="report-drawer-container"
+        variants={drawerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
       >
-        <button type="button" className="wizard-close-btn" onClick={onClose} aria-label="Close">
-          <X size={20} style={{ pointerEvents: 'none' }} />
+        <div className="drawer-handle" />
+        <button type="button" className="drawer-close-btn" onClick={onClose}>
+          <X size={20} />
         </button>
 
         <AnimatePresence mode="wait">
@@ -82,40 +84,62 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              className="report-content"
+              className="report-drawer-content"
             >
-              <div className="modal-header-alt">
-                <div className="icon-badge warning"><AlertTriangle size={24} /></div>
+              <div className="report-header">
+                <div className="report-icon-badge warning"><AlertTriangle size={24} /></div>
                 <h2>Report an Issue</h2>
-                <p>Send a direct ticket to the Altsan Operations Team for resolution.</p>
+                <p>Send a direct ticket to the Altsan Operations Team.</p>
               </div>
 
               <form onSubmit={handleSubmit} className="report-form">
-                <div className="form-group-row">
-                   <div className="form-group">
-                    <label>Category</label>
-                    <select name="category" value={formData.category} onChange={handleChange}>
-                      <option value="maintenance">Maintenance & Repair</option>
-                      <option value="cleaning">Cleaning / Hygiene</option>
-                      <option value="security">Security Concern</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Priority</label>
-                    <select name="severity" value={formData.severity} onChange={handleChange}>
-                      <option value="low">Low - Routine</option>
-                      <option value="medium">Medium - Needs Attention</option>
-                      <option value="high">High - Urgent</option>
-                    </select>
+                
+                {/* Sleek Pill selectors instead of dropdowns for 1-hand reachability */}
+                <div className="form-group">
+                  <label>Category</label>
+                  <div className="touch-pill-grid">
+                    {[
+                      { id: 'maintenance', label: 'Maintenance' },
+                      { id: 'cleaning', label: 'Cleaning' },
+                      { id: 'security', label: 'Security' },
+                      { id: 'other', label: 'Other' }
+                    ].map(cat => (
+                      <div 
+                        key={cat.id} 
+                        className={`touch-pill ${formData.category === cat.id ? 'active' : ''}`}
+                        onClick={() => setFormData({...formData, category: cat.id})}
+                      >
+                        {cat.label}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="form-group glass-input">
+                <div className="form-group">
+                  <label>Priority Level</label>
+                  <div className="touch-pill-grid priority-grid">
+                    {[
+                      { id: 'low', label: 'Low' },
+                      { id: 'medium', label: 'Medium' },
+                      { id: 'high', label: 'Urgent' }
+                    ].map(sev => (
+                      <div 
+                        key={sev.id} 
+                        className={`touch-pill ${formData.severity === sev.id ? 'active ' + sev.id : ''}`}
+                        onClick={() => setFormData({...formData, severity: sev.id})}
+                      >
+                        {sev.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
                   <label><MapPin size={14}/> Facility / Location</label>
                   <input 
                     type="text" 
                     name="location" 
+                    className="sleek-input"
                     placeholder="e.g. Lobby B, Floor 3" 
                     value={formData.location}
                     onChange={handleChange}
@@ -123,10 +147,11 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
                   />
                 </div>
 
-                <div className="form-group summary-input">
+                <div className="form-group">
                   <label>Issue Description</label>
                   <textarea 
                     name="description" 
+                    className="sleek-textarea"
                     placeholder="Provide details about the issue..."
                     rows="3"
                     value={formData.description}
@@ -135,7 +160,7 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
                   />
                 </div>
 
-                <div className="form-group file-upload-group">
+                <div className="form-group">
                   <label>Attach Photo (Optional)</label>
                   <div 
                     className={`drag-drop-zone ${dragActive ? 'drag-active' : ''} ${selectedFile ? 'has-file' : ''}`}
@@ -162,6 +187,7 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
                         <ImageIcon size={24} className="file-icon" />
                         <span className="file-name">{selectedFile.name}</span>
                         <button 
+                          type="button"
                           className="btn-remove-file"
                           onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
                         >
@@ -171,26 +197,10 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
                     ) : (
                       <div className="upload-prompt">
                         <UploadCloud size={32} className="upload-icon" />
-                        <p>Click or drag image here</p>
-                        <span className="upload-hint">SVG, PNG, JPG (max 5MB)</span>
+                        <p>Tap to upload image</p>
                       </div>
                     )}
                   </div>
-                </div>
-
-                <div className="form-footer mt-4">
-                  <button 
-                    type="submit" 
-                    className={`btn-primary-large full-width ${isSubmitting ? 'submitting' : ''}`}
-                    disabled={isSubmitting || !formData.location || !formData.description}
-                  >
-                    {isSubmitting ? 'Submitting to Operations...' : (
-                      <>
-                        <Send size={18} />
-                        Submit Report
-                      </>
-                    )}
-                  </button>
                 </div>
               </form>
             </motion.div>
@@ -199,16 +209,35 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
               key="success"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="success-state"
+              className="report-success-state"
             >
-              <div className="success-icon-large">
-                <CheckCircle2 size={64} />
+              <div className="success-icon-burst">
+                <CheckCircle2 size={64} color="#10B981" />
               </div>
               <h2>Ticket Submitted</h2>
               <p>The Altsan Operations team has received your query and will dispatch a resolution unit shortly.</p>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Action Button at the very bottom */}
+        {!isSuccess && (
+          <div className="report-drawer-footer">
+            <button 
+              type="button" 
+              className={`report-btn-submit ${isSubmitting ? 'submitting' : ''}`}
+              disabled={isSubmitting || !formData.location || !formData.description}
+              onClick={handleSubmit}
+            >
+              {isSubmitting ? 'Submitting to Operations...' : (
+                <>
+                  <Send size={18} />
+                  Submit Report
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   );
