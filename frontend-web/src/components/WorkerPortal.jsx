@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Power, MapPin, Clock, CheckCircle2, ChevronRight, Activity, AlertCircle } from 'lucide-react';
+import { 
+  Power, MapPin, Clock, CheckCircle2, ChevronRight, Activity, 
+  AlertCircle, Wifi, QrCode, Camera, UploadCloud, X, Wallet, TrendingUp 
+} from 'lucide-react';
 import './WorkerPortal.css';
 
 const WorkerPortal = ({ requests, onUpdate }) => {
@@ -8,6 +11,11 @@ const WorkerPortal = ({ requests, onUpdate }) => {
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
+  // New State for Photo Proof
+  const [showProofUpload, setShowProofUpload] = useState(false);
+  const [proofFile, setProofFile] = useState(null);
+  const fileInputRef = useRef(null);
+
   const availableJobs = requests.filter(r => r.status === 'Requested');
   const activeAssignment = requests.find(r => r.status === 'In Progress' || r.status === 'Investigating');
 
@@ -17,11 +25,17 @@ const WorkerPortal = ({ requests, onUpdate }) => {
       return;
     }
     onUpdate(id, 'In Progress');
-    setActiveTab('attendance'); // Redirect to current assignment
+    setActiveTab('attendance'); 
   };
 
-  const handleCompleteJob = (id) => {
+  const handleInitiateCompletion = () => {
+    setShowProofUpload(true);
+  };
+
+  const handleFinalizeCompletion = (id) => {
     onUpdate(id, 'Resolved');
+    setShowProofUpload(false);
+    setProofFile(null);
   };
 
   useEffect(() => {
@@ -40,7 +54,10 @@ const WorkerPortal = ({ requests, onUpdate }) => {
         <div className="t-header-top">
           <div>
             <h1>Field Terminal</h1>
-            <p className="terminal-subtitle">Altsan Operations Network</p>
+            <div className="network-status">
+               <Wifi size={12} className="pulse-wifi" />
+               <span>Altsan Secure Sync: Active</span>
+            </div>
           </div>
           <div className="t-clock-display">
             {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -48,18 +65,15 @@ const WorkerPortal = ({ requests, onUpdate }) => {
         </div>
         
         <div className="t-nav-tabs">
-          <button 
-            className={`t-tab ${activeTab === 'attendance' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('attendance')}
-          >
+          <button className={`t-tab ${activeTab === 'attendance' ? 'active' : ''}`} onClick={() => setActiveTab('attendance')}>
             Dashboard
           </button>
-          <button 
-            className={`t-tab ${activeTab === 'jobs' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('jobs')}
-          >
+          <button className={`t-tab ${activeTab === 'jobs' ? 'active' : ''}`} onClick={() => setActiveTab('jobs')}>
             Job Board
             {availableJobs.length > 0 && <span className="job-badge">{availableJobs.length}</span>}
+          </button>
+          <button className={`t-tab ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => setActiveTab('earnings')}>
+            Shift & Payout
           </button>
         </div>
       </header>
@@ -67,15 +81,8 @@ const WorkerPortal = ({ requests, onUpdate }) => {
       <main className="terminal-main">
         <AnimatePresence mode="wait">
           {activeTab === 'attendance' && (
-            <motion.div 
-              key="attendance"
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, y: -20 }}
-              variants={cardVariants}
-              className="t-pane"
-            >
-              {/* Massive Clock In Button Section */}
+            <motion.div key="attendance" initial="hidden" animate="visible" exit={{ opacity: 0, y: -20 }} variants={cardVariants} className="t-pane">
+              
               <div className="clock-section">
                 <div className="clock-status-ring">
                   <motion.button 
@@ -94,7 +101,6 @@ const WorkerPortal = ({ requests, onUpdate }) => {
                 </div>
               </div>
 
-              {/* Current Assignment Card */}
               <div className="current-mission">
                 <div className="mission-header">
                   <Activity size={18} className="mission-icon" />
@@ -115,12 +121,52 @@ const WorkerPortal = ({ requests, onUpdate }) => {
                         <p>{activeAssignment.issue}</p>
                       </div>
                     </div>
-                    <button 
-                      className="m-complete-btn"
-                      onClick={() => handleCompleteJob(activeAssignment.id)}
-                    >
-                      <CheckCircle2 size={20} /> Mark Mission Complete
-                    </button>
+
+                    {!showProofUpload ? (
+                      <div className="mission-actions">
+                        <button className="m-scan-btn">
+                          <QrCode size={18} /> Scan Location
+                        </button>
+                        <button className="m-complete-btn" onClick={handleInitiateCompletion}>
+                          <CheckCircle2 size={18} /> Complete Job
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="proof-upload-section">
+                        <h4>Photo Proof Required</h4>
+                        <p>Please upload a photo of the completed work before finalizing.</p>
+                        
+                        <div className={`proof-dropzone ${proofFile ? 'has-file' : ''}`} onClick={() => fileInputRef.current?.click()}>
+                           <input 
+                              type="file" accept="image/*" className="hidden-file-input" ref={fileInputRef}
+                              onChange={(e) => { if (e.target.files[0]) setProofFile(e.target.files[0]); }}
+                           />
+                           {proofFile ? (
+                             <div className="proof-file">
+                                <Camera size={20} className="text-emerald" />
+                                <span>{proofFile.name}</span>
+                                <X size={16} onClick={(e) => { e.stopPropagation(); setProofFile(null); }} className="close-icon" />
+                             </div>
+                           ) : (
+                             <div className="proof-prompt">
+                                <UploadCloud size={24} /> Tap to Capture / Upload Photo
+                             </div>
+                           )}
+                        </div>
+                        
+                        <div className="proof-actions">
+                          <button className="m-scan-btn" onClick={() => setShowProofUpload(false)}>Cancel</button>
+                          <button 
+                            className="m-complete-btn" 
+                            disabled={!proofFile}
+                            onClick={() => handleFinalizeCompletion(activeAssignment.id)}
+                            style={{ opacity: !proofFile ? 0.5 : 1 }}
+                          >
+                            Finalize & Submit
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="empty-mission">
@@ -138,27 +184,14 @@ const WorkerPortal = ({ requests, onUpdate }) => {
           )}
 
           {activeTab === 'jobs' && (
-            <motion.div 
-              key="jobs"
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, y: -20 }}
-              className="t-pane jobs-grid"
-            >
+            <motion.div key="jobs" initial="hidden" animate="visible" exit={{ opacity: 0, y: -20 }} className="t-pane jobs-grid">
               {availableJobs.length === 0 ? (
                 <div className="empty-mission" style={{ marginTop: '40px' }}>
                   <p>No open jobs available on the network.</p>
                 </div>
               ) : (
                 availableJobs.map((job, idx) => (
-                  <motion.div 
-                    key={job.id} 
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: idx * 0.1 }}
-                    className="dispatch-ticket"
-                  >
+                  <motion.div key={job.id} variants={cardVariants} initial="hidden" animate="visible" transition={{ delay: idx * 0.1 }} className="dispatch-ticket">
                     <div className="ticket-edge" />
                     <div className="ticket-content">
                       <div className="t-meta">
@@ -167,16 +200,54 @@ const WorkerPortal = ({ requests, onUpdate }) => {
                       </div>
                       <h3>{job.service}</h3>
                       <p className="t-loc"><MapPin size={14} /> {job.location}</p>
-                      <button 
-                        className="t-accept-btn" 
-                        onClick={() => handleAcceptJob(job.id)}
-                      >
+                      <button className="t-accept-btn" onClick={() => handleAcceptJob(job.id)}>
                         Accept Mission
                       </button>
                     </div>
                   </motion.div>
                 ))
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'earnings' && (
+            <motion.div key="earnings" initial="hidden" animate="visible" exit={{ opacity: 0, y: -20 }} className="t-pane">
+               <div className="earnings-summary">
+                  <div className="e-card main">
+                     <Wallet size={24} className="e-icon" />
+                     <span>This Week</span>
+                     <h2>$485.50</h2>
+                  </div>
+                  <div className="e-card side">
+                     <TrendingUp size={20} className="e-icon text-emerald" />
+                     <span>Jobs Done</span>
+                     <h3>12</h3>
+                  </div>
+               </div>
+
+               <div className="shift-history">
+                  <div className="mission-header">
+                     <Clock size={18} className="mission-icon" />
+                     <h3>Recent Shifts</h3>
+                  </div>
+                  
+                  {[
+                     { day: 'Today', hours: '6.5 hrs', earned: '$130.00', status: 'Pending' },
+                     { day: 'Yesterday', hours: '8.0 hrs', earned: '$160.00', status: 'Paid' },
+                     { day: 'Mon, Oct 12', hours: '7.2 hrs', earned: '$144.00', status: 'Paid' }
+                  ].map((shift, idx) => (
+                     <div key={idx} className="shift-row">
+                        <div className="s-left">
+                           <strong>{shift.day}</strong>
+                           <span>{shift.hours} logged</span>
+                        </div>
+                        <div className="s-right">
+                           <strong>{shift.earned}</strong>
+                           <span className={`s-status ${shift.status.toLowerCase()}`}>{shift.status}</span>
+                        </div>
+                     </div>
+                  ))}
+               </div>
             </motion.div>
           )}
         </AnimatePresence>
