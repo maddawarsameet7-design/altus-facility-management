@@ -87,7 +87,7 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
               <div className="modal-header-alt">
                 <div className="icon-badge warning"><AlertTriangle size={24} /></div>
                 <h2>Report an Issue</h2>
-                <p>Send a direct ticket to the Altus Operations Team for resolution.</p>
+                <p>Send a direct ticket to the Altsan Operations Team for resolution.</p>
               </div>
 
               <form onSubmit={handleSubmit} className="report-form">
@@ -205,7 +205,7 @@ const ReportIssueModal = ({ onClose, onSubmit }) => {
                 <CheckCircle2 size={64} />
               </div>
               <h2>Ticket Submitted</h2>
-              <p>The Altus Operations team has received your query and will dispatch a resolution unit shortly.</p>
+              <p>The Altsan Operations team has received your query and will dispatch a resolution unit shortly.</p>
             </motion.div>
           )}
         </AnimatePresence>

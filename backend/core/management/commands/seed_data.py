@@ -11,10 +11,10 @@ from core.models import (
 
 
 class Command(BaseCommand):
-    help = 'Seeds comprehensive demo data for the Altus Facility Management platform'
+    help = 'Seeds comprehensive demo data for the Altsan Facility Management platform'
 
     def handle(self, *args, **kwargs):
-        self.stdout.write("🌱 Seeding Altus demo data...")
+        self.stdout.write("🌱 Seeding Altsan demo data...")
 
         # ── 1. Service Categories ─────────────────────────────
         categories_data = [
@@ -42,16 +42,16 @@ class Command(BaseCommand):
         password = "password123"
 
         users_data = [
-            ('admin', 'DIRECTOR', 'admin@altus.com', 'Priya', 'Sharma'),
-            ('supervisor1', 'SUPERVISOR', 'supervisor@altus.com', 'Rajesh', 'Verma'),
-            ('chairman1', 'CHAIRMAN', 'chairman@altus.com', 'Anita', 'Desai'),
-            ('member1', 'MEMBER', 'member1@altus.com', 'Sameet', 'Maddawar'),
-            ('member2', 'MEMBER', 'member2@altus.com', 'Vikram', 'Joshi'),
-            ('member3', 'MEMBER', 'member3@altus.com', 'Neha', 'Kapoor'),
-            ('worker1', 'WORKER', 'worker1@altus.com', 'Ramesh', 'Kumar'),
-            ('worker2', 'WORKER', 'worker2@altus.com', 'Sunil', 'Yadav'),
-            ('worker3', 'WORKER', 'worker3@altus.com', 'Deepak', 'Singh'),
-            ('worker4', 'WORKER', 'worker4@altus.com', 'Manoj', 'Gupta'),
+            ('admin', 'DIRECTOR', 'admin@altsan.com', 'Priya', 'Sharma'),
+            ('supervisor1', 'SUPERVISOR', 'supervisor@altsan.com', 'Rajesh', 'Verma'),
+            ('chairman1', 'CHAIRMAN', 'chairman@altsan.com', 'Anita', 'Desai'),
+            ('member1', 'MEMBER', 'member1@altsan.com', 'Sameet', 'Maddawar'),
+            ('member2', 'MEMBER', 'member2@altsan.com', 'Vikram', 'Joshi'),
+            ('member3', 'MEMBER', 'member3@altsan.com', 'Neha', 'Kapoor'),
+            ('worker1', 'WORKER', 'worker1@altsan.com', 'Ramesh', 'Kumar'),
+            ('worker2', 'WORKER', 'worker2@altsan.com', 'Sunil', 'Yadav'),
+            ('worker3', 'WORKER', 'worker3@altsan.com', 'Deepak', 'Singh'),
+            ('worker4', 'WORKER', 'worker4@altsan.com', 'Manoj', 'Gupta'),
         ]
 
         users = {}
@@ -106,7 +106,7 @@ class Command(BaseCommand):
 
         # ── 4. Client Profiles ────────────────────────────────
         client_profiles_data = [
-            ('chairman1', 'Altus Heights Residency', 'Anita Desai', '1234567890', 'SOCIETY'),
+            ('chairman1', 'Altsan Heights Residency', 'Anita Desai', '1234567890', 'SOCIETY'),
             ('member1', 'Horizon Tech Park', 'Sameet Maddawar', '9988776655', 'CORPORATE'),
         ]
 
@@ -127,9 +127,9 @@ class Command(BaseCommand):
 
         # ── 5. Properties ────────────────────────────────────
         properties_data = [
-            ('chairman1', 'Altus Heights - Tower A', '401, Altus Heights, Andheri West, Mumbai 400053', 19.1360, 72.8295),
-            ('chairman1', 'Altus Heights - Tower B', '402, Altus Heights, Andheri West, Mumbai 400053', 19.1365, 72.8300),
-            ('chairman1', 'Altus Heights - Clubhouse', 'Altus Heights Clubhouse, Andheri West, Mumbai 400053', 19.1358, 72.8290),
+            ('chairman1', 'Altsan Heights - Tower A', '401, Altsan Heights, Andheri West, Mumbai 400053', 19.1360, 72.8295),
+            ('chairman1', 'Altsan Heights - Tower B', '402, Altsan Heights, Andheri West, Mumbai 400053', 19.1365, 72.8300),
+            ('chairman1', 'Altsan Heights - Clubhouse', 'Altsan Heights Clubhouse, Andheri West, Mumbai 400053', 19.1358, 72.8290),
             ('member1', 'Horizon Tech Park - Block 1', 'Horizon Tech Park, BKC, Mumbai 400051', 19.0650, 72.8686),
             ('member1', 'Horizon Tech Park - Cafeteria', 'Horizon Tech Park Cafeteria, BKC, Mumbai 400051', 19.0655, 72.8690),
         ]
@@ -172,7 +172,7 @@ class Command(BaseCommand):
             },
             {
                 'reporter': 'member3', 'category': 'Security Guard',
-                'location': 'Altus Heights - Main Entrance',
+                'location': 'Altsan Heights - Main Entrance',
                 'issue': 'Need additional night security guard for parking area. Recent theft incidents reported.',
                 'status': 'Requested', 'priority': 'High',
                 'created_offset_days': 0,
@@ -217,7 +217,7 @@ class Command(BaseCommand):
             },
             {
                 'reporter': 'chairman1', 'category': 'Electrician',
-                'location': 'Altus Heights - Generator Room',
+                'location': 'Altsan Heights - Generator Room',
                 'issue': 'Backup generator failing to start during power cuts. Need full inspection and servicing.',
                 'status': 'Requested', 'priority': 'Critical',
                 'created_offset_days': 0,
@@ -330,7 +330,7 @@ class Command(BaseCommand):
         # ── Summary ──────────────────────────────────────────
         self.stdout.write("")
         self.stdout.write(self.style.SUCCESS("═" * 50))
-        self.stdout.write(self.style.SUCCESS("  🎉 Altus demo data seeded successfully!"))
+        self.stdout.write(self.style.SUCCESS("  🎉 Altsan demo data seeded successfully!"))
         self.stdout.write(self.style.SUCCESS("═" * 50))
         self.stdout.write(f"  Categories:    {ServiceCategory.objects.count()}")
         self.stdout.write(f"  Users:         {User.objects.count()}")

@@ -6,7 +6,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: "Altus Central Core",
+    title: "Altsan Central Core",
     icon: path.join(__dirname, '../public/favicon.ico'),
     webPreferences: {
       nodeIntegration: true,

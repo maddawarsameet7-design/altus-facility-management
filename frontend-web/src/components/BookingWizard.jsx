@@ -350,7 +350,7 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
                    <>
                      <div className="dot" style={{ width: '48px', height: '48px', background: 'var(--primary)', marginBottom: '16px' }}></div>
                      <h3 style={{ fontSize: '24px', fontWeight: '800' }}>Confirming Details...</h3>
-                     <p className="subtitle">Securely placing your request over the Altus network.</p>
+                     <p className="subtitle">Securely placing your request over the Altsan network.</p>
                    </>
                 ) : (
                    <>

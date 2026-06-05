@@ -49,7 +49,7 @@ const PaymentCheckout = ({ request, onPaymentSuccess, onClose }) => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
               >
-                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '4px' }}>Paying to Altus Facility</p>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '4px' }}>Paying to Altsan Facility</p>
                 <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '24px' }}>₹{amount}</h2>
                 
                 <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '16px', marginBottom: '32px' }}>

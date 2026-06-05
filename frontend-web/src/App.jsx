@@ -64,9 +64,9 @@ const getIconForCategory = (name) => {
 };
 
 const MainLayout = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('altus_token'));
-  const [currentRole, setCurrentRole] = useState(localStorage.getItem('altus_role') || 'member');
-  const [currentUser, setCurrentUser] = useState(localStorage.getItem('altus_user') || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('altsan_token'));
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('altsan_role') || 'member');
+  const [currentUser, setCurrentUser] = useState(localStorage.getItem('altsan_user') || null);
   const navigate = useNavigate();
 
   const [globalRequests, setGlobalRequests] = useState([]);
@@ -163,8 +163,8 @@ const MainLayout = () => {
     setCurrentRole(normalizedRole);
     setCurrentUser(payload.username);
     
-    localStorage.setItem('altus_role', normalizedRole);
-    localStorage.setItem('altus_user', payload.username);
+    localStorage.setItem('altsan_role', normalizedRole);
+    localStorage.setItem('altsan_user', payload.username);
     
     if (normalizedRole === 'worker') navigate('/worker');
     else if (normalizedRole === 'supervisor') navigate('/supervisor');

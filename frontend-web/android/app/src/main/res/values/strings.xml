@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Altus</string>
-    <string name="title_activity_main">Altus</string>
+    <string name="app_name">Altsan</string>
+    <string name="title_activity_main">Altsan</string>
     <string name="package_name">com.altus.facility</string>
     <string name="custom_url_scheme">com.altus.facility</string>
 </resources>

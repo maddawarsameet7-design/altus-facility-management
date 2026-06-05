@@ -31,8 +31,8 @@ const LoginRegistration = ({ onLoginSuccess }) => {
         });
         
         const { access, refresh } = response.data;
-        localStorage.setItem('altus_token', access);
-        localStorage.setItem('altus_refresh', refresh);
+        localStorage.setItem('altsan_token', access);
+        localStorage.setItem('altsan_refresh', refresh);
         
         // Step 2: Fetch the real user profile from the server
         try {
@@ -69,8 +69,8 @@ const LoginRegistration = ({ onLoginSuccess }) => {
                 username: formData.username,
                 password: formData.password
               });
-              localStorage.setItem('altus_token', loginRes.data.access);
-              localStorage.setItem('altus_refresh', loginRes.data.refresh);
+              localStorage.setItem('altsan_token', loginRes.data.access);
+              localStorage.setItem('altsan_refresh', loginRes.data.refresh);
               
               const profileRes = await userApi.me();
               setIsRegisterSuccess(false);
@@ -137,7 +137,7 @@ const LoginRegistration = ({ onLoginSuccess }) => {
 
       <div className="auth-glass-pane">
         <div className="auth-header">
-          <div className="auth-logo">Altus</div>
+          <div className="auth-logo">Altsan</div>
           <h1>{isLogin ? 'Welcome Back' : 'Create Account'}</h1>
           <p className="auth-subtitle">
             {isLogin 
