@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Building2, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  Briefcase,
-  TrendingUp,
-  MessageSquare,
-  Search,
-  Filter
+  Building2, AlertCircle, CheckCircle2, Clock, Briefcase, TrendingUp,
+  MessageSquare, Search, Filter, ShieldCheck, Activity, MapPin, Zap
 } from 'lucide-react';
 import './SupervisorConsole.css';
 
@@ -18,125 +11,145 @@ const SupervisorConsole = ({ requests, onUpdate }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const kpis = [
-    { label: 'Active Areas', value: '4', trend: 'Stable', icon: Building2, color: '#3b82f6' },
-    { label: 'Open Issues', value: String(requests.filter(r => r.status !== 'Resolved').length), trend: 'Live', icon: AlertCircle, color: '#ef4444' },
-    { label: 'SLA Compliance', value: '98.5%', trend: '+1.2%', icon: CheckCircle2, color: '#10b981' },
-    { label: 'Active Staff', value: '315', trend: '+12', icon: Briefcase, color: '#8b5cf6' }
+    { label: 'Active Zones', value: '4', trend: 'Stable', icon: Building2, color: '#3b82f6' },
+    { label: 'Live Issues', value: String(requests.filter(r => r.status !== 'Resolved').length), trend: 'Critical', icon: AlertCircle, color: '#ef4444' },
+    { label: 'SLA Met', value: '98.5%', trend: '+1.2%', icon: ShieldCheck, color: '#10b981' },
+    { label: 'Staff Online', value: '315', trend: '+12', icon: Briefcase, color: '#8b5cf6' }
   ];
 
-  const handleUpdate = (id, newStatus) => {
+  const handleStatusChange = (id, newStatus) => {
     onUpdate(id, newStatus);
-    alert(`Successfully verified and updated status for ${id}.`);
+  };
+
+  const statuses = ['Requested', 'Investigating', 'In Progress', 'Resolved'];
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
   };
 
   return (
-    <div className="supervisor-console-container">
-      <header className="console-header">
-        <div className="header-left">
-          <h2>Operations Command Center</h2>
-          <p>Centralized view of all society areas and ongoing issues.</p>
-        </div>
-        <div className="header-actions">
-           <div className="search-bar">
-             <Search size={18} className="search-icon" />
-             <input 
-               type="text" 
-               placeholder="Search areas or queries..." 
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-             />
-           </div>
-           <button className="btn-secondary"><Filter size={18} /> Filters</button>
+    <div className="command-center-container">
+      <header className="cc-header">
+        <div className="cc-header-top">
+          <div className="cc-brand">
+            <Activity size={28} color="#3b82f6" />
+            <div>
+              <h2>Command Center</h2>
+              <p>Altsan Global Operations</p>
+            </div>
+          </div>
+          <div className="cc-search">
+            <Search size={18} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Track issues, areas, or staff..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </header>
 
-      {/* KPI Analytics Bar */}
-      <div className="kpi-banner">
-        {kpis.map((kpi, idx) => (
-          <motion.div 
-            key={idx}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="kpi-box"
-          >
-            <div className="kpi-icon-box" style={{ backgroundColor: `${kpi.color}15`, color: kpi.color }}>
-              {(() => {
-                const Icon = kpi.icon;
-                return <Icon size={24} />;
-              })()}
-            </div>
-            <div className="kpi-content">
-              <span className="kpi-label">{kpi.label}</span>
-              <div className="kpi-value-row">
-                <h3>{kpi.value}</h3>
-                <span className={`trend-badge ${kpi.trend.startsWith('+') ? 'positive' : 'negative'}`}>
+      {/* KPI HUD */}
+      <motion.div 
+        className="kpi-hud"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {kpis.map((kpi, idx) => {
+          const Icon = kpi.icon;
+          return (
+            <motion.div key={idx} variants={itemVariants} className="kpi-glass-widget">
+              <div className="kpi-bg-glow" style={{ background: kpi.color }} />
+              <div className="kpi-top">
+                <div className="kpi-icon" style={{ color: kpi.color, background: `${kpi.color}20` }}>
+                  <Icon size={20} />
+                </div>
+                <span className={`kpi-trend ${kpi.trend === 'Critical' ? 'danger' : 'success'}`}>
                   {kpi.trend}
                 </span>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+              <div className="kpi-bottom">
+                <h3>{kpi.value}</h3>
+                <p>{kpi.label}</p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
 
-      <div className="console-main">
-        <div className="tabs-row">
-          <button 
-            className={`tab ${activeTab === 'queries' ? 'active' : ''}`}
-            onClick={() => setActiveTab('queries')}
-          >
-            Issue Tracker
+      <div className="cc-main">
+        <div className="cc-tabs">
+          <button className={`cc-tab ${activeTab === 'queries' ? 'active' : ''}`} onClick={() => setActiveTab('queries')}>
+            Live Dispatch
           </button>
-          <button 
-            className={`tab ${activeTab === 'facilities' ? 'active' : ''}`}
-            onClick={() => setActiveTab('facilities')}
-          >
-            Area Management
+          <button className={`cc-tab ${activeTab === 'facilities' ? 'active' : ''}`} onClick={() => setActiveTab('facilities')}>
+            Facility Map
           </button>
         </div>
 
-        <div className="content-pane">
+        <div className="cc-content">
           {activeTab === 'queries' && (
-            <div className="queries-list">
-              {requests.map((query) => (
-                <motion.div 
-                  key={query.id} 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="query-card"
-                >
-                  <div className="query-meta">
-                    <span className="q-id">{query.id}</span>
-                    <span className={`priority-tag ${query.priority.toLowerCase()}`}>{query.priority}</span>
-                    <span className="q-time"><Clock size={14}/> {query.time}</span>
+            <motion.div className="dispatch-list" variants={containerVariants} initial="hidden" animate="visible">
+              {requests.map(req => (
+                <motion.div key={req.id} variants={itemVariants} className="dispatch-row">
+                  <div className="d-left">
+                    <div className="d-meta">
+                      <span className="d-id">{req.id}</span>
+                      <span className={`d-priority ${req.priority.toLowerCase()}`}>
+                        <Zap size={12} /> {req.priority}
+                      </span>
+                    </div>
+                    <h4 className="d-title">{req.issue}</h4>
+                    <div className="d-details">
+                      <span><MapPin size={14} /> {req.location}</span>
+                      <span><MessageSquare size={14} /> {req.reporter}</span>
+                    </div>
                   </div>
-                  <h3 className="q-title">{query.issue}</h3>
-                  <div className="q-footer">
-                    <div className="q-facility"><Building2 size={16}/> {query.location}</div>
-                    <div className="q-reporter"><MessageSquare size={16}/> Reported by: {query.reporter}</div>
-                    <div className="q-actions">
-                      <select 
-                        className={`status-dropdown ${(query.status).toLowerCase().replace(/\s+/g, '-')}`} 
-                        value={query.status}
-                        onChange={(e) => handleUpdate(query.id, e.target.value)}
-                      >
-                        <option value="Requested">Requested</option>
-                        <option value="Investigating">Investigating</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Resolved">Resolved</option>
-                      </select>
+                  
+                  <div className="d-right">
+                    <div className="status-stepper">
+                      {statuses.map(status => {
+                        const currentIndex = statuses.indexOf(req.status);
+                        const statusIndex = statuses.indexOf(status);
+                        const isActive = req.status === status;
+                        const isPast = statusIndex < currentIndex;
+                        
+                        let stateClass = '';
+                        if (isActive) stateClass = 'active pulse';
+                        else if (isPast) stateClass = 'completed';
+                        
+                        return (
+                          <button 
+                            key={status}
+                            className={`stepper-btn ${stateClass}`}
+                            onClick={() => handleStatusChange(req.id, status)}
+                            title={`Mark as ${status}`}
+                          >
+                            {status === 'Resolved' && isActive ? <CheckCircle2 size={16} /> : <div className="step-dot" />}
+                            <span className="step-label">{status}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
 
           {activeTab === 'facilities' && (
-             <div className="empty-state">
-               <Building2 size={48} className="empty-icon" />
-               <h3>Area Overview</h3>
-               <p>Select a society block from the sidebar to view detailed operations metrics.</p>
+             <div className="cc-empty-state">
+               <Building2 size={64} style={{ opacity: 0.2, marginBottom: '16px' }} />
+               <h3>Area Operations Radar</h3>
+               <p>Select a zone from the sidebar to view live sensor data.</p>
              </div>
           )}
         </div>
