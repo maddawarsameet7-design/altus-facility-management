@@ -11,6 +11,13 @@ from core.views import (
     ReviewViewSet, ChatMessageViewSet, 
     UserProfileView, RegisterView, DashboardStatsView, DeviceTokenView
 )
+from core.views_attendance import (
+    ClockInView, ClockOutView, MyAttendanceHistoryView,
+    WorkerLocationUpdateView, AttendanceViewSet
+)
+from core.views_society import (
+    SocietyViewSet, SiteViewSet, SocietySettingsViewSet, JoinSocietyView
+)
 from core.views_payments import CreateRazorpayOrderView, VerifyRazorpayPaymentView
 
 router = DefaultRouter()
@@ -21,6 +28,10 @@ router.register(r'services', ServiceCategoryViewSet, basename='service')
 router.register(r'requests', ServiceRequestViewSet, basename='request')
 router.register(r'reviews', ReviewViewSet, basename='review')
 router.register(r'chats', ChatMessageViewSet, basename='chat')
+router.register(r'attendance', AttendanceViewSet, basename='attendance')
+router.register(r'societies', SocietyViewSet, basename='society')
+router.register(r'sites', SiteViewSet, basename='site')
+router.register(r'society-settings', SocietySettingsViewSet, basename='society-settings')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -38,6 +49,17 @@ urlpatterns = [
     # Payments
     path('api/payments/create-order/', CreateRazorpayOrderView.as_view(), name='create_payment_order'),
     path('api/payments/verify/', VerifyRazorpayPaymentView.as_view(), name='verify_payment'),
+    
+    # Attendance endpoints
+    path('api/attendance/clock-in/', ClockInView.as_view(), name='clock_in'),
+    path('api/attendance/clock-out/', ClockOutView.as_view(), name='clock_out'),
+    path('api/attendance/my-history/', MyAttendanceHistoryView.as_view(), name='my_attendance_history'),
+    
+    # Worker location update (REST fallback)
+    path('api/workers/location/', WorkerLocationUpdateView.as_view(), name='worker_location_update'),
+
+    # Society join (invite code)
+    path('api/societies/join/', JoinSocietyView.as_view(), name='society_join'),
     
     # Router-generated API endpoints
     path('api/', include(router.urls)),

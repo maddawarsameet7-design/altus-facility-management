@@ -112,9 +112,22 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # ── RBAC: deny by default, each view overrides as needed ──
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',  # 👈 change this
+        'rest_framework.permissions.IsAuthenticated',
     ),
+    # ── Throttling: protect against brute-force & abuse ───────
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/min',      # Unauthenticated (login, register)
+        'user': '200/min',     # Authenticated users (all roles)
+    },
+    # ── Pagination ─────────────────────────────────────────────
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 25,
 }
 
 SIMPLE_JWT = {

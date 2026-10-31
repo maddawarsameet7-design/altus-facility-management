@@ -1,6 +1,10 @@
 import uuid
+import random
+import string
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
+
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -12,32 +16,170 @@ class User(AbstractUser):
         ('DIRECTOR', 'Platform Director')
     ]
     role = models.CharField(max_length=15, choices=ROLE_CHOICES, default='MEMBER')
-    
-    # Resolving backwards relation clashes for custom users
+
     groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='custom_user_set',
-        blank=True,
-        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
-        verbose_name='groups',
+        'auth.Group', related_name='custom_user_set', blank=True,
+        help_text='The groups this user belongs to.', verbose_name='groups',
     )
     user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_set',
-        blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='user permissions',
+        'auth.Permission', related_name='custom_user_set', blank=True,
+        help_text='Specific permissions for this user.', verbose_name='user permissions',
     )
 
 
+# ─── MULTI-TENANCY MODELS ────────────────────────────────────────────────────
+
+class Society(models.Model):
+    """
+    Top-level tenant entity. A Society is a client of Altus —
+    a housing society, hospital, or office that subscribes to facility services.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    CLIENT_TYPE_CHOICES = [
+        ('SOCIETY', 'Housing Society'),
+        ('HOSPITAL', 'Hospital / Healthcare'),
+        ('OFFICE', 'Corporate / Office'),
+    ]
+    name = models.CharField(max_length=255)
+    client_type = models.CharField(max_length=20, choices=CLIENT_TYPE_CHOICES, default='SOCIETY')
+    address = models.TextField()
+    gstin = models.CharField(max_length=20, blank=True, null=True)
+    billing_email = models.EmailField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Societies'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Site(models.Model):
+    """
+    A physical location within a Society (e.g. Building A, Block B Gate).
+    Used for GPS geofencing on worker clock-in/out.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='sites')
+    name = models.CharField(max_length=255)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    geofence_radius_m = models.IntegerField(default=100)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.society.name})"
+
+
+class Membership(models.Model):
+    """
+    Links a User to a Society with a society-level role.
+    A user may have memberships in multiple societies with different roles.
+
+    Note: User.role is the *platform* role. Membership.role is the society-level role.
+      e.g. User.role=SUPERVISOR + Membership.role=SUPERVISOR → assigned ops for this society.
+      e.g. User.role=MEMBER + Membership.role=CHAIRMAN → is chairman of this one society.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='memberships')
+    ROLE_CHOICES = [
+        ('MEMBER', 'Member'),
+        ('CHAIRMAN', 'Chairman'),
+        ('SUPERVISOR', 'Supervisor'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='MEMBER')
+    flat_or_unit = models.CharField(max_length=50, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'society')
+        ordering = ['-joined_at']
+
+    def __str__(self):
+        return f"{self.user.username} @ {self.society.name} [{self.role}]"
+
+
+class SocietySettings(models.Model):
+    """Per-society operational configuration."""
+    OVERTIME_CHOICES = [
+        ('NONE', 'No Overtime Policy'),
+        ('FLAT', 'Flat Overtime Rate'),
+        ('MULTIPLIER', 'Multiplier-based Overtime'),
+    ]
+    society = models.OneToOneField(
+        Society, on_delete=models.CASCADE,
+        primary_key=True, related_name='settings'
+    )
+    selfie_required = models.BooleanField(default=False)
+    shift_start_grace_minutes = models.IntegerField(default=15)
+    overtime_policy = models.CharField(max_length=20, choices=OVERTIME_CHOICES, default='NONE')
+    invoice_day = models.IntegerField(
+        default=1, validators=[MinValueValidator(1), MaxValueValidator(28)]
+    )
+    payment_terms_days = models.IntegerField(default=30)
+
+    class Meta:
+        verbose_name_plural = 'Society Settings'
+
+    def __str__(self):
+        return f"Settings for {self.society.name}"
+
+
+def _generate_invite_code():
+    """Generate a human-readable 12-char invite code like ALTUS-XK2P4M."""
+    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    return f"ALTUS-{suffix}"
+
+
+class InviteCode(models.Model):
+    """
+    One-time or limited-use invite codes for joining a Society.
+    Created by a Director (any society) or a Chairman (their own society).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='invite_codes')
+    ROLE_CHOICES = [
+        ('MEMBER', 'Member'),
+        ('CHAIRMAN', 'Chairman'),
+        ('SUPERVISOR', 'Supervisor'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='MEMBER')
+    code = models.CharField(max_length=20, unique=True, default=_generate_invite_code)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    max_uses = models.IntegerField(default=1)
+    use_count = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.code} → {self.society.name} [{self.role}]"
+
+    @property
+    def is_valid(self):
+        from django.utils import timezone
+        if not self.is_active:
+            return False
+        if self.expires_at and timezone.now() > self.expires_at:
+            return False
+        if self.use_count >= self.max_uses:
+            return False
+        return True
+
+
+# ─── EXISTING MODELS ─────────────────────────────────────────────────────────
+
 class ClientProfile(models.Model):
-    """Profile for Organization Clients (Hospitals, Societies, etc)"""
+    """Legacy per-user org profile — kept for backward compat. New tenancy uses Society."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='client_profile')
     organization_name = models.CharField(max_length=255)
     contact_person = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
-    
     ORG_TYPES = [
         ('SOCIETY', 'Housing Society'),
         ('CORPORATE', 'Commercial Complex')
@@ -49,11 +191,10 @@ class ClientProfile(models.Model):
 
 
 class WorkerProfile(models.Model):
-    """Profile for Service Providers (Electricians, Housekeeping, etc)"""
+    """Profile for Service Providers. Workers are deployed to societies via roster — no direct society FK."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile')
     phone = models.CharField(max_length=20)
-    
     STATUS_CHOICES = [
         ('PENDING', 'Pending Verification'),
         ('VERIFIED', 'Verified'),
@@ -61,11 +202,8 @@ class WorkerProfile(models.Model):
         ('SUSPENDED', 'Suspended')
     ]
     verification_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    
-    # Document Verification
     id_document = models.FileField(upload_to='worker_docs/', null=True, blank=True)
     profile_photo = models.ImageField(upload_to='worker_photos/', null=True, blank=True)
-    
     average_rating = models.FloatField(default=0.0)
     current_lat = models.FloatField(null=True, blank=True)
     current_lng = models.FloatField(null=True, blank=True)
@@ -92,25 +230,27 @@ class ServiceCategory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    base_hourly_rate = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True
-    )
+    base_hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return self.name
 
+
 class ServiceRequest(models.Model):
-    """A centralized service request or amenity booking within the society"""
+    """A service request raised within a Society."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests_made')
     category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE)
-    
+
+    # ── Society scoping: nullable for migration safety; backfilled by data migration ──
+    society = models.ForeignKey(
+        Society, on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='service_requests'
+    )
+
     location = models.CharField(max_length=255, help_text="e.g., Block A, Main Gate")
-    issue = models.TextField(blank=True, help_text="Description of the requirement")
-    
+    issue = models.TextField(blank=True)
     STATUS_CHOICES = [
         ('Requested', 'Requested'),
         ('Investigating', 'Investigating'),
@@ -119,7 +259,6 @@ class ServiceRequest(models.Model):
         ('Cancelled', 'Cancelled')
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Requested')
-    
     PRIORITY_CHOICES = [
         ('Normal', 'Normal'),
         ('Medium', 'Medium'),
@@ -127,11 +266,9 @@ class ServiceRequest(models.Model):
         ('Critical', 'Critical')
     ]
     priority = models.CharField(max_length=15, choices=PRIORITY_CHOICES, default='Normal')
-    
     scheduled_at = models.DateTimeField(null=True, blank=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     is_paid = models.BooleanField(default=False)
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -144,7 +281,6 @@ class Assignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='assignments')
     worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='assignments')
-    
     STATUS_CHOICES = [
         ('PENDING_ACCEPTANCE', 'Pending Acceptance'),
         ('ACCEPTED', 'Accepted'),
@@ -153,6 +289,7 @@ class Assignment(models.Model):
     ]
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING_ACCEPTANCE')
     assigned_at = models.DateTimeField(auto_now_add=True)
+
 
 class Attendance(models.Model):
     """Digital attendance/time tracking for a shift"""
@@ -168,12 +305,9 @@ class Review(models.Model):
     """Mutual review system for Members and Workers"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='reviews')
-    
-    # Reviewer and Reviewee can be Client or Worker
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_given')
     reviewee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_received')
-    
-    rating = models.IntegerField() # 1-5 stars
+    rating = models.IntegerField()
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -202,7 +336,6 @@ class PaymentTransaction(models.Model):
     request = models.OneToOneField(ServiceRequest, on_delete=models.CASCADE, related_name='transaction')
     transaction_id = models.CharField(max_length=100, unique=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('SUCCESS', 'Success'),
@@ -214,6 +347,7 @@ class PaymentTransaction(models.Model):
     def __str__(self):
         return f"TX {self.transaction_id} - {self.status}"
 
+
 class DeviceToken(models.Model):
     """Stores FCM device tokens for sending push notifications"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -222,6 +356,6 @@ class DeviceToken(models.Model):
     device_type = models.CharField(max_length=20, choices=[('ios', 'iOS'), ('android', 'Android'), ('web', 'Web')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.device_type}"
