@@ -323,10 +323,24 @@ class TestLoginSecurity:
             DEBUG=False,
             SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
             ALLOWED_HOSTS=['api.altsan.com', 'altsan.com'],
-            CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com']
+            CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com'],
+            PRIVATE_STORAGE_BUCKET='altsan-private-storage-bucket'
         ):
             # Should not raise any exception
             validate_production_settings()
+
+    def test_startup_check_refuses_when_private_storage_missing(self):
+        """With DEBUG=False, refuses to boot if PRIVATE_STORAGE_BUCKET is missing."""
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+            ALLOWED_HOSTS=['api.altsan.com'],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com'],
+            PRIVATE_STORAGE_BUCKET=''
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "Private object storage settings" in str(exc_info.value)
 
     def test_check_default_passwords_fails_when_user_has_password123(self, db):
         """check_default_passwords command must fail and exit non-zero (raise CommandError) if password123 is found."""

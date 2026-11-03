@@ -212,6 +212,9 @@ REST_FRAMEWORK = {
         'token_refresh': TOKEN_REFRESH_THROTTLE_RATE,
         'register_ip': REGISTER_THROTTLE_RATE,
         'society_join': '60/hour' if DEBUG else '10/hour',
+        'clock_in': '60/min' if DEBUG else '10/min',
+        'clock_out': '60/min' if DEBUG else '10/min',
+        'selfie': '60/min' if DEBUG else '30/min',
     },
     # ── Pagination ─────────────────────────────────────────────
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -285,6 +288,15 @@ else:
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ── Private Object / File Storage Configuration ───────────────
+PRIVATE_STORAGE_ROOT = BASE_DIR / 'private_media'
+PRIVATE_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+PRIVATE_STORAGE_BUCKET = os.environ.get('PRIVATE_STORAGE_BUCKET') or os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+# ── Image Decompression Bomb Protection ───────────────────────
+import PIL.Image
+PIL.Image.MAX_IMAGE_PIXELS = 10_000_000
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

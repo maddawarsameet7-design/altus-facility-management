@@ -69,10 +69,21 @@ class Site(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     geofence_radius_m = models.IntegerField(default=100)
+    max_gps_accuracy_m = models.FloatField(default=50.0)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['name']
+
+    def clean(self):
+        super().clean()
+        if self.max_gps_accuracy_m is not None and self.geofence_radius_m is not None:
+            if self.max_gps_accuracy_m > self.geofence_radius_m:
+                raise ValidationError({'max_gps_accuracy_m': 'GPS accuracy limit cannot exceed the geofence radius.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.society.name})"
@@ -122,6 +133,18 @@ class SocietySettings(models.Model):
         default=1, validators=[MinValueValidator(1), MaxValueValidator(28)]
     )
     payment_terms_days = models.IntegerField(default=30)
+
+    # ── Managed Staffing Operational Policies (No Hard-Coded Constants) ──
+    MOCK_LOCATION_CHOICES = [
+        ('REJECT', 'Reject Mock Location'),
+        ('FLAG', 'Flag Mock Location'),
+        ('ALLOW', 'Allow Mock Location'),
+    ]
+    mock_location_policy = models.CharField(max_length=20, choices=MOCK_LOCATION_CHOICES, default='REJECT')
+    early_clock_in_minutes = models.IntegerField(default=30)
+    early_leave_minutes = models.IntegerField(default=15)
+    overtime_threshold_minutes = models.IntegerField(default=30)
+    complaint_escalation_hours = models.IntegerField(default=24)
 
     class Meta:
         verbose_name_plural = 'Society Settings'
@@ -191,6 +214,16 @@ def upload_worker_photo(instance, filename):
 def upload_attendance_proof(instance, filename):
     ext = filename.split('.')[-1] if '.' in filename else 'jpg'
     return f'attendance_proofs/{uuid.uuid4().hex}/{uuid.uuid4().hex}.{ext}'
+
+
+def upload_selfie_path(instance, filename):
+    ext = filename.split('.')[-1] if '.' in filename else 'jpg'
+    return f'selfies/{instance.society_id}/{uuid.uuid4().hex}.{ext}'
+
+
+def get_private_storage_wrapper():
+    from core.storage import get_private_storage
+    return get_private_storage()
 
 
 # ─── EXISTING MODELS ─────────────────────────────────────────────────────────
@@ -441,3 +474,367 @@ class DeviceToken(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.device_type}"
+
+
+# ─── MANAGED STAFFING FOUNDATION MODELS ──────────────────────────────────────
+
+class Post(models.Model):
+    """
+    A staffed position at a client's Site (e.g. 'Block A Housekeeping', 'Gate 1 Night Guard').
+    Direct society FK, scoped via SocietyScopedMixin.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='posts')
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='posts')
+    name = models.CharField(max_length=255)
+    CATEGORY_CHOICES = [
+        ('HOUSEKEEPING', 'Housekeeping'),
+        ('SECURITY', 'Security'),
+        ('MAINTENANCE', 'Maintenance'),
+        ('OTHER', 'Other'),
+    ]
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='HOUSEKEEPING')
+    BILLING_BASIS_CHOICES = [
+        ('FIXED_MONTHLY', 'Fixed Monthly'),
+        ('PER_SHIFT', 'Per Shift'),
+        ('PER_HOUR', 'Per Hour'),
+    ]
+    billing_basis = models.CharField(max_length=25, choices=BILLING_BASIS_CHOICES, default='PER_SHIFT')
+    client_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['site', 'name']
+
+    def clean(self):
+        super().clean()
+        if self.site_id and self.society_id:
+            if self.site.society_id != self.society_id:
+                raise ValidationError({'site': 'Site must belong to the same society as Post.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} @ {self.site.name}"
+
+
+class Shift(models.Model):
+    """
+    Daily operating window for a Post. Supports overnight shifts crossing midnight.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='shifts')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='shifts')
+    name = models.CharField(max_length=100)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    crosses_midnight = models.BooleanField(default=False)
+    days_of_week = models.CharField(max_length=30, default='0,1,2,3,4,5,6')
+    required_headcount = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['post', 'start_time']
+
+    def clean(self):
+        super().clean()
+        if self.post_id and self.society_id:
+            if self.post.society_id != self.society_id:
+                raise ValidationError({'post': 'Post must belong to the same society as Shift.'})
+        if self.start_time and self.end_time:
+            self.crosses_midnight = self.end_time < self.start_time
+
+    def save(self, *args, **kwargs):
+        if self.start_time and self.end_time:
+            self.crosses_midnight = self.end_time < self.start_time
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')})"
+
+
+class RosterAssignment(models.Model):
+    """
+    Assignment of a worker to a shift.
+    Cross-society overlap check ensures workers are never double-booked across any society.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='roster_assignments')
+    worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='roster_assignments')
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='roster_assignments')
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    ASSIGNMENT_TYPES = [
+        ('REGULAR', 'Regular'),
+        ('RELIEVER', 'Reliever'),
+        ('TEMPORARY', 'Temporary'),
+    ]
+    assignment_type = models.CharField(max_length=20, choices=ASSIGNMENT_TYPES, default='REGULAR')
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('ENDED', 'Ended'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_assignments')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_date']
+
+    def clean(self):
+        super().clean()
+        if self.shift_id and self.society_id:
+            if self.shift.society_id != self.society_id:
+                raise ValidationError({'shift': 'Shift must belong to the same society as RosterAssignment.'})
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date': 'End date cannot be earlier than start date.'})
+
+        # Overlap check across ALL societies for this worker
+        if self.status == 'ACTIVE' and self.worker_id and self.shift_id:
+            from core.staffing_utils import dates_overlap, shifts_overlap
+            active_existing = RosterAssignment.objects.filter(
+                worker_id=self.worker_id,
+                status='ACTIVE'
+            ).exclude(pk=self.pk).select_related('shift')
+
+            for existing in active_existing:
+                if dates_overlap(self.start_date, self.end_date, existing.start_date, existing.end_date):
+                    if shifts_overlap(self.shift, existing.shift):
+                        raise ValidationError({
+                            'worker': f"Worker already has an active assignment on shift '{existing.shift.name}' "
+                                      f"with overlapping hours during this period."
+                        })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.worker.user.username} -> {self.shift.name} ({self.start_date})"
+
+
+class DailyRoster(models.Model):
+    """
+    Daily slot requirement per (shift, date, slot_number).
+    shift_start_at and shift_end_at are timezone-aware UTC datetimes.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='daily_rosters')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='daily_rosters')
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='daily_rosters')
+    date = models.DateField()
+    slot_number = models.PositiveIntegerField(default=1)
+    worker = models.ForeignKey(WorkerProfile, null=True, blank=True, on_delete=models.SET_NULL, related_name='daily_roster_slots')
+    STATUS_CHOICES = [
+        ('SCHEDULED', 'Scheduled'),
+        ('PRESENT', 'Present'),
+        ('UNFILLED', 'Unfilled'),
+        ('ABSENT', 'Absent'),
+        ('COVERED', 'Covered'),
+        ('COMPLETED', 'Completed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SCHEDULED')
+    covered_by = models.ForeignKey(WorkerProfile, null=True, blank=True, on_delete=models.SET_NULL, related_name='covering_roster_slots')
+    shift_start_at = models.DateTimeField()
+    shift_end_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['shift', 'date', 'slot_number'], name='unique_shift_date_slot')
+        ]
+        indexes = [
+            models.Index(fields=['society', 'date']),
+            models.Index(fields=['worker', 'date']),
+            models.Index(fields=['post', 'date']),
+        ]
+        ordering = ['date', 'shift_start_at', 'slot_number']
+
+    def clean(self):
+        super().clean()
+        if self.shift_id and self.society_id:
+            if self.shift.society_id != self.society_id:
+                raise ValidationError({'shift': 'Shift must belong to the same society as DailyRoster.'})
+        if self.post_id and self.society_id:
+            if self.post.society_id != self.society_id:
+                raise ValidationError({'post': 'Post must belong to the same society as DailyRoster.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        worker_str = self.worker.user.username if self.worker else "UNFILLED"
+        return f"{self.date} | {self.shift.name} slot #{self.slot_number} -> {worker_str} [{self.status}]"
+
+
+class LeaveRecord(models.Model):
+    """
+    Worker leave records. Approving leave updates upcoming unfilled daily roster slots.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='leave_records')
+    worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='leave_records')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    LEAVE_TYPES = [
+        ('WEEKLY_OFF', 'Weekly Off'),
+        ('PAID_LEAVE', 'Paid Leave'),
+        ('UNPAID_LEAVE', 'Unpaid Leave'),
+        ('SICK', 'Sick Leave'),
+    ]
+    leave_type = models.CharField(max_length=25, choices=LEAVE_TYPES)
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    approved_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='approved_leaves')
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_date']
+
+    def clean(self):
+        super().clean()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date': 'End date cannot be earlier than start date.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.worker.user.username} {self.leave_type} ({self.start_date} to {self.end_date}) [{self.status}]"
+
+
+class AttendanceEvent(models.Model):
+    """
+    Roster-based attendance record.
+    OneToOneField with DailyRoster ensures exactly one attendance record per slot.
+    UniqueConstraints on worker + clock_in_uuid and worker + clock_out_uuid prevent cross-worker leakage.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='attendance_events')
+    roster_entry = models.OneToOneField(DailyRoster, on_delete=models.CASCADE, related_name='attendance_event')
+    worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='attendance_events')
+    clock_in_uuid = models.UUIDField(null=True, blank=True)
+    clock_out_uuid = models.UUIDField(null=True, blank=True)
+    clock_in_at = models.DateTimeField(null=True, blank=True)
+    clock_out_at = models.DateTimeField(null=True, blank=True)
+    client_timestamp = models.DateTimeField()
+    server_timestamp = models.DateTimeField(auto_now_add=True)
+    time_mismatch_flag = models.BooleanField(default=False)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    gps_accuracy_m = models.FloatField(null=True, blank=True)
+    distance_from_site_m = models.FloatField(null=True, blank=True)
+    mock_location_flag = models.BooleanField(default=False)
+    selfie_file = models.FileField(upload_to=upload_selfie_path, storage=get_private_storage_wrapper, null=True, blank=True)
+    flags = models.CharField(max_length=100, blank=True)
+    worked_minutes = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['worker', 'clock_in_uuid'], name='unique_worker_clock_in_uuid'),
+            models.UniqueConstraint(fields=['worker', 'clock_out_uuid'], name='unique_worker_clock_out_uuid'),
+        ]
+        indexes = [
+            models.Index(fields=['society', 'clock_in_at']),
+            models.Index(fields=['worker', 'clock_in_at']),
+        ]
+        ordering = ['-clock_in_at']
+
+    def clean(self):
+        super().clean()
+        if self.roster_entry_id and self.society_id:
+            if self.roster_entry.society_id != self.society_id:
+                raise ValidationError({'roster_entry': 'Roster entry must belong to the same society as AttendanceEvent.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Attendance {self.worker.user.username} @ {self.roster_entry.date} ({self.clock_in_at})"
+
+
+class Alert(models.Model):
+    """
+    Staffing alert for unfilled slots, tardiness, or unexplained absences.
+    UniqueConstraint per (roster_entry, alert_type) prevents duplicate alert storms.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='staffing_alerts')
+    ALERT_TYPES = [
+        ('ABSENT', 'Worker Absent'),
+        ('LATE', 'Worker Late'),
+        ('UNFILLED', 'Shift Unfilled'),
+    ]
+    alert_type = models.CharField(max_length=20, choices=ALERT_TYPES)
+    roster_entry = models.ForeignKey(DailyRoster, on_delete=models.CASCADE, related_name='alerts')
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('ACKNOWLEDGED', 'Acknowledged'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['roster_entry', 'alert_type'], name='unique_roster_entry_alert_type')
+        ]
+        ordering = ['-created_at']
+
+    def clean(self):
+        super().clean()
+        if self.roster_entry_id and self.society_id:
+            if self.roster_entry.society_id != self.society_id:
+                raise ValidationError({'roster_entry': 'Roster entry must belong to the same society as Alert.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Alert {self.alert_type} @ {self.roster_entry} [{self.status}]"
+
+
+class AuditLog(models.Model):
+    """
+    Immutable audit trail for supervisory overrides and attendance corrections.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='audit_logs')
+    actor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='audit_logs')
+    action = models.CharField(max_length=50)
+    target_model = models.CharField(max_length=50)
+    target_id = models.UUIDField()
+    changes = models.JSONField(default=dict)
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.actor.username} {self.action} on {self.target_model}:{self.target_id}"

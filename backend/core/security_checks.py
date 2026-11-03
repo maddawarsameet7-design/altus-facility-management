@@ -44,3 +44,10 @@ def validate_production_settings():
             "SECURITY CRITICAL: Production startup aborted! CORS_ALLOWED_ORIGINS cannot be empty when DEBUG=False."
         )
 
+    private_storage = getattr(settings, 'PRIVATE_STORAGE_BUCKET', None)
+    if not private_storage:
+        raise ImproperlyConfigured(
+            "SECURITY CRITICAL: Production startup aborted! Private object storage settings "
+            "(PRIVATE_STORAGE_BUCKET or AWS_STORAGE_BUCKET_NAME) must be configured when DEBUG=False."
+        )
+

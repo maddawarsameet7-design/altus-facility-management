@@ -5,6 +5,8 @@ from .models import (
     ServiceCategory, ServiceRequest, Assignment,
     Review, Attendance, ChatMessage, PaymentTransaction,
     Society, Site, Membership, SocietySettings, InviteCode,
+    Post, Shift, RosterAssignment, DailyRoster, LeaveRecord,
+    AttendanceEvent, Alert, AuditLog,
 )
 
 
@@ -139,3 +141,11 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
 
 admin.site.register(Property)
 admin.site.register(Attendance)
+admin.site.register(Post)
+admin.site.register(Shift)
+admin.site.register(RosterAssignment)
+admin.site.register(DailyRoster)
+admin.site.register(LeaveRecord)
+admin.site.register(AttendanceEvent)
+admin.site.register(Alert)
+admin.site.register(AuditLog)
