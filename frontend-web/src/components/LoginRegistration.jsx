@@ -189,7 +189,7 @@ const LoginRegistration = ({ onLoginSuccess }) => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
 
-          {isLogin && (
+          {isLogin && import.meta.env.DEV && (
             <div className="demo-accounts-pill-box">
               <span className="demo-label">1-Tap Demo Quick Select:</span>
               <div className="demo-pills">

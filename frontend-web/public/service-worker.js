@@ -15,6 +15,18 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // Security & Data Freshness: Never cache API requests, WebSocket handshakes, or mutations.
+  // Network-only policy ensures auth tokens, financial data, and credentials bypass cache.
+  if (
+    url.pathname.startsWith('/api/') || 
+    url.pathname.startsWith('/ws/') || 
+    event.request.method !== 'GET'
+  ) {
+    return; // Passthrough directly to network
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {

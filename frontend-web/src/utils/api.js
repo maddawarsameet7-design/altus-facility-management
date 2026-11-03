@@ -1,18 +1,38 @@
 import axios from 'axios';
 
-const isDev = window.location.hostname === 'localhost' || 
-              window.location.hostname === '127.0.0.1' || 
-              window.location.hostname.startsWith('192.168.') || 
-              window.location.hostname.startsWith('10.') || 
-              window.location.hostname.endsWith('.local') ||
-              window.location.port === '5173' ||
-              window.location.port === '3000';
+/**
+ * Resolves the backend API base URL strictly adhering to environment rules:
+ * - In Development (import.meta.env.DEV):
+ *   Prefers VITE_API_URL if provided, else falls back to local host detection.
+ * - In Production (!import.meta.env.DEV):
+ *   VITE_API_URL MUST be configured. Fails loudly with an explicit Error if missing.
+ *   Never guesses or hardcodes a production domain.
+ */
+export function resolveApiBaseUrl() {
+  const envUrl = import.meta.env.VITE_API_URL;
 
-const BASE_HOST = isDev 
-  ? `http://${window.location.hostname || 'localhost'}:8000`
-  : `https://api.altsan.com`;
+  if (import.meta.env.DEV) {
+    if (envUrl) {
+      return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
+    }
+    const hostname = (typeof window !== 'undefined' && window.location?.hostname) 
+      ? window.location.hostname 
+      : 'localhost';
+    return `http://${hostname}:8000/api/`;
+  }
 
-const API_URL = `${BASE_HOST}/api/`;
+  // Production check
+  if (!envUrl) {
+    throw new Error(
+      '[Altsan Security Error] Missing required environment variable VITE_API_URL in production build. ' +
+      'Refusing to guess production domain.'
+    );
+  }
+
+  return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
+}
+
+export const API_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_URL,
