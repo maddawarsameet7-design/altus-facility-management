@@ -124,8 +124,23 @@ DATABASES = {
     }
 }
 
-if os.environ.get('DATABASE_URL'):
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, conn_health_checks=True)
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    try:
+        import socket
+        from urllib.parse import urlparse
+        parsed_url = urlparse(database_url)
+        hostname = parsed_url.hostname
+        if hostname and hostname not in ('localhost', '127.0.0.1'):
+            socket.getaddrinfo(hostname, None)
+        DATABASES['default'] = dj_database_url.config(conn_max_age=600, conn_health_checks=True)
+    except Exception as e:
+        import logging
+        logging.warning(f"DATABASE_URL host failed DNS resolution ({e}). Gracefully falling back to SQLite.")
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
 
 AUTH_USER_MODEL = 'core.User'
 
