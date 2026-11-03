@@ -327,3 +327,30 @@ class TestLoginSecurity:
         ):
             # Should not raise any exception
             validate_production_settings()
+
+    def test_check_default_passwords_fails_when_user_has_password123(self, db):
+        """check_default_passwords command must fail and exit non-zero (raise CommandError) if password123 is found."""
+        User.objects.create_user(
+            username='vulnerable_user',
+            password='password123',
+            email='vuln@test.com'
+        )
+        with pytest.raises(CommandError) as exc_info:
+            call_command('check_default_passwords')
+        assert "Found 1 account(s) using the insecure default password 'password123'" in str(exc_info.value)
+        assert "vulnerable_user" in str(exc_info.value)
+
+    def test_check_default_passwords_succeeds_when_all_passwords_secure(self, db):
+        """check_default_passwords command passes cleanly when all users have secure passwords."""
+        User.objects.create_user(
+            username='safe_user_1',
+            password='SuperSecurePassword987!',
+            email='safe1@test.com'
+        )
+        User.objects.create_user(
+            username='safe_user_2',
+            password='AnotherSecurePassword654!',
+            email='safe2@test.com'
+        )
+        # Should not raise
+        call_command('check_default_passwords')
