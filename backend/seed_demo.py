@@ -4,6 +4,10 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'facility_proj.settings'
 import django
 django.setup()
 
+from django.conf import settings
+if not getattr(settings, 'DEBUG', False):
+    raise RuntimeError("Refusing to run seed_demo script when DEBUG is False. Restricted to development.")
+
 from core.models import User, WorkerProfile, ServiceCategory, ServiceRequest
 
 # Ensure worker has a profile

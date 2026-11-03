@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from datetime import timedelta
 from core.models import (
@@ -14,6 +15,12 @@ class Command(BaseCommand):
     help = 'Seeds comprehensive demo data for the Altsan Facility Management platform'
 
     def handle(self, *args, **kwargs):
+        if not getattr(settings, 'DEBUG', False):
+            raise CommandError(
+                "Refusing to execute seed_data in production (DEBUG=False). "
+                "This command modifies core database users and is restricted to local development."
+            )
+
         self.stdout.write("🌱 Seeding Altsan demo data...")
 
         # ── 1. Service Categories ─────────────────────────────

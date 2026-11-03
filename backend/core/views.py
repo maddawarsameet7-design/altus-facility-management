@@ -22,6 +22,7 @@ from .permissions import (
     IsOwnerOrOps, IsWorkerSelf, IsOpsOrReadOnly
 )
 from .mixins import SocietyScopedMixin, get_user_society_ids
+from .throttles import LoginIPThrottle
 
 
 # ─── AUTH & USER ──────────────────────────────────────────────
@@ -38,7 +39,7 @@ class UserProfileView(APIView):
 class RegisterView(APIView):
     """Public endpoint to register new users."""
     permission_classes = [permissions.AllowAny]
-    throttle_scope = 'login'
+    throttle_classes = [LoginIPThrottle]
 
     def post(self, request):
         username = request.data.get('username')

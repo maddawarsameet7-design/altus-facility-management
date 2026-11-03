@@ -6,15 +6,22 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-production-ready-key-change-this')
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 't')
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 
 # Razorpay Keys
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_YourTestKeyIdHere')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'YourTestKeySecretHere')
 
-ALLOWED_HOSTS = ['*', 'altsan.com', 'api.altsan.com', '.ngrok-free.app', 'localhost', '127.0.0.1']
+allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
+if allowed_hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1']
+else:
+    ALLOWED_HOSTS = ['altsan.com', 'api.altsan.com']
+
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 CSRF_TRUSTED_ORIGINS = [
@@ -109,6 +116,8 @@ if os.environ.get('DATABASE_URL'):
 
 AUTH_USER_MODEL = 'core.User'
 
+LOGIN_THROTTLE_RATE = os.environ.get('LOGIN_THROTTLE_RATE', '60/min' if DEBUG else '5/min')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -126,7 +135,9 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/min' if DEBUG else '20/min',
         'user': '1000/min' if DEBUG else '200/min',
-        'login': '60/min' if DEBUG else '5/min',
+        'login': LOGIN_THROTTLE_RATE,
+        'login_ip': LOGIN_THROTTLE_RATE,
+        'login_user': LOGIN_THROTTLE_RATE,
         'society_join': '60/hour' if DEBUG else '10/hour',
     },
     # ── Pagination ─────────────────────────────────────────────
@@ -142,19 +153,20 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-CORS_ALLOWED_ORIGINS = [
-    'https://altsan.com',
-    'https://www.altsan.com',
-    'https://api.altsan.com',
-]
-if DEBUG:
-    CORS_ALLOWED_ORIGINS.extend([
+CORS_ALLOW_ALL_ORIGINS = bool(DEBUG)
+
+cors_env = os.environ.get('CORS_ALLOWED_ORIGINS')
+if cors_env:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_env.split(',') if origin.strip()]
+elif DEBUG:
+    CORS_ALLOWED_ORIGINS = [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
-    ])
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = []
 
-if RENDER_EXTERNAL_HOSTNAME:
+if RENDER_EXTERNAL_HOSTNAME and f'https://{RENDER_EXTERNAL_HOSTNAME}' not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
 TIME_ZONE = 'UTC'

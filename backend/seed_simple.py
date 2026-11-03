@@ -5,6 +5,10 @@ import uuid
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'facility_proj.settings')
 django.setup()
 
+from django.conf import settings
+if not getattr(settings, 'DEBUG', False):
+    raise RuntimeError("Refusing to run seed_simple script when DEBUG is False. Restricted to development.")
+
 from core.models import ServiceCategory, User
 
 def seed():
