@@ -12,11 +12,13 @@ Hardening and security regression tests for authentication:
 import pytest
 from django.urls import reverse
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
 from rest_framework.test import APIClient
 from core.models import User
+from core.security_checks import validate_production_settings
 
 
 @pytest.fixture(autouse=True)
@@ -257,3 +259,71 @@ class TestLoginSecurity:
         )
         assert trusted_response.headers.get('Access-Control-Allow-Origin') == 'https://altsan.com'
         assert 'Retry-After' in trusted_response.headers.get('Access-Control-Expose-Headers', '')
+
+    def test_startup_check_refuses_when_secret_key_insecure(self):
+        """With DEBUG=False, refuses to boot if SECRET_KEY is missing, default, or short."""
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='django-insecure-production-ready-key-change-this',
+            ALLOWED_HOSTS=['api.altsan.com'],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com']
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "SECRET_KEY is missing, using a known insecure default, or too short" in str(exc_info.value)
+
+        # Short key (< 32 chars)
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='tooshortkey12345',
+            ALLOWED_HOSTS=['api.altsan.com'],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com']
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "minimum 32 characters required" in str(exc_info.value)
+
+    def test_startup_check_refuses_when_allowed_hosts_empty(self):
+        """With DEBUG=False, refuses to boot if ALLOWED_HOSTS is empty or wildcard [*]."""
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+            ALLOWED_HOSTS=[],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com']
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "ALLOWED_HOSTS cannot be empty or wildcard [*]" in str(exc_info.value)
+
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+            ALLOWED_HOSTS=['*'],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com']
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "ALLOWED_HOSTS cannot be empty or wildcard [*]" in str(exc_info.value)
+
+    def test_startup_check_refuses_when_cors_origins_empty(self):
+        """With DEBUG=False, refuses to boot if CORS_ALLOWED_ORIGINS is empty."""
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+            ALLOWED_HOSTS=['api.altsan.com'],
+            CORS_ALLOWED_ORIGINS=[]
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "CORS_ALLOWED_ORIGINS cannot be empty" in str(exc_info.value)
+
+    def test_startup_check_passes_with_valid_production_settings(self):
+        """With DEBUG=False and proper production secrets configured, startup check passes cleanly."""
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+            ALLOWED_HOSTS=['api.altsan.com', 'altsan.com'],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com']
+        ):
+            # Should not raise any exception
+            validate_production_settings()
