@@ -801,3 +801,4 @@ class UnfilledRosterView(APIView):
                 qs = qs.filter(date=target_date)
 
         return Response(DailyRosterSerializer(qs.order_by('date', 'shift_start_at')[:100], many=True).data)
+

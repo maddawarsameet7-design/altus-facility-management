@@ -1,5 +1,5 @@
 import zoneinfo
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_tz
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -46,13 +46,13 @@ class Command(BaseCommand):
 
                 # Compute timezone-aware shift start and end
                 start_naive = datetime.combine(target_date, shift.start_time)
-                start_dt = timezone.make_aware(start_naive, kolkata_tz).astimezone(timezone.utc)
+                start_dt = timezone.make_aware(start_naive, kolkata_tz).astimezone(dt_tz.utc)
 
                 if shift.crosses_midnight:
                     end_naive = datetime.combine(target_date + timedelta(days=1), shift.end_time)
                 else:
                     end_naive = datetime.combine(target_date, shift.end_time)
-                end_dt = timezone.make_aware(end_naive, kolkata_tz).astimezone(timezone.utc)
+                end_dt = timezone.make_aware(end_naive, kolkata_tz).astimezone(dt_tz.utc)
 
                 # Find active assignments for this shift on target_date
                 active_assignments = list(RosterAssignment.objects.filter(
@@ -118,3 +118,4 @@ class Command(BaseCommand):
 def models_q_end_date(target_date):
     from django.db.models import Q
     return Q(end_date__isnull=True) | Q(end_date__gte=target_date)
+

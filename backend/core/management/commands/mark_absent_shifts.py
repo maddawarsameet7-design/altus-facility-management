@@ -76,3 +76,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Evaluated unattended slots: Marked {absent_count} ABSENT, {unfilled_count} UNFILLED."
         ))
+

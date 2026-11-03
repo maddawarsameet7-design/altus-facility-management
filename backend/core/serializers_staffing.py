@@ -174,3 +174,4 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'target_model', 'target_id', 'changes', 'reason', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
