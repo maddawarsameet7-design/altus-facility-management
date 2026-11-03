@@ -2,11 +2,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.altsan.facility',
-  appName: 'Altsan',
+  appName: 'Altsan Facility',
   webDir: 'dist',
   server: {
-    url: 'http://10.0.2.2:5173',
-    cleartext: true
+    androidScheme: 'https'
   }
 };
 
