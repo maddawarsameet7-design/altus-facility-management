@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ArrowRight, ScanFace } from 'lucide-react';
 import { authApi, userApi } from '../utils/api';
+import { getLoginErrorMessage } from '../utils/errorMessages';
 import './Auth.css';
 
 const LoginRegistration = ({ onLoginSuccess }) => {
@@ -95,18 +96,9 @@ const LoginRegistration = ({ onLoginSuccess }) => {
         }
       }
     } catch (err) {
-      if (err.response?.status === 401) {
-        setError("Invalid username or password.");
-      } else if (err.response?.status === 429) {
-        setError("Too many login attempts. Please wait a minute and try again.");
-      } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
-      } else if (!err.response || err.code === 'ERR_NETWORK') {
-        setError("Backend server is not reachable. Please ensure the Django backend is running on port 8000.");
-      } else {
-        setError("Authentication Failed. Please check your credentials.");
-      }
-      console.error(err);
+      const message = getLoginErrorMessage(err);
+      setError(message);
+      console.error('[Auth Error]', err);
     } finally {
       setLoading(false);
       setIsScanning(false);
