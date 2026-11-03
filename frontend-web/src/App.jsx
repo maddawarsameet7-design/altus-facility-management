@@ -37,6 +37,7 @@ import NotificationCenter from './components/NotificationCenter';
 import ProductTour from './components/ProductTour';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { Bell, Sun, Moon, Building2 } from 'lucide-react';
+import altsanLogo from './assets/altsan-logo.png';
 import './App.css';
 
 // New Mobile-First Floating Pill Navigation Item
@@ -241,9 +242,13 @@ const MainLayout = () => {
     <div className={`app-main-wrapper role-${currentRole}`}>
       {/* Top Header / User Context */}
       <header className="mobile-app-header">
-        <div className="header-user-info">
-          <p className="greeting">Welcome, {currentUser || 'User'}</p>
-          <div className="header-badge-row">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img src={altsanLogo} alt="Altsan Logo" className="header-brand-logo" />
+          </Link>
+          <div className="header-user-info">
+            <p className="greeting">Welcome, {currentUser || 'User'}</p>
+            <div className="header-badge-row">
             <span className="role-badge">{currentRole}</span>
             {currentSociety ? (
               <span className="society-badge" title="Active Client Society">
@@ -258,6 +263,7 @@ const MainLayout = () => {
             )}
           </div>
         </div>
+      </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button className="header-action-btn" onClick={() => setShowJoinModal(true)} title="Join Society with Code">
              <Building2 size={19} />

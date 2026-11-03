@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import altsanLogo from '../assets/altsan-logo.png';
 import './JobsScreen.css';
 
 const resolveApiBase = () => {
@@ -78,7 +79,7 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
   return (
     <div className="mobile-app-container">
       <header className="mobile-header">
-        <div className="profile-mini">WK</div>
+        <img src={altsanLogo} alt="Altsan" className="header-mini-logo" />
         <h1>My Tasks & Jobs</h1>
         <button className="filter-icon" onClick={fetchJobs} title="Refresh">🔄</button>
       </header>

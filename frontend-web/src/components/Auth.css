@@ -80,6 +80,26 @@
   margin-bottom: 32px;
 }
 
+.auth-logo-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.auth-logo-img {
+  height: 88px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 25px rgba(27, 24, 55, 0.25));
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.auth-logo-img:hover {
+  transform: scale(1.06);
+}
+
 .auth-logo {
   font-family: 'Outfit', sans-serif;
   font-weight: 900;

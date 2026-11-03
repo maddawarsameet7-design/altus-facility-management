@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import altsanLogo from '../assets/altsan-logo.png';
 import './AttendanceScreen.css';
 
 // ── Dynamic API Configuration ─────────────────────────────────────
@@ -246,7 +247,7 @@ const AttendanceScreen = ({ assignmentId: propAssignmentId, onTabChange }) => {
   return (
     <div className="mobile-app-container">
       <header className="mobile-header">
-        <div className="profile-mini">WK</div>
+        <img src={altsanLogo} alt="Altsan" className="header-mini-logo" />
         <h1>Attendance & GPS</h1>
         <div className="notification-icon">🟢</div>
       </header>

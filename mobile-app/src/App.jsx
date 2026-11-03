@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AttendanceScreen from './screens/AttendanceScreen.jsx';
 import JobsScreen from './screens/JobsScreen.jsx';
+import altsanLogo from './assets/altsan-logo.png';
 
 const resolveApiBase = () => {
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
@@ -115,18 +116,18 @@ function App() {
           border: '1px solid rgba(255,255,255,0.08)',
           textAlign: 'center',
         }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '32px',
-            margin: '0 auto 16px',
-          }}>
-            ⚡
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <img 
+              src={altsanLogo} 
+              alt="Altsan Logo" 
+              style={{
+                height: '90px',
+                width: 'auto',
+                maxWidth: '100%',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.5))'
+              }} 
+            />
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px' }}>Altus Worker</h2>
           <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '24px' }}>Field Terminal & Mobile Attendance</p>

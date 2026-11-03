@@ -108,6 +108,20 @@ body.dark-theme .app-main-wrapper {
   z-index: 10;
 }
 
+.header-brand-logo {
+  height: 42px;
+  width: auto;
+  max-width: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(27, 24, 55, 0.3));
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.header-brand-logo:hover {
+  transform: scale(1.08);
+}
+
 .header-user-info .greeting {
   font-family: 'Outfit', sans-serif;
   font-size: 24px;

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ArrowRight, ScanFace } from 'lucide-react';
 import { authApi, userApi } from '../utils/api';
 import { getLoginErrorMessage } from '../utils/errorMessages';
+import altsanLogo from '../assets/altsan-logo.png';
 import './Auth.css';
 
 const LoginRegistration = ({ onLoginSuccess }) => {
@@ -170,7 +171,9 @@ const LoginRegistration = ({ onLoginSuccess }) => {
 
       <div className="auth-glass-pane">
         <div className="auth-header">
-          <div className="auth-logo">Altsan</div>
+          <div className="auth-logo-wrap">
+            <img src={altsanLogo} alt="Altsan Logo" className="auth-logo-img" />
+          </div>
           <h1>{isLogin ? 'Welcome Back' : 'Create Account'}</h1>
           <p className="auth-subtitle">
             {isLogin 
