@@ -199,3 +199,23 @@
   color: #16a34a;
   font-weight: 700;
 }
+
+
+/* ── Multi-Tenancy Society Badges ────────────────── */
+.job-society-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.history-society {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  margin-top: 2px;
+}

@@ -27,6 +27,8 @@ import LoginRegistration from './components/LoginRegistration';
 import WorkerPortal from './components/WorkerPortal';
 import SupervisorConsole from './components/SupervisorConsole';
 import DirectorPortal from './components/DirectorPortal';
+import ChairmanPortal from './components/ChairmanPortal';
+import JoinSocietyModal from './components/JoinSocietyModal';
 import ReviewModal from './components/ReviewModal';
 import ChatWindow from './components/ChatWindow';
 import PaymentCheckout from './components/PaymentCheckout';
@@ -34,7 +36,7 @@ import TrackingMap from './components/TrackingMap';
 import NotificationCenter from './components/NotificationCenter';
 import ProductTour from './components/ProductTour';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { Bell, Sun, Moon } from 'lucide-react';
+import { Bell, Sun, Moon, Building2 } from 'lucide-react';
 import './App.css';
 
 // New Mobile-First Floating Pill Navigation Item
@@ -76,12 +78,18 @@ const MainLayout = () => {
   const navigate = useNavigate();
 
   // Consume Global State
-  const { requests: globalRequests, setRequests } = useStore();
+  const { 
+    requests: globalRequests, 
+    setRequests,
+    currentSociety,
+    fetchUserSocieties
+  } = useStore();
 
   const [showReviewFor, setShowReviewFor] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [activeCheckout, setActiveCheckout] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
   const fetchRequests = useCallback(async () => {
@@ -135,10 +143,11 @@ const MainLayout = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchRequests();
+      if (fetchUserSocieties) fetchUserSocieties();
       const interval = setInterval(fetchRequests, 10000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, fetchRequests]);
+  }, [isAuthenticated, fetchRequests, fetchUserSocieties]);
 
   const updateRequestStatus = async (id, newStatus) => {
     try {
@@ -179,6 +188,7 @@ const MainLayout = () => {
     if (normalizedRole === 'worker') navigate('/worker');
     else if (normalizedRole === 'supervisor') navigate('/supervisor');
     else if (normalizedRole === 'director') navigate('/director');
+    else if (normalizedRole === 'chairman') navigate('/chairman');
     else navigate('/');
   };
 
@@ -236,9 +246,25 @@ const MainLayout = () => {
       <header className="mobile-app-header">
         <div className="header-user-info">
           <p className="greeting">Welcome, {currentUser || 'User'}</p>
-          <span className="role-badge">{currentRole}</span>
+          <div className="header-badge-row">
+            <span className="role-badge">{currentRole}</span>
+            {currentSociety ? (
+              <span className="society-badge" title="Active Client Society">
+                <Building2 size={12} />
+                <span>{currentSociety.name}</span>
+              </span>
+            ) : (
+              <button className="join-society-pill-btn" onClick={() => setShowJoinModal(true)}>
+                <PlusCircle size={12} />
+                <span>Join Society</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button className="header-action-btn" onClick={() => setShowJoinModal(true)} title="Join Society with Code">
+             <Building2 size={19} />
+          </button>
           <button className="header-action-btn theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
              {isDark ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -277,6 +303,7 @@ const MainLayout = () => {
             } 
           />
           <Route path="/tickets" element={<MemberTickets currentRole={currentRole} requests={globalRequests} />} />
+          <Route path="/chairman" element={<ChairmanPortal />} />
           <Route path="/worker" element={<WorkerPortal requests={globalRequests} onUpdate={updateRequestStatus} currentUser={currentUser} />} />
           <Route path="/supervisor" element={<SupervisorConsole requests={globalRequests} onUpdate={updateRequestStatus} />} />
           <Route path="/director" element={<DirectorPortal />} />
@@ -291,7 +318,16 @@ const MainLayout = () => {
         <div className="nav-pill-container">
           
           {/* Specific Routing mapped by Role */}
-          {(currentRole === 'member' || currentRole === 'chairman') && (
+          {currentRole === 'chairman' && (
+            <>
+              <BottomNavLink to="/" icon={Home} />
+              <BottomNavLink to="/chairman" icon={Shield} />
+              <BottomNavLink to="/book" icon={PlusCircle} />
+              <BottomNavLink to="/tickets" icon={FileText} />
+            </>
+          )}
+
+          {currentRole === 'member' && (
             <>
               <BottomNavLink to="/" icon={Home} />
               <BottomNavLink to="/book" icon={PlusCircle} />
@@ -355,6 +391,11 @@ const MainLayout = () => {
       <NotificationCenter 
         isOpen={showNotifications} 
         onClose={() => setShowNotifications(false)} 
+      />
+
+      <JoinSocietyModal
+        isOpen={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
       />
 
       {/* Global Product Tour */}

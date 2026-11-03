@@ -76,9 +76,36 @@ export const serviceApi = {
   list: () => api.get('services/'),
 };
 
+export const categoryApi = serviceApi;
+
 export const paymentApi = {
   createOrder: (data) => api.post('payments/create-order/', data),
   verify: (data) => api.post('payments/verify/', data),
+};
+
+export const societyApi = {
+  list: () => api.get('societies/'),
+  getById: (id) => api.get(`societies/${id}/`),
+  create: (data) => api.post('societies/', data),
+  update: (id, data) => api.put(`societies/${id}/`, data),
+  delete: (id) => api.delete(`societies/${id}/`),
+  createInvite: (societyId, data) => api.post(`societies/${societyId}/invite/`, data),
+  getMembers: (societyId, pendingOnly = false) => api.get(`societies/${societyId}/members/${pendingOnly ? '?pending=true' : ''}`),
+  approveMember: (societyId, userId) => api.post(`societies/${societyId}/members/${userId}/approve/`),
+  rejectMember: (societyId, userId) => api.post(`societies/${societyId}/members/${userId}/reject/`),
+  addSupervisor: (societyId, userId) => api.post(`societies/${societyId}/supervisors/`, { user_id: userId }),
+  removeSupervisor: (societyId, userId) => api.delete(`societies/${societyId}/supervisors/${userId}/`),
+  join: (code) => api.post('societies/join/', { code }),
+
+  // Sites
+  getSites: () => api.get('sites/'),
+  createSite: (data) => api.post('sites/', data),
+  updateSite: (id, data) => api.put(`sites/${id}/`, data),
+  deleteSite: (id) => api.delete(`sites/${id}/`),
+
+  // Settings
+  getSettings: (societyId) => api.get(`society-settings/${societyId}/`),
+  updateSettings: (societyId, data) => api.put(`society-settings/${societyId}/`, data),
 };
 
 export default api;

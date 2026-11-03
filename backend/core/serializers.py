@@ -8,11 +8,29 @@ from .models import (
 )
 
 
+class UserMembershipSerializer(serializers.ModelSerializer):
+    society_name = serializers.ReadOnlyField(source='society.name')
+    client_type = serializers.ReadOnlyField(source='society.client_type')
+
+    class Meta:
+        model = Membership
+        fields = ['id', 'society', 'society_name', 'client_type', 'role', 'flat_or_unit', 'is_active']
+
+
 class UserSerializer(serializers.ModelSerializer):
+    memberships = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'memberships']
         read_only_fields = ['id', 'role']
+
+    def get_memberships(self, obj):
+        # Return user's memberships if user is saved in DB
+        if not getattr(obj, 'pk', None):
+            return []
+        qs = obj.memberships.select_related('society').all()
+        return UserMembershipSerializer(qs, many=True).data
 
 
 class PropertySerializer(serializers.ModelSerializer):

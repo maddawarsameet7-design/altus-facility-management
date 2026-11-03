@@ -87,6 +87,7 @@ const AttendanceScreen = ({ assignmentId, onTabChange }) => {
           id: active.assignment_id,
           service: active.service,
           location: active.location,
+          society: active.society_name || 'Client Site',
         });
       }
     } catch (err) {
@@ -211,6 +212,11 @@ const AttendanceScreen = ({ assignmentId, onTabChange }) => {
         {/* Active Assignment */}
         {activeJob && (
           <section className="job-context-card">
+            {activeJob.society && (
+              <div className="job-society-badge">
+                <span>🏢 {activeJob.society}</span>
+              </div>
+            )}
             <h3>Current Assignment</h3>
             <div className="job-brief">
               <div className="job-primary">
@@ -263,8 +269,13 @@ const AttendanceScreen = ({ assignmentId, onTabChange }) => {
               <p className="empty-state">No shift records yet.</p>
             )}
             {history.slice(0, 5).map((rec) => (
-              <div className="history-item" key={rec.attendance_id}>
-                <div className="date">{formatDate(rec.clock_in)}</div>
+              <div className="history-item" key={rec.attendance_id || rec.id}>
+                <div>
+                  <div className="date">{formatDate(rec.clock_in)}</div>
+                  {rec.society_name && (
+                    <div className="history-society">🏢 {rec.society_name}</div>
+                  )}
+                </div>
                 <div className="hours">
                   {formatTime(rec.clock_in)} – {rec.clock_out ? formatTime(rec.clock_out) : '…'}
                 </div>
