@@ -103,17 +103,17 @@ function App() {
         justifyContent: 'center',
         minHeight: '100vh',
         padding: '24px',
-        backgroundColor: '#0b0f19',
+        backgroundColor: '#1B1837',
         color: '#f8fafc',
       }}>
         <div style={{
           width: '100%',
           maxWidth: '380px',
-          background: '#131b2e',
+          background: 'rgba(27, 24, 55, 0.85)',
           padding: '32px 24px',
           borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(255,255,255,0.12)',
           textAlign: 'center',
         }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
