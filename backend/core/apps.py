@@ -16,7 +16,7 @@ class CoreConfig(AppConfig):
         build_commands = {
             'collectstatic', 'migrate', 'makemigrations',
             'check_default_passwords', 'seed_data', 'shell',
-            'showmigrations', 'sqlmigrate'
+            'showmigrations', 'sqlmigrate', 'bootstrap_prod_user'
         }
         if any(arg in build_commands for arg in sys.argv):
             return

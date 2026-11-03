@@ -19,4 +19,4 @@ COPY . /app/
 EXPOSE 8000
 
 # Run entrypoint script (if any) or migration + server
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py migrate && if [ \"$DEBUG\" = \"True\" ] || [ \"$DEBUG\" = \"true\" ] || [ \"$DEBUG\" = \"1\" ]; then python manage.py seed_data || true; fi && daphne -b 0.0.0.0 -p 8000 facility_proj.asgi:application"]
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && (python manage.py migrate || (export DATABASE_URL='' && python manage.py migrate)) && python manage.py bootstrap_prod_user || true && if [ \"$DEBUG\" = \"True\" ] || [ \"$DEBUG\" = \"true\" ] || [ \"$DEBUG\" = \"1\" ]; then python manage.py seed_data || true; fi && daphne -b 0.0.0.0 -p ${PORT:-8000} facility_proj.asgi:application"]

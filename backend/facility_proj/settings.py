@@ -19,10 +19,10 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
-if not SECRET_KEY:
-    if os.environ.get('RENDER') or os.environ.get('RENDER_SERVICE_ID'):
+if not SECRET_KEY or any(SECRET_KEY.startswith(k) for k in ('django-insecure-', 'secret', 'changeme')) or len(SECRET_KEY) < 32:
+    if os.environ.get('RENDER') or os.environ.get('RENDER_SERVICE_ID') or os.environ.get('RENDER_INSTANCE_ID') or not (os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')):
         import hashlib
-        srv_id = os.environ.get('RENDER_SERVICE_ID', 'srv-d8gpa01kh4rs73aurodg-altsan-prod')
+        srv_id = os.environ.get('RENDER_SERVICE_ID', os.environ.get('RENDER_INSTANCE_ID', 'srv-d8gpa01kh4rs73aurodg-altsan-prod'))
         SECRET_KEY = hashlib.sha256(f'altsan-render-secure-salt-{srv_id}'.encode()).hexdigest()
     else:
         SECRET_KEY = 'django-insecure-production-ready-key-change-this'
@@ -40,6 +40,10 @@ elif DEBUG:
     ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1']
 else:
     ALLOWED_HOSTS = ['altsan.com', 'api.altsan.com']
+
+# On Render or in production, ensure valid hosts are present and avoid wildcard abort
+if not DEBUG and (not ALLOWED_HOSTS or ALLOWED_HOSTS == ['*']):
+    ALLOWED_HOSTS = ['altsan.com', 'api.altsan.com', 'localhost', '127.0.0.1']
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
@@ -123,12 +127,8 @@ else:
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'altus',        # must match pgAdmin
-        'USER': 'postgres',
-        'PASSWORD': '1234',     # must match what you set
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -139,16 +139,27 @@ if database_url:
         from urllib.parse import urlparse
         parsed_url = urlparse(database_url)
         hostname = parsed_url.hostname
+        port = parsed_url.port or 5432
         if hostname and hostname not in ('localhost', '127.0.0.1'):
-            socket.getaddrinfo(hostname, None)
+            test_conn = socket.create_connection((hostname, port), timeout=2.5)
+            test_conn.close()
         DATABASES['default'] = dj_database_url.config(conn_max_age=600, conn_health_checks=True)
     except Exception as e:
         import logging
-        logging.warning(f"DATABASE_URL host failed DNS resolution ({e}). Gracefully falling back to SQLite.")
+        logging.warning(f"DATABASE_URL connection test failed ({e}). Gracefully falling back to SQLite.")
         DATABASES['default'] = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
+elif DEBUG and os.environ.get('USE_LOCAL_POSTGRES', '').lower() in ('true', '1'):
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'altus',
+        'USER': 'postgres',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 
 AUTH_USER_MODEL = 'core.User'
 
@@ -217,6 +228,12 @@ else:
         'https://altsan.com',
         'https://www.altsan.com',
     ]
+
+# Ensure critical production origins are always permitted
+if not DEBUG:
+    for origin in ['https://altsan.com', 'https://www.altsan.com']:
+        if origin not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(origin)
 
 if RENDER_EXTERNAL_HOSTNAME and f'https://{RENDER_EXTERNAL_HOSTNAME}' not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')

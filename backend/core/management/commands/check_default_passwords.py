@@ -33,7 +33,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"✅ Password security check PASSED: Checked {total_checked} user(s). "
+                f"[PASS] Password security check PASSED: Checked {total_checked} user(s). "
                 f"Zero accounts use '{DEFAULT_VULNERABLE_PASSWORD}'."
             )
         )
