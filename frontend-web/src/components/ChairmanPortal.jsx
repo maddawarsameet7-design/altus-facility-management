@@ -35,8 +35,8 @@ const ChairmanPortal = () => {
         societyApi.getMembers(societyId, true),
         societyApi.getMembers(societyId, false)
       ]);
-      setPendingMembers(Array.isArray(pendingRes.data) ? pendingRes.data : []);
-      const all = Array.isArray(allRes.data) ? allRes.data : [];
+      setPendingMembers(Array.isArray(pendingRes.data) ? pendingRes.data : (pendingRes.data?.results || []));
+      const all = Array.isArray(allRes.data) ? allRes.data : (allRes.data?.results || []);
       setActiveMembers(all.filter(m => m.is_active));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load society members.');

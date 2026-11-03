@@ -47,7 +47,8 @@ const BookingWizard = ({ onClose, onSuccess, currentRole }) => {
   }, [fetchServices]);
 
   // Enrich the raw services with our UI styles
-  const enrichedServices = rawServices.map(cat => ({
+  const serviceList = Array.isArray(rawServices) ? rawServices : (rawServices?.results || []);
+  const enrichedServices = serviceList.map(cat => ({
     ...cat,
     category: cat.name,
     ...getStyleForCategory(cat.name),

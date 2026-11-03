@@ -97,12 +97,9 @@ const MainLayout = () => {
       console.log("Fetching service requests...");
       const response = await requestApi.getAll();
       
-      if (!Array.isArray(response.data)) {
-        console.warn("API returned non-array data:", response.data);
-        return;
-      }
+      const rawData = Array.isArray(response.data) ? response.data : (response.data?.results || []);
 
-      const mapped = response.data.map(req => {
+      const mapped = rawData.map(req => {
         const catName = req.category?.name || 'Unknown';
         const style = getIconForCategory(catName);
         

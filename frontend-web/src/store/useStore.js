@@ -83,7 +83,8 @@ const useStore = create((set, get) => ({
     set({ servicesLoading: true });
     try {
       const res = await serviceApi.list();
-      set({ services: res.data, servicesLoading: false });
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      set({ services: rawList, servicesLoading: false });
     } catch (err) {
       console.error("Failed to fetch services", err);
       set({ servicesLoading: false });
