@@ -124,10 +124,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/min',           # Unauthenticated
-        'user': '200/min',          # Authenticated users (all roles)
-        'login': '5/min',           # Login/auth brute-force protection
-        'society_join': '10/hour',  # Strict invite join limit per user/IP
+        'anon': '100/min' if DEBUG else '20/min',
+        'user': '1000/min' if DEBUG else '200/min',
+        'login': '60/min' if DEBUG else '5/min',
+        'society_join': '60/hour' if DEBUG else '10/hour',
     },
     # ── Pagination ─────────────────────────────────────────────
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -142,7 +142,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = [
     'https://altsan.com',
     'https://www.altsan.com',

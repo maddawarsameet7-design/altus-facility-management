@@ -97,8 +97,12 @@ const LoginRegistration = ({ onLoginSuccess }) => {
     } catch (err) {
       if (err.response?.status === 401) {
         setError("Invalid username or password.");
+      } else if (err.response?.status === 429) {
+        setError("Too many login attempts. Please wait a minute and try again.");
       } else if (err.response?.data?.detail) {
         setError(err.response.data.detail);
+      } else if (!err.response || err.code === 'ERR_NETWORK') {
+        setError("Backend server is not reachable. Please ensure the Django backend is running on port 8000.");
       } else {
         setError("Authentication Failed. Please check your credentials.");
       }
@@ -184,6 +188,49 @@ const LoginRegistration = ({ onLoginSuccess }) => {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+
+          {isLogin && (
+            <div className="demo-accounts-pill-box">
+              <span className="demo-label">1-Tap Demo Quick Select:</span>
+              <div className="demo-pills">
+                <button 
+                  type="button" 
+                  className="demo-pill" 
+                  onClick={() => { setFormData({ ...formData, username: 'admin', password: 'password123' }); setError(''); }}
+                >
+                  👑 Director
+                </button>
+                <button 
+                  type="button" 
+                  className="demo-pill" 
+                  onClick={() => { setFormData({ ...formData, username: 'chairman1', password: 'password123' }); setError(''); }}
+                >
+                  🏢 Chairman
+                </button>
+                <button 
+                  type="button" 
+                  className="demo-pill" 
+                  onClick={() => { setFormData({ ...formData, username: 'supervisor1', password: 'password123' }); setError(''); }}
+                >
+                  👷 Supervisor
+                </button>
+                <button 
+                  type="button" 
+                  className="demo-pill" 
+                  onClick={() => { setFormData({ ...formData, username: 'member1', password: 'password123' }); setError(''); }}
+                >
+                  🏠 Member
+                </button>
+                <button 
+                  type="button" 
+                  className="demo-pill" 
+                  onClick={() => { setFormData({ ...formData, username: 'worker1', password: 'password123' }); setError(''); }}
+                >
+                  ⚡ Worker
+                </button>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '12px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>

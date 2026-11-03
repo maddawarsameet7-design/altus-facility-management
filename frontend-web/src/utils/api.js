@@ -1,7 +1,15 @@
 import axios from 'axios';
 
-const BASE_HOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? `http://${window.location.hostname}:8000`
+const isDev = window.location.hostname === 'localhost' || 
+              window.location.hostname === '127.0.0.1' || 
+              window.location.hostname.startsWith('192.168.') || 
+              window.location.hostname.startsWith('10.') || 
+              window.location.hostname.endsWith('.local') ||
+              window.location.port === '5173' ||
+              window.location.port === '3000';
+
+const BASE_HOST = isDev 
+  ? `http://${window.location.hostname || 'localhost'}:8000`
   : `https://api.altsan.com`;
 
 const API_URL = `${BASE_HOST}/api/`;

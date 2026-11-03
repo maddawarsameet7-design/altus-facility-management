@@ -23,13 +23,22 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js').then(registration => {
-            console.log('SW registered: ', registration);
-          }).catch(registrationError => {
-            console.log('SW registration failed: ', registrationError);
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '5173') {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (const registration of registrations) {
+              registration.unregister();
+            }
           });
-        });
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              for (const name of names) caches.delete(name);
+            });
+          }
+        } else {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+          });
+        }
       }
     </script>
   </body>
