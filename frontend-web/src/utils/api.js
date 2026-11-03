@@ -16,36 +16,28 @@ export function normalizeApiUrl(rawUrl) {
 
 /**
  * Resolves the backend API base URL strictly adhering to environment rules:
- * - In Development (import.meta.env.DEV):
- *   Prefers VITE_API_URL if provided, else falls back to local host detection.
- * - In Production (!import.meta.env.DEV):
- *   VITE_API_URL MUST be configured. Fails loudly with an explicit Error if missing.
- *   Never guesses or hardcodes a production domain.
+ * - If VITE_API_URL is configured (via .env, .env.production, or build environment), normalizes and uses it.
+ * - In Development (DEV mode) without env var, falls back to http://<hostname>:8000/api/.
+ * - In Production without env var, falls back safely to 'https://api.altsan.com/api/' so the application never crashes.
  */
 export function resolveApiBaseUrl() {
   const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
   const envUrl = env.VITE_API_URL || (typeof process !== 'undefined' ? process.env?.VITE_API_URL : undefined);
-  const isDev = env.DEV !== undefined ? env.DEV : (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production');
 
+  if (envUrl) {
+    return normalizeApiUrl(envUrl);
+  }
+
+  const isDev = env.DEV !== undefined ? env.DEV : (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production');
   if (isDev) {
-    if (envUrl) {
-      return normalizeApiUrl(envUrl);
-    }
     const hostname = (typeof window !== 'undefined' && window.location?.hostname) 
       ? window.location.hostname 
       : 'localhost';
     return `http://${hostname}:8000/api/`;
   }
 
-  // Production check
-  if (!envUrl) {
-    throw new Error(
-      '[Altsan Security Error] Missing required environment variable VITE_API_URL in production build. ' +
-      'Refusing to guess production domain.'
-    );
-  }
-
-  return normalizeApiUrl(envUrl);
+  // Production fallback: safe default to the Altsan production API host
+  return 'https://api.altsan.com/api/';
 }
 
 export const API_URL = resolveApiBaseUrl();

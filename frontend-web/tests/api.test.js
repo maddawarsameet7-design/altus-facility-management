@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeApiUrl } from '../src/utils/api.js';
+import { normalizeApiUrl, resolveApiBaseUrl } from '../src/utils/api.js';
 
 describe('API URL Normalization', () => {
   it('normalizes root domain to end with /api/', () => {
@@ -21,3 +21,10 @@ describe('API URL Normalization', () => {
   });
 });
 
+describe('API URL Resolution', () => {
+  it('resolves safely without throwing in any environment', () => {
+    const url = resolveApiBaseUrl();
+    assert.ok(typeof url === 'string');
+    assert.ok(url.endsWith('/api/'));
+  });
+});
