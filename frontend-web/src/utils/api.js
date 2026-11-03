@@ -1,6 +1,20 @@
 import axios from 'axios';
 
 /**
+ * Normalizes any API URL string so it consistently ends with `/api/`.
+ * Supports both root host format ('https://api.altsan.com')
+ * and full path format ('https://api.altsan.com/api' or 'https://api.altsan.com/api/').
+ */
+export function normalizeApiUrl(rawUrl) {
+  if (!rawUrl) return '';
+  let url = rawUrl.trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return `${url}/`;
+}
+
+/**
  * Resolves the backend API base URL strictly adhering to environment rules:
  * - In Development (import.meta.env.DEV):
  *   Prefers VITE_API_URL if provided, else falls back to local host detection.
@@ -9,11 +23,13 @@ import axios from 'axios';
  *   Never guesses or hardcodes a production domain.
  */
 export function resolveApiBaseUrl() {
-  const envUrl = import.meta.env.VITE_API_URL;
+  const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+  const envUrl = env.VITE_API_URL || (typeof process !== 'undefined' ? process.env?.VITE_API_URL : undefined);
+  const isDev = env.DEV !== undefined ? env.DEV : (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production');
 
-  if (import.meta.env.DEV) {
+  if (isDev) {
     if (envUrl) {
-      return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
+      return normalizeApiUrl(envUrl);
     }
     const hostname = (typeof window !== 'undefined' && window.location?.hostname) 
       ? window.location.hostname 
@@ -29,7 +45,7 @@ export function resolveApiBaseUrl() {
     );
   }
 
-  return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
+  return normalizeApiUrl(envUrl);
 }
 
 export const API_URL = resolveApiBaseUrl();

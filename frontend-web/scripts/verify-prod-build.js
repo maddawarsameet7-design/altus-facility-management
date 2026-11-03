@@ -11,7 +11,18 @@ if (!fs.existsSync(distDir)) {
   process.exit(1);
 }
 
-const FORBIDDEN_STRINGS = ['password123', 'Quick login', 'Quick Select', '1-Tap Demo'];
+const FORBIDDEN_STRINGS = [
+  'password123',
+  'Quick login',
+  'Quick Select',
+  '1-Tap Demo Quick Select',
+  '1-Tap Demo',
+  '👑 Director',
+  '🏢 Chairman',
+  '👷 Supervisor',
+  '🏠 Member',
+  '⚡ Worker',
+];
 let foundIssues = 0;
 
 function scanDir(dir) {

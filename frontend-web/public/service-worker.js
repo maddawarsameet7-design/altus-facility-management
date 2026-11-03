@@ -1,4 +1,6 @@
-const CACHE_NAME = 'altsan-pwa-v1';
+// Deployment Version Identifier: Update with each release to invalidate stale app caches
+const CACHE_VERSION = '2026.11.04.1';
+const CACHE_NAME = `altsan-pwa-v${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/index.html',
