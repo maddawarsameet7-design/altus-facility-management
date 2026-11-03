@@ -116,12 +116,21 @@ if os.environ.get('DATABASE_URL'):
 
 AUTH_USER_MODEL = 'core.User'
 
-LOGIN_THROTTLE_RATE = os.environ.get('LOGIN_THROTTLE_RATE', '60/min' if DEBUG else '5/min')
+# ── Reverse Proxy IP Configuration ───────────────────────────
+NUM_PROXIES = int(os.environ.get('NUM_PROXIES', 1 if not DEBUG else 0))
+
+# ── Throttling Configuration ──────────────────────────────────
+LOGIN_USER_IP_THROTTLE_RATE = os.environ.get('LOGIN_USER_IP_THROTTLE_RATE', '60/min' if DEBUG else '5/min')
+LOGIN_IP_THROTTLE_RATE = os.environ.get('LOGIN_IP_THROTTLE_RATE', '120/min' if DEBUG else '30/min')
+LOGIN_USER_THROTTLE_RATE = os.environ.get('LOGIN_USER_THROTTLE_RATE', '120/hour' if DEBUG else '20/hour')
+TOKEN_REFRESH_THROTTLE_RATE = os.environ.get('TOKEN_REFRESH_THROTTLE_RATE', '120/min' if DEBUG else '60/min')
+REGISTER_THROTTLE_RATE = os.environ.get('REGISTER_THROTTLE_RATE', '60/min' if DEBUG else '10/min')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'NUM_PROXIES': NUM_PROXIES,
     # ── RBAC: deny by default, each view overrides as needed ──
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -135,9 +144,12 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/min' if DEBUG else '20/min',
         'user': '1000/min' if DEBUG else '200/min',
-        'login': LOGIN_THROTTLE_RATE,
-        'login_ip': LOGIN_THROTTLE_RATE,
-        'login_user': LOGIN_THROTTLE_RATE,
+        'login': LOGIN_USER_IP_THROTTLE_RATE,
+        'login_user_ip': LOGIN_USER_IP_THROTTLE_RATE,
+        'login_ip': LOGIN_IP_THROTTLE_RATE,
+        'login_user': LOGIN_USER_THROTTLE_RATE,
+        'token_refresh': TOKEN_REFRESH_THROTTLE_RATE,
+        'register_ip': REGISTER_THROTTLE_RATE,
         'society_join': '60/hour' if DEBUG else '10/hour',
     },
     # ── Pagination ─────────────────────────────────────────────
@@ -154,6 +166,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = bool(DEBUG)
+CORS_EXPOSE_HEADERS = ['Retry-After']
 
 cors_env = os.environ.get('CORS_ALLOWED_ORIGINS')
 if cors_env:

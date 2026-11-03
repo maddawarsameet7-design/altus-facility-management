@@ -86,8 +86,10 @@ class TestLoginSecurity:
                 'anon': '20/min',
                 'user': '200/min',
                 'login': '2/min',
-                'login_ip': '2/min',
-                'login_user': '2/min',
+                'login_user_ip': '2/min',
+                'login_ip': '10/min',
+                'login_user': '20/hour',
+                'token_refresh': '60/min',
             },
         }
     )
@@ -119,29 +121,106 @@ class TestLoginSecurity:
                 'rest_framework.permissions.IsAuthenticated',
             ),
             'DEFAULT_THROTTLE_RATES': {
-                'login_ip': '10/min',
-                'login_user': '2/min',  # Strict per-username rate
+                'login_user_ip': '5/min',
+                'login_ip': '30/min',
+                'login_user': '20/hour',
             },
         }
     )
-    def test_dual_throttle_by_username_across_different_ips(self, client, test_user):
-        """Distributed credential stuffing from different IPs targeting the same username is blocked."""
+    def test_attacker_on_ip_a_cannot_lock_out_legitimate_user_on_ip_b(self, client, test_user):
+        """Attacker on IP A failing 5 times gets blocked, but legitimate user on IP B can still log in."""
+        url = reverse('token_obtain_pair')
+        ip_a = '198.51.100.1'
+        ip_b = '198.51.100.2'
+
+        # Attacker on IP A fails 5 times
+        for _ in range(5):
+            res = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                              REMOTE_ADDR=ip_a, format='json')
+            assert res.status_code == 401
+
+        # Attacker's 6th attempt from IP A is throttled (429)
+        attacker_blocked = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                                       REMOTE_ADDR=ip_a, format='json')
+        assert attacker_blocked.status_code == 429
+
+        # Legitimate user on IP B logs in with correct password -> SUCCESS (200 OK)
+        user_res = client.post(url, {'username': 'security_test_user', 'password': 'ValidPassword123!'},
+                               REMOTE_ADDR=ip_b, format='json')
+        assert user_res.status_code == 200
+        assert 'access' in user_res.data
+        assert 'refresh' in user_res.data
+
+    @override_settings(
+        DEBUG=False,
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': (
+                'rest_framework_simplejwt.authentication.JWTAuthentication',
+            ),
+            'DEFAULT_PERMISSION_CLASSES': (
+                'rest_framework.permissions.IsAuthenticated',
+            ),
+            'DEFAULT_THROTTLE_RATES': {
+                'login_user_ip': '2/min',
+                'login_ip': '5/min',
+                'token_refresh': '60/min',
+            },
+        }
+    )
+    def test_token_refresh_not_blocked_by_login_failures(self, client, test_user):
+        """Token refresh endpoint uses its own loose scope and is not blocked by login brute-force limits."""
+        login_url = reverse('token_obtain_pair')
+        refresh_url = reverse('token_refresh')
+
+        # First obtain a valid refresh token
+        login_res = client.post(login_url, {
+            'username': 'security_test_user',
+            'password': 'ValidPassword123!'
+        }, format='json')
+        assert login_res.status_code == 200
+        refresh_token = login_res.data['refresh']
+
+        # Now spam login with bad credentials until 429
+        for _ in range(3):
+            client.post(login_url, {'username': 'security_test_user', 'password': 'bad'}, format='json')
+
+        blocked_login = client.post(login_url, {'username': 'security_test_user', 'password': 'bad'}, format='json')
+        assert blocked_login.status_code == 429
+
+        # Refresh endpoint remains fully functional and succeeds
+        refresh_res = client.post(refresh_url, {'refresh': refresh_token}, format='json')
+        assert refresh_res.status_code == 200
+        assert 'access' in refresh_res.data
+
+    @override_settings(
+        DEBUG=False,
+        NUM_PROXIES=1,
+        REST_FRAMEWORK={
+            'NUM_PROXIES': 1,
+            'DEFAULT_THROTTLE_RATES': {
+                'login_user_ip': '2/min',
+            },
+        }
+    )
+    def test_proxy_ip_x_forwarded_for_resolution(self, client, test_user):
+        """X-Forwarded-For is correctly used behind a reverse proxy when NUM_PROXIES is configured."""
         url = reverse('token_obtain_pair')
 
-        # IP 1
-        r1 = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
-                         REMOTE_ADDR='198.51.100.1', format='json')
-        assert r1.status_code == 401
+        # 2 bad attempts from client IP 203.0.113.50 behind proxy 10.0.0.1
+        client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                    HTTP_X_FORWARDED_FOR='203.0.113.50', REMOTE_ADDR='10.0.0.1', format='json')
+        client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                    HTTP_X_FORWARDED_FOR='203.0.113.50', REMOTE_ADDR='10.0.0.1', format='json')
 
-        # IP 2
-        r2 = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
-                         REMOTE_ADDR='198.51.100.2', format='json')
-        assert r2.status_code == 401
+        # 3rd attempt from 203.0.113.50 is throttled
+        blocked = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                              HTTP_X_FORWARDED_FOR='203.0.113.50', REMOTE_ADDR='10.0.0.1', format='json')
+        assert blocked.status_code == 429
 
-        # IP 3: Different IP, but targeted username exceeded threshold -> 429
-        r3 = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
-                         REMOTE_ADDR='198.51.100.3', format='json')
-        assert r3.status_code == 429
+        # Different client IP 203.0.113.99 behind the same proxy 10.0.0.1 is NOT throttled
+        other = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                            HTTP_X_FORWARDED_FOR='203.0.113.99', REMOTE_ADDR='10.0.0.1', format='json')
+        assert other.status_code == 401
 
     def test_seed_script_refuses_to_run_when_debug_false(self):
         """seed_data command must refuse to run and raise CommandError if DEBUG is False."""
@@ -169,7 +248,7 @@ class TestLoginSecurity:
         assert response.headers.get('Access-Control-Allow-Origin') != 'https://evil-unauthorized.com'
         assert response.headers.get('Access-Control-Allow-Origin') != '*'
 
-        # Trusted origin gets proper CORS header
+        # Trusted origin gets proper CORS header and exposes Retry-After
         trusted_response = client.post(
             url,
             {'username': 'test', 'password': 'bad'},
@@ -177,3 +256,4 @@ class TestLoginSecurity:
             format='json'
         )
         assert trusted_response.headers.get('Access-Control-Allow-Origin') == 'https://altsan.com'
+        assert 'Retry-After' in trusted_response.headers.get('Access-Control-Expose-Headers', '')

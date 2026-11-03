@@ -23,7 +23,7 @@ from .permissions import (
 )
 from rest_framework.throttling import ScopedRateThrottle
 from .mixins import SocietyScopedMixin, get_user_society_ids
-from .throttles import LoginIPThrottle
+from .throttles import RegisterThrottle
 
 
 # ─── AUTH & USER ──────────────────────────────────────────────
@@ -40,7 +40,7 @@ class UserProfileView(APIView):
 class RegisterView(APIView):
     """Public endpoint to register new users."""
     permission_classes = [permissions.AllowAny]
-    throttle_classes = [ScopedRateThrottle, LoginIPThrottle]
+    throttle_classes = [ScopedRateThrottle, RegisterThrottle]
     throttle_scope = 'login'
 
     def post(self, request):
