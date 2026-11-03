@@ -34,6 +34,13 @@ from core.views_society import (
     SocietyViewSet, SiteViewSet, SocietySettingsViewSet, JoinSocietyView
 )
 from core.views_payments import CreateRazorpayOrderView, VerifyRazorpayPaymentView
+from core.views_staffing import (
+    PostViewSet, ShiftViewSet, RosterAssignmentViewSet, DailyRosterViewSet,
+    LeaveRecordViewSet, AlertViewSet, AuditLogViewSet,
+    RosterClockInView, RosterClockOutView, RosterBoardTodayView,
+    MyScheduleView, MarkSlotAbsentView, UnfilledRosterView,
+    AttendanceCorrectionView, SelfieDownloadView
+)
 
 router = DefaultRouter()
 router.register(r'clients', ClientProfileViewSet, basename='client')
@@ -47,6 +54,13 @@ router.register(r'attendance', AttendanceViewSet, basename='attendance')
 router.register(r'societies', SocietyViewSet, basename='society')
 router.register(r'sites', SiteViewSet, basename='site')
 router.register(r'society-settings', SocietySettingsViewSet, basename='society-settings')
+router.register(r'roster/posts', PostViewSet, basename='roster-post')
+router.register(r'roster/shifts', ShiftViewSet, basename='roster-shift')
+router.register(r'roster/assignments', RosterAssignmentViewSet, basename='roster-assignment')
+router.register(r'roster/daily', DailyRosterViewSet, basename='roster-daily')
+router.register(r'roster/leaves', LeaveRecordViewSet, basename='roster-leave')
+router.register(r'roster/alerts', AlertViewSet, basename='roster-alert')
+router.register(r'roster/audit-logs', AuditLogViewSet, basename='roster-audit-log')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -66,11 +80,21 @@ urlpatterns = [
     path('api/payments/create-order/', CreateRazorpayOrderView.as_view(), name='create_payment_order'),
     path('api/payments/verify/', VerifyRazorpayPaymentView.as_view(), name='verify_payment'),
     
-    # Attendance endpoints
+    # Existing request-based attendance endpoints (untouched)
     path('api/attendance/clock-in/', ClockInView.as_view(), name='clock_in'),
     path('api/attendance/clock-out/', ClockOutView.as_view(), name='clock_out'),
     path('api/attendance/my-history/', MyAttendanceHistoryView.as_view(), name='my_attendance_history'),
     
+    # Roster-based staffing attendance & operational endpoints
+    path('api/roster/clock-in/', RosterClockInView.as_view(), name='roster_clock_in'),
+    path('api/roster/clock-out/', RosterClockOutView.as_view(), name='roster_clock_out'),
+    path('api/roster/today/', RosterBoardTodayView.as_view(), name='roster_board_today'),
+    path('api/roster/my-schedule/', MyScheduleView.as_view(), name='roster_my_schedule'),
+    path('api/roster/unfilled/', UnfilledRosterView.as_view(), name='roster_unfilled'),
+    path('api/roster/<uuid:pk>/mark-absent/', MarkSlotAbsentView.as_view(), name='roster_mark_absent'),
+    path('api/roster/attendance/<uuid:pk>/correct/', AttendanceCorrectionView.as_view(), name='roster_attendance_correct'),
+    path('api/roster/attendance/<uuid:pk>/selfie/', SelfieDownloadView.as_view(), name='roster_attendance_selfie'),
+
     # Worker location update (REST fallback)
     path('api/workers/location/', WorkerLocationUpdateView.as_view(), name='worker_location_update'),
 
