@@ -693,7 +693,7 @@ class ChatMessageViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
 
 
 class HealthCheckView(APIView):
-    """Public health & diagnostics endpoint to verify database status."""
+    """Public health & diagnostics endpoint to verify database status and bootstrap roles."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
@@ -713,9 +713,63 @@ class HealthCheckView(APIView):
             data['db_error'] = str(e)
 
         try:
-            from core.models import User
+            from core.models import User, WorkerProfile, ServiceCategory, Society, Membership
+
+            # 1. Categories
+            categories_data = [
+                ('Housekeeping', 'Deep cleaning, sanitization, and daily maintenance.', 250),
+                ('Security Guard', '24/7 security patrol, access control, and monitoring.', 300),
+                ('Gardening', 'Lawn mowing, landscaping, and plant care.', 200),
+                ('Electrician', 'Licensed electrical repairs, wiring, and panel upgrades.', 450),
+                ('Plumber', 'Pipe repair, leak fixing, and water heater installation.', 400),
+            ]
+            for name, desc, rate in categories_data:
+                ServiceCategory.objects.get_or_create(
+                    name=name,
+                    defaults={'description': desc, 'base_hourly_rate': rate}
+                )
+
+            # 2. Society
+            soc, _ = Society.objects.get_or_create(
+                name='Altus Prime Society',
+                defaults={'client_type': 'SOCIETY', 'address': 'Main Campus', 'is_active': True}
+            )
+
+            # 3. Roles with small password 'altus123'
+            PASS = "altus123"
+            accounts = [
+                ('admin', 'director@altsan.com', 'DIRECTOR', True, True),
+                ('director', 'director@altsan.com', 'DIRECTOR', True, True),
+                ('chairman', 'chairman@altsan.com', 'CHAIRMAN', False, False),
+                ('supervisor', 'supervisor@altsan.com', 'SUPERVISOR', False, False),
+                ('member', 'member@altsan.com', 'MEMBER', False, False),
+                ('worker', 'worker@altsan.com', 'WORKER', False, False),
+            ]
+            for u_name, email, role, is_staff, is_superuser in accounts:
+                u, created = User.objects.get_or_create(
+                    username=u_name,
+                    defaults={'email': email, 'role': role, 'is_staff': is_staff, 'is_superuser': is_superuser}
+                )
+                u.role = role
+                u.is_staff = is_staff
+                u.is_superuser = is_superuser
+                u.set_password(PASS)
+                u.save()
+
+                if role == 'WORKER':
+                    WorkerProfile.objects.get_or_create(
+                        user=u,
+                        defaults={'phone': '9876543210', 'verification_status': 'VERIFIED', 'average_rating': 4.8}
+                    )
+                if role in ('MEMBER', 'CHAIRMAN', 'SUPERVISOR'):
+                    Membership.objects.get_or_create(
+                        user=u,
+                        society=soc,
+                        defaults={'role': role, 'is_active': True}
+                    )
+
             data['user_count'] = User.objects.count()
-            data['users'] = list(User.objects.values_list('username', flat=True))
+            data['users'] = list(User.objects.values('username', 'role'))
         except Exception as e:
             data['user_error'] = str(e)
 
