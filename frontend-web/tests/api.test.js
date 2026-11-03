@@ -20,3 +20,4 @@ describe('API URL Normalization', () => {
     assert.equal(normalizeApiUrl('http://localhost:8000/api/'), 'http://localhost:8000/api/');
   });
 });
+

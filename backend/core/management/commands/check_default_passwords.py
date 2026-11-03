@@ -37,3 +37,4 @@ class Command(BaseCommand):
                 f"Zero accounts use '{DEFAULT_VULNERABLE_PASSWORD}'."
             )
         )
+

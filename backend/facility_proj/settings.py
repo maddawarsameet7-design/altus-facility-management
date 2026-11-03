@@ -18,7 +18,15 @@ except ImportError:
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-production-ready-key-change-this')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if os.environ.get('RENDER') or os.environ.get('RENDER_SERVICE_ID'):
+        import hashlib
+        srv_id = os.environ.get('RENDER_SERVICE_ID', 'srv-d8gpa01kh4rs73aurodg-altsan-prod')
+        SECRET_KEY = hashlib.sha256(f'altsan-render-secure-salt-{srv_id}'.encode()).hexdigest()
+    else:
+        SECRET_KEY = 'django-insecure-production-ready-key-change-this'
+
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 
 # Razorpay Keys
@@ -205,7 +213,10 @@ elif DEBUG:
         'http://127.0.0.1:5173',
     ]
 else:
-    CORS_ALLOWED_ORIGINS = []
+    CORS_ALLOWED_ORIGINS = [
+        'https://altsan.com',
+        'https://www.altsan.com',
+    ]
 
 if RENDER_EXTERNAL_HOSTNAME and f'https://{RENDER_EXTERNAL_HOSTNAME}' not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')

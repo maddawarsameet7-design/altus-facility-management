@@ -43,3 +43,4 @@ def validate_production_settings():
         raise ImproperlyConfigured(
             "SECURITY CRITICAL: Production startup aborted! CORS_ALLOWED_ORIGINS cannot be empty when DEBUG=False."
         )
+
