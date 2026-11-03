@@ -5,14 +5,14 @@ Idempotent bootstrap command for production:
 - Ensures essential service categories exist.
 - Ensures a default society exists for tenant isolation.
 - Ensures essential initial role accounts (DIRECTOR, CHAIRMAN, SUPERVISOR, MEMBER, WORKER)
-  exist with secure production passwords (never 'password123').
+  exist with easy-to-use small passwords (never 'password123').
 """
 from django.core.management.base import BaseCommand
 from core.models import User, WorkerProfile, ServiceCategory, Society, Membership
 
 
 class Command(BaseCommand):
-    help = 'Ensures standard service categories and essential initial users exist with secure credentials.'
+    help = 'Ensures standard service categories and essential initial users exist with clean credentials.'
 
     def handle(self, *args, **kwargs):
         self.stdout.write("[BOOTSTRAP] Bootstrapping production users and categories...")
@@ -45,13 +45,18 @@ class Command(BaseCommand):
         if soc_created:
             self.stdout.write("  [+] Created default society: Altus Prime Society")
 
-        # 3. Essential initial users (All use secure non-default password)
-        SECURE_PASS = "AltusSecure2026!"
+        # 3. Essential initial users (All use clean, easy-to-type password: 'altus123')
+        SECURE_PASS = "altus123"
         users_to_ensure = [
+            ('admin', 'director@altsan.com', 'DIRECTOR', True, True),
             ('admin_altus', 'director@altsan.com', 'DIRECTOR', True, True),
+            ('chairman', 'chairman@altsan.com', 'CHAIRMAN', False, False),
             ('chairman_altus', 'chairman@altsan.com', 'CHAIRMAN', False, False),
+            ('supervisor', 'supervisor@altsan.com', 'SUPERVISOR', False, False),
             ('supervisor_altus', 'supervisor@altsan.com', 'SUPERVISOR', False, False),
+            ('member', 'member@altsan.com', 'MEMBER', False, False),
             ('member_altus', 'member@altsan.com', 'MEMBER', False, False),
+            ('worker', 'worker@altsan.com', 'WORKER', False, False),
             ('worker_altus', 'worker@altsan.com', 'WORKER', False, False),
         ]
 
@@ -65,10 +70,13 @@ class Command(BaseCommand):
                     'is_superuser': is_superuser
                 }
             )
-            if created:
-                user.set_password(SECURE_PASS)
-                user.save()
-                self.stdout.write(f"  [+] Created user: {username} ({role})")
+            user.set_password(SECURE_PASS)
+            user.role = role
+            user.is_staff = is_staff
+            user.is_superuser = is_superuser
+            user.save()
+            status_text = "Created" if created else "Updated password for"
+            self.stdout.write(f"  [+] {status_text} user: {username} ({role})")
 
             # Worker profile
             if role == 'WORKER':
