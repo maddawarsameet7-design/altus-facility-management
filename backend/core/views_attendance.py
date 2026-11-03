@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from .models import Attendance, Assignment, WorkerProfile
 from .serializers import AttendanceSerializer
 from .permissions import IsWorker, IsOpsUser, IsOwnerOrOps
-from .mixins import get_user_society_ids
+from .mixins import SocietyScopedMixin, get_user_society_ids
 
 
 class ClockInView(APIView):
@@ -51,7 +51,12 @@ class ClockInView(APIView):
                 status=status.HTTP_409_CONFLICT
             )
 
-        attendance, _ = Attendance.objects.get_or_create(assignment=assignment)
+        attendance, _ = Attendance.objects.get_or_create(
+            assignment=assignment,
+            defaults={'society': assignment.request.society}
+        )
+        if not attendance.society_id and assignment.request.society_id:
+            attendance.society = assignment.request.society
         attendance.clock_in = timezone.now()
         attendance.save()
 
@@ -214,26 +219,26 @@ class WorkerLocationUpdateView(APIView):
         })
 
 
-class AttendanceViewSet(viewsets.ReadOnlyModelViewSet):
+class AttendanceViewSet(SocietyScopedMixin, viewsets.ReadOnlyModelViewSet):
     """
-    GET /api/attendance/        — List attendance records (scoped by role)
-    GET /api/attendance/{id}/   — Detail view (own record for workers, any for ops)
+    GET /api/attendance/        — List attendance records (scoped by role & society)
+    GET /api/attendance/{id}/   — Detail view (own record for workers, any in society for ops)
 
     Access matrix:
       WORKER      → own records only (redirected to /my-history/ for richer output)
-      SUPERVISOR  → all records, filterable by assignment or worker
-      DIRECTOR    → all records, filterable by assignment or worker
-      MEMBER/CHAIRMAN → 403 (they use the service request response for context)
+      SUPERVISOR  → records in supervisor's active societies
+      DIRECTOR    → all records
+      MEMBER/CHAIRMAN → 403
     """
     serializer_class = AttendanceSerializer
     permission_classes = [permissions.IsAuthenticated]
+    society_field = 'society'
 
     def get_permissions(self):
         """Members and Chairmen have no business calling this endpoint."""
         perms = super().get_permissions()
         role = getattr(self.request.user, 'role', '')
         if role in ('MEMBER', 'CHAIRMAN'):
-            # Return an explicit denial rather than an empty queryset
             from rest_framework.permissions import BasePermission
 
             class Deny(BasePermission):
@@ -250,25 +255,24 @@ class AttendanceViewSet(viewsets.ReadOnlyModelViewSet):
 
         qs = Attendance.objects.select_related(
             'assignment__worker__user',
-            'assignment__request__category'
+            'assignment__request__category',
+            'society'
         )
 
         if role == 'WORKER':
             try:
                 worker = WorkerProfile.objects.get(user=user)
-                qs = qs.filter(assignment__worker=worker)
+                return qs.filter(assignment__worker=worker)
             except WorkerProfile.DoesNotExist:
                 return qs.none()
-        elif role in ('SUPERVISOR', 'DIRECTOR'):
-            if role == 'SUPERVISOR':
-                # Scope to societies where this supervisor has membership
-                society_ids = list(get_user_society_ids(user))
-                qs = qs.filter(assignment__request__society__in=society_ids)
-            # DIRECTOR: unfiltered
+        elif role == 'DIRECTOR':
+            pass
+        elif role == 'SUPERVISOR':
+            society_ids = list(get_user_society_ids(user))
+            qs = qs.filter(society__in=society_ids)
         else:
             return qs.none()
 
-        # Filter params (ops only)
         assignment_id = self.request.query_params.get('assignment')
         if assignment_id:
             qs = qs.filter(assignment_id=assignment_id)
@@ -280,11 +284,11 @@ class AttendanceViewSet(viewsets.ReadOnlyModelViewSet):
         return qs.order_by('-clock_in')
 
     def get_object(self):
-        """Object-level: workers can only retrieve their own records."""
+        """Object-level: workers can only retrieve their own records; cross-society returns 404."""
         obj = super().get_object()
         user = self.request.user
         if user.role == 'WORKER':
             if obj.assignment.worker.user != user:
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("You can only view your own attendance records.")
+                from django.http import Http404
+                raise Http404
         return obj

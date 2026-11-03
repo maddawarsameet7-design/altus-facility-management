@@ -51,14 +51,17 @@ class AttendanceSerializer(serializers.ModelSerializer):
     duration_hours = serializers.SerializerMethodField()
     service_name = serializers.ReadOnlyField(source='assignment.request.category.name')
     location = serializers.ReadOnlyField(source='assignment.request.location')
+    society_name = serializers.ReadOnlyField(source='society.name')
 
     class Meta:
         model = Attendance
         fields = [
-            'id', 'assignment', 'service_name', 'location',
+            'id', 'assignment', 'society', 'society_name',
+            'service_name', 'location',
             'clock_in', 'clock_out', 'duration_hours',
             'proof_of_work_url', 'photo_proof'
         ]
+        read_only_fields = ['id', 'society', 'society_name']
 
     def get_duration_hours(self, obj):
         if obj.clock_in and obj.clock_out:
@@ -83,7 +86,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
         fields = ['id', 'request', 'sender', 'sender_name', 'content', 'timestamp']
-        read_only_fields = ['id', 'timestamp']
+        read_only_fields = ['id', 'sender', 'timestamp']
 
 
 class PaymentTransactionSerializer(serializers.ModelSerializer):

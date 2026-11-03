@@ -38,6 +38,7 @@ class UserProfileView(APIView):
 class RegisterView(APIView):
     """Public endpoint to register new users."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'login'
 
     def post(self, request):
         username = request.data.get('username')
@@ -155,16 +156,18 @@ class DashboardStatsView(APIView):
         if role == 'SUPERVISOR':
             society_ids = list(get_user_society_ids(user))
             req_qs = ServiceRequest.objects.filter(society__in=society_ids)
+            total_workers = WorkerProfile.objects.filter(assignments__request__society__in=society_ids).distinct().count()
+            verified_workers = WorkerProfile.objects.filter(assignments__request__society__in=society_ids, verification_status='VERIFIED').distinct().count()
+            pending_workers = 0
         else:
             req_qs = ServiceRequest.objects.all()
+            total_workers = WorkerProfile.objects.count()
+            verified_workers = WorkerProfile.objects.filter(verification_status='VERIFIED').count()
+            pending_workers = WorkerProfile.objects.filter(verification_status='PENDING').count()
 
         total_requests = req_qs.count()
         open_requests = req_qs.exclude(status='Resolved').count()
         resolved_requests = req_qs.filter(status='Resolved').count()
-
-        total_workers = WorkerProfile.objects.count()
-        verified_workers = WorkerProfile.objects.filter(verification_status='VERIFIED').count()
-        pending_workers = WorkerProfile.objects.filter(verification_status='PENDING').count()
 
         monthly_trend = []
         for i in range(5, -1, -1):
@@ -255,8 +258,13 @@ class WorkerViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'WORKER':
             return WorkerProfile.objects.filter(user=user)
-        if user.role in ('SUPERVISOR', 'DIRECTOR'):
+        if user.role == 'DIRECTOR':
             return WorkerProfile.objects.all()
+        if user.role == 'SUPERVISOR':
+            society_ids = list(get_user_society_ids(user))
+            return WorkerProfile.objects.filter(
+                Q(verification_status='VERIFIED') | Q(assignments__request__society__in=society_ids)
+            ).distinct()
         # Members/Chairmen cannot list workers
         return WorkerProfile.objects.none()
 
@@ -279,10 +287,10 @@ class WorkerViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def pending(self, request):
-        """List workers pending verification. Ops only."""
-        if request.user.role not in ('SUPERVISOR', 'DIRECTOR'):
+        """List workers pending verification. Director only."""
+        if request.user.role != 'DIRECTOR':
             return Response(
-                {"error": "Only Supervisors and Directors can view pending workers."},
+                {"error": "Only Directors can view pending workers."},
                 status=status.HTTP_403_FORBIDDEN
             )
         pending = WorkerProfile.objects.filter(verification_status='PENDING')
@@ -394,47 +402,7 @@ class ServiceRequestViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Set reporter from auth, and society from the mixin's logic."""
-        user = self.request.user
-        role = user.role
-
-        if role == 'DIRECTOR':
-            # Director must supply society_id in the body
-            society_id = self.request.data.get('society_id') or self.request.data.get('society')
-            if society_id:
-                from .models import Society as SocietyModel
-                society = SocietyModel.objects.get(pk=society_id)
-                serializer.save(reporter=user, society=society)
-            else:
-                serializer.save(reporter=user)
-            return
-
-        # MEMBER / CHAIRMAN / SUPERVISOR — auto-set society from Membership
-        from .models import Membership as MembershipModel
-        if role == 'SUPERVISOR':
-            society_id = self.request.data.get('society_id') or self.request.data.get('society')
-            if not society_id:
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError({"society_id": "Supervisors must specify society_id."})
-            society_ids = list(get_user_society_ids(user))
-            if str(society_id) not in [str(s) for s in society_ids]:
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("You are not a supervisor of that society.")
-            from .models import Society as SocietyModel
-            serializer.save(reporter=user, society=SocietyModel.objects.get(pk=society_id))
-            return
-
-        # MEMBER / CHAIRMAN — force society from their membership (ignore any body value)
-        membership = MembershipModel.objects.filter(
-            user=user, is_active=True
-        ).select_related('society').order_by('-joined_at').first()
-
-        if not membership:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied(
-                "You are not a member of any active society. "
-                "Contact a Director or Chairman to join one."
-            )
-        serializer.save(reporter=user, society=membership.society)
+        super().perform_create(serializer, reporter=self.request.user)
 
     def create(self, request, *args, **kwargs):
         """Only Clients (MEMBER/CHAIRMAN) can create service requests."""
@@ -446,7 +414,8 @@ class ServiceRequestViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        """Only Directors can delete service requests."""
+        """Only Directors can delete service requests. Others get 404 if out-of-society, or 403."""
+        self.get_object()
         if request.user.role != 'DIRECTOR':
             return Response(
                 {"error": "Only Directors can delete service requests."},
@@ -629,10 +598,18 @@ class ReviewViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
         user = request.user
         request_id = request.data.get('request')
 
-        try:
-            srv_request = ServiceRequest.objects.get(id=request_id)
-        except ServiceRequest.DoesNotExist:
-            return Response({"error": "Service request not found."}, status=status.HTTP_404_NOT_FOUND)
+        if user.role != 'DIRECTOR':
+            society_ids = get_user_society_ids(user)
+            if user.role == 'WORKER':
+                srv_request = get_object_or_404(
+                    ServiceRequest, id=request_id, assignments__worker__user=user
+                )
+            else:
+                srv_request = get_object_or_404(
+                    ServiceRequest, id=request_id, society__in=society_ids
+                )
+        else:
+            srv_request = get_object_or_404(ServiceRequest, id=request_id)
 
         if srv_request.status != 'Resolved':
             return Response(
@@ -668,6 +645,22 @@ class ChatMessageViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     serializer_class = ChatMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
     society_field = 'request__society'
+
+    def perform_create(self, serializer):
+        request_obj = serializer.validated_data.get('request')
+        user = self.request.user
+        if user.role != 'DIRECTOR':
+            society_ids = [str(s) for s in get_user_society_ids(user)]
+            if str(request_obj.society_id) not in society_ids:
+                from django.http import Http404
+                raise Http404
+            is_reporter = request_obj.reporter == user
+            is_assigned_worker = request_obj.assignments.filter(worker__user=user).exists()
+            is_ops = user.role in ('SUPERVISOR', 'DIRECTOR')
+            if not (is_reporter or is_assigned_worker or is_ops):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You are not a participant in this request.")
+        serializer.save(sender=user)
 
     def get_queryset(self):
         user = self.request.user

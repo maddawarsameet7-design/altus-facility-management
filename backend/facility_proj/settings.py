@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.CurrentUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -120,10 +121,13 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/min',      # Unauthenticated (login, register)
-        'user': '200/min',     # Authenticated users (all roles)
+        'anon': '20/min',           # Unauthenticated
+        'user': '200/min',          # Authenticated users (all roles)
+        'login': '5/min',           # Login/auth brute-force protection
+        'society_join': '10/hour',  # Strict invite join limit per user/IP
     },
     # ── Pagination ─────────────────────────────────────────────
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -188,3 +192,14 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Ensure staticfiles directory exists to eliminate startup warning
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+
+# ── Fast Password Hasher for Tests ──────────────────────────────────────────
+import sys
+if 'pytest' in sys.modules or any('test' in arg for arg in sys.argv):
+    PASSWORD_HASHERS = [
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    ]
+

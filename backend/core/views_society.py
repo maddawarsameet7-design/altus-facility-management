@@ -10,6 +10,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import ScopedRateThrottle
 
 from .models import Society, Site, Membership, SocietySettings, InviteCode, User
 from .serializers import (
@@ -17,7 +18,7 @@ from .serializers import (
     SocietySettingsSerializer, InviteCodeSerializer,
 )
 from .permissions import IsDirectorOnly, IsOpsUser, IsSocietyChairman
-from .mixins import get_user_society_ids
+from .mixins import SocietyScopedMixin, get_user_society_ids
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ def _user_is_chairman_of(user, society):
 
 # ─── Society CRUD ─────────────────────────────────────────────────────────────
 
-class SocietyViewSet(viewsets.ModelViewSet):
+class SocietyViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     """
     GET  /api/societies/          DIRECTOR: all; others: own societies
     POST /api/societies/          DIRECTOR only
@@ -48,6 +49,7 @@ class SocietyViewSet(viewsets.ModelViewSet):
     """
     serializer_class = SocietySerializer
     permission_classes = [permissions.IsAuthenticated]
+    society_field = 'id'
 
     def get_queryset(self):
         user = self.request.user
@@ -81,6 +83,7 @@ class SocietyViewSet(viewsets.ModelViewSet):
         return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        self.get_object()
         if request.user.role != 'DIRECTOR':
             return Response(
                 {"error": "Only Directors can delete societies."},
@@ -240,6 +243,8 @@ class JoinSocietyView(APIView):
     Creates a Membership with is_active=False (pending Chairman approval).
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'society_join'
 
     def post(self, request):
         code = request.data.get('code', '').strip().upper()
@@ -285,7 +290,7 @@ class JoinSocietyView(APIView):
 
 # ─── Site CRUD ────────────────────────────────────────────────────────────────
 
-class SiteViewSet(viewsets.ModelViewSet):
+class SiteViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     """
     Sites (physical locations) within a society.
     Director: all sites.
@@ -294,6 +299,7 @@ class SiteViewSet(viewsets.ModelViewSet):
     """
     serializer_class = SiteSerializer
     permission_classes = [permissions.IsAuthenticated]
+    society_field = 'society'
 
     def get_queryset(self):
         user = self.request.user
@@ -305,6 +311,12 @@ class SiteViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         if request.user.role not in ('DIRECTOR', 'SUPERVISOR'):
             return Response({"error": "Only Directors and Supervisors can create sites."}, status=403)
+        if request.user.role == 'SUPERVISOR':
+            society_id = request.data.get('society') or request.data.get('society_id')
+            society_ids = [str(s) for s in get_user_society_ids(request.user)]
+            if str(society_id) not in society_ids:
+                from django.http import Http404
+                raise Http404
         return super().create(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -313,6 +325,7 @@ class SiteViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        self.get_object()
         if request.user.role != 'DIRECTOR':
             return Response({"error": "Only Directors can delete sites."}, status=403)
         return super().destroy(request, *args, **kwargs)
@@ -320,7 +333,7 @@ class SiteViewSet(viewsets.ModelViewSet):
 
 # ─── SocietySettings ─────────────────────────────────────────────────────────
 
-class SocietySettingsViewSet(viewsets.ModelViewSet):
+class SocietySettingsViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     """
     GET/PUT /api/society-settings/{society_id}/
     Director: any society.
@@ -329,6 +342,7 @@ class SocietySettingsViewSet(viewsets.ModelViewSet):
     """
     serializer_class = SocietySettingsSerializer
     permission_classes = [permissions.IsAuthenticated]
+    society_field = 'society'
 
     def get_queryset(self):
         user = self.request.user

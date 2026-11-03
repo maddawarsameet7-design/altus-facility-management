@@ -60,10 +60,12 @@ def make_service_request(reporter, society, category=None):
     )
 
 
-def auth(client, user, password='testpass123'):
-    response = client.post('/api/auth/login/', {'username': user.username, 'password': password}, format='json')
-    assert response.status_code == 200, f"Login failed for {user.username}: {response.data}"
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+def auth(client, user, password=None):
+    token = str(RefreshToken.for_user(user).access_token)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
 
 # ─── T01: Member cannot list another society's requests ───────────────────────

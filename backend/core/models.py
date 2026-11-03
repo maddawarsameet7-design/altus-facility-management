@@ -1,9 +1,11 @@
 import uuid
 import random
 import string
+import secrets
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 
 class User(AbstractUser):
@@ -69,6 +71,9 @@ class Site(models.Model):
     geofence_radius_m = models.IntegerField(default=100)
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return f"{self.name} ({self.society.name})"
 
@@ -77,10 +82,6 @@ class Membership(models.Model):
     """
     Links a User to a Society with a society-level role.
     A user may have memberships in multiple societies with different roles.
-
-    Note: User.role is the *platform* role. Membership.role is the society-level role.
-      e.g. User.role=SUPERVISOR + Membership.role=SUPERVISOR → assigned ops for this society.
-      e.g. User.role=MEMBER + Membership.role=CHAIRMAN → is chairman of this one society.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
@@ -130,8 +131,9 @@ class SocietySettings(models.Model):
 
 
 def _generate_invite_code():
-    """Generate a human-readable 12-char invite code like ALTUS-XK2P4M."""
-    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    """Generate a cryptographically secure 16-character invite code like ALTUS-7X9B2K4M1P."""
+    chars = string.ascii_uppercase + string.digits
+    suffix = ''.join(secrets.choice(chars) for _ in range(10))
     return f"ALTUS-{suffix}"
 
 
@@ -148,13 +150,16 @@ class InviteCode(models.Model):
         ('SUPERVISOR', 'Supervisor'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='MEMBER')
-    code = models.CharField(max_length=20, unique=True, default=_generate_invite_code)
+    code = models.CharField(max_length=30, unique=True, default=_generate_invite_code)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     max_uses = models.IntegerField(default=1)
     use_count = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.code} → {self.society.name} [{self.role}]"
@@ -169,6 +174,23 @@ class InviteCode(models.Model):
         if self.use_count >= self.max_uses:
             return False
         return True
+
+
+# ─── SECURE FILE UPLOAD HANDLERS ─────────────────────────────────────────────
+
+def upload_worker_doc(instance, filename):
+    ext = filename.split('.')[-1] if '.' in filename else 'pdf'
+    return f'worker_docs/{uuid.uuid4().hex}/{uuid.uuid4().hex}.{ext}'
+
+
+def upload_worker_photo(instance, filename):
+    ext = filename.split('.')[-1] if '.' in filename else 'jpg'
+    return f'worker_photos/{uuid.uuid4().hex}/{uuid.uuid4().hex}.{ext}'
+
+
+def upload_attendance_proof(instance, filename):
+    ext = filename.split('.')[-1] if '.' in filename else 'jpg'
+    return f'attendance_proofs/{uuid.uuid4().hex}/{uuid.uuid4().hex}.{ext}'
 
 
 # ─── EXISTING MODELS ─────────────────────────────────────────────────────────
@@ -202,8 +224,8 @@ class WorkerProfile(models.Model):
         ('SUSPENDED', 'Suspended')
     ]
     verification_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    id_document = models.FileField(upload_to='worker_docs/', null=True, blank=True)
-    profile_photo = models.ImageField(upload_to='worker_photos/', null=True, blank=True)
+    id_document = models.FileField(upload_to=upload_worker_doc, null=True, blank=True)
+    profile_photo = models.ImageField(upload_to=upload_worker_photo, null=True, blank=True)
     average_rating = models.FloatField(default=0.0)
     current_lat = models.FloatField(null=True, blank=True)
     current_lng = models.FloatField(null=True, blank=True)
@@ -232,6 +254,9 @@ class ServiceCategory(models.Model):
     description = models.TextField(blank=True)
     base_hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
@@ -242,7 +267,7 @@ class ServiceRequest(models.Model):
     reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests_made')
     category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE)
 
-    # ── Society scoping: nullable for migration safety; backfilled by data migration ──
+    # ── Society scoping ──
     society = models.ForeignKey(
         Society, on_delete=models.PROTECT,
         null=True, blank=True,
@@ -272,6 +297,22 @@ class ServiceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-created_at']
+
+    def clean(self):
+        super().clean()
+        from core.middleware import get_current_user
+        current_user = get_current_user()
+        if current_user and current_user.is_authenticated:
+            if getattr(current_user, 'role', '') != 'DIRECTOR' and not getattr(current_user, 'is_superuser', False):
+                if not self.society_id:
+                    raise ValidationError({'society': 'Society is required for non-Director users.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.category.name} - {self.location} ({self.status})"
 
@@ -290,15 +331,50 @@ class Assignment(models.Model):
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING_ACCEPTANCE')
     assigned_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-assigned_at']
+
 
 class Attendance(models.Model):
-    """Digital attendance/time tracking for a shift"""
+    """Digital attendance/time tracking for a shift with direct Society linkage"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(
+        Society, on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='attendances'
+    )
     assignment = models.OneToOneField(Assignment, on_delete=models.CASCADE)
     clock_in = models.DateTimeField(null=True, blank=True)
     clock_out = models.DateTimeField(null=True, blank=True)
     proof_of_work_url = models.URLField(max_length=500, null=True, blank=True)
-    photo_proof = models.ImageField(upload_to='attendance_proofs/', null=True, blank=True)
+    photo_proof = models.ImageField(upload_to=upload_attendance_proof, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-clock_in']
+
+    def clean(self):
+        super().clean()
+        # Backfill society from assignment.request if missing
+        if not self.society_id and self.assignment_id:
+            try:
+                self.society = self.assignment.request.society
+            except Exception:
+                pass
+        from core.middleware import get_current_user
+        current_user = get_current_user()
+        if current_user and current_user.is_authenticated:
+            if getattr(current_user, 'role', '') != 'DIRECTOR' and not getattr(current_user, 'is_superuser', False):
+                if not self.society_id:
+                    raise ValidationError({'society': 'Society is required for non-Director users.'})
+
+    def save(self, *args, **kwargs):
+        if not self.society_id and self.assignment_id:
+            try:
+                self.society = self.assignment.request.society
+            except Exception:
+                pass
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class Review(models.Model):
@@ -310,6 +386,9 @@ class Review(models.Model):
     rating = models.IntegerField()
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"Review for {self.reviewee.username} ({self.rating} stars)"
@@ -343,6 +422,9 @@ class PaymentTransaction(models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"TX {self.transaction_id} - {self.status}"

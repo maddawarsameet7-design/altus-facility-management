@@ -7,6 +7,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import ServiceRequest
 from .permissions import IsClientUser
+from .mixins import get_user_society_ids
 
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
@@ -31,7 +32,11 @@ class CreateRazorpayOrderView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        service_req = get_object_or_404(ServiceRequest, id=request_id)
+        if request.user.role != 'DIRECTOR':
+            society_ids = get_user_society_ids(request.user)
+            service_req = get_object_or_404(ServiceRequest, id=request_id, society__in=society_ids)
+        else:
+            service_req = get_object_or_404(ServiceRequest, id=request_id)
 
         # Enforce ownership — only the reporter can pay
         if service_req.reporter != request.user:
@@ -97,7 +102,11 @@ class VerifyRazorpayPaymentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        service_req = get_object_or_404(ServiceRequest, id=request_id)
+        if request.user.role != 'DIRECTOR':
+            society_ids = get_user_society_ids(request.user)
+            service_req = get_object_or_404(ServiceRequest, id=request_id, society__in=society_ids)
+        else:
+            service_req = get_object_or_404(ServiceRequest, id=request_id)
 
         # Ownership check
         if service_req.reporter != request.user:

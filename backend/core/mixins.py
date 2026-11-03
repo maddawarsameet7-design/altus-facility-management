@@ -6,7 +6,7 @@ Drop SocietyScopedMixin into any ModelViewSet to get:
   - SUPERVISOR   → filtered to societies with active Membership
   - CHAIRMAN     → filtered to societies with active Membership
   - MEMBER       → filtered to societies with active Membership
-  - WORKER       → .none() (workers use their own scoped views)
+  - WORKER       → .none() (or worker self-records when overridden)
 
 perform_create enforces that the society written to the DB is always one
 the user is actually a member of. Members/Chairmen cannot override this.
@@ -27,6 +27,8 @@ def get_user_society_ids(user):
     Directors have no Memberships — they access everything by role check.
     Workers never have Memberships — they access nothing via this mixin.
     """
+    if not user or not user.is_authenticated:
+        return Membership.objects.none().values_list('society_id', flat=True)
     return Membership.objects.filter(
         user=user, is_active=True
     ).values_list('society_id', flat=True)
@@ -34,15 +36,12 @@ def get_user_society_ids(user):
 
 class SocietyScopedMixin:
     """
-    Mixin for ModelViewSet subclasses that store a `society` FK.
+    Mixin for ModelViewSet subclasses that store a `society` FK or self-reference.
 
     The host ViewSet must define `society_field` (default: 'society') pointing
     to the ForeignKey field name used in the queryset filter.
-
-    e.g. for Attendance (which reaches society via assignment__request__society):
-        society_field = 'assignment__request__society'
     """
-    society_field = 'society'  # override in subclass if traversal is needed
+    society_field = 'society'
 
     # ── Queryset scoping ──────────────────────────────────────────────────────
 
@@ -52,12 +51,11 @@ class SocietyScopedMixin:
         role = getattr(user, 'role', '')
 
         if role == 'DIRECTOR':
-            return qs  # sees everything
+            return qs
 
         if role == 'WORKER':
-            return qs.none()  # workers override entirely in their own viewset
+            return qs.none()
 
-        # MEMBER / CHAIRMAN / SUPERVISOR: scope to their active memberships
         society_ids = get_user_society_ids(user)
         return qs.filter(**{f"{self.society_field}__in": society_ids})
 
@@ -72,7 +70,6 @@ class SocietyScopedMixin:
             return obj
 
         if role == 'WORKER':
-            # Workers have their own object checks; mixin defers
             return obj
 
         # Retrieve the society PK from the object (supports traversal)
@@ -82,29 +79,31 @@ class SocietyScopedMixin:
             target = getattr(target, part, None)
             if target is None:
                 break
-        # target is now the Society instance (or None)
         society_id = getattr(target, 'pk', target)
 
-        society_ids = list(get_user_society_ids(user))
-        if society_id not in society_ids:
-            raise Http404  # intentional — do not reveal existence
+        society_ids = [str(s) for s in get_user_society_ids(user)]
+        if str(society_id) not in society_ids:
+            raise Http404
 
         return obj
 
     # ── perform_create: enforce society from Membership ───────────────────────
 
-    def perform_create(self, serializer):
-        user = self.request.user
+    def resolve_create_society(self, request):
+        """Helper to resolve and validate the appropriate society for object creation."""
+        user = request.user
         role = getattr(user, 'role', '')
 
         if role == 'DIRECTOR':
-            # Director must supply society_id; validated in serializer
-            serializer.save()
-            return
+            society_id = request.data.get('society_id') or request.data.get('society')
+            if society_id:
+                try:
+                    return Society.objects.get(pk=society_id)
+                except Society.DoesNotExist:
+                    raise Http404
+            return None
 
         if role in ('MEMBER', 'CHAIRMAN'):
-            # Auto-assign: use the user's single active Membership
-            # If they have multiple (unusual), pick the most recently joined
             membership = Membership.objects.filter(
                 user=user, is_active=True
             ).select_related('society').order_by('-joined_at').first()
@@ -115,24 +114,30 @@ class SocietyScopedMixin:
                     "You are not a member of any active society. "
                     "Contact a Director or Chairman to join one."
                 )
-            serializer.save(society=membership.society)
-            return
+            return membership.society
 
         if role == 'SUPERVISOR':
-            # Supervisor passes society_id; must be one of their memberships
-            society_id = self.request.data.get('society_id') or self.request.data.get('society')
+            society_id = request.data.get('society_id') or request.data.get('society')
             if not society_id:
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError(
-                    {"society_id": "Supervisors with multiple societies must specify society_id."}
+                    {"society_id": "Supervisors must specify society_id."}
                 )
-            society_ids = list(get_user_society_ids(user))
-            if str(society_id) not in [str(s) for s in society_ids]:
+            society_ids = [str(s) for s in get_user_society_ids(user)]
+            if str(society_id) not in society_ids:
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("You are not a supervisor of that society.")
-            society = Society.objects.get(pk=society_id)
-            serializer.save(society=society)
-            return
+            try:
+                return Society.objects.get(pk=society_id)
+            except Society.DoesNotExist:
+                raise Http404
 
-        serializer.save()
+        return None
 
+    def perform_create(self, serializer, **extra_kwargs):
+        save_kwargs = dict(extra_kwargs)
+        if self.society_field and self.society_field != 'id' and 'society' not in save_kwargs:
+            society = self.resolve_create_society(self.request)
+            if society:
+                save_kwargs['society'] = society
+        serializer.save(**save_kwargs)

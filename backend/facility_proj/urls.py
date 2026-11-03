@@ -5,6 +5,17 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from rest_framework.throttling import ScopedRateThrottle
+
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
+
+
+class ThrottledTokenRefreshView(TokenRefreshView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 from core.views import (
     ClientProfileViewSet, WorkerViewSet, PropertyViewSet, 
     ServiceCategoryViewSet, ServiceRequestViewSet,
@@ -37,8 +48,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Auth endpoints (must be before the router include)
-    path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/login/', ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/refresh/', ThrottledTokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),
     
     # User profile & dashboard (must be before the router include)
