@@ -5,15 +5,18 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from rest_framework.throttling import ScopedRateThrottle
 from core.throttles import LoginIPThrottle, LoginUsernameThrottle
 
 
 class ThrottledTokenObtainPairView(TokenObtainPairView):
-    throttle_classes = [LoginIPThrottle, LoginUsernameThrottle]
+    throttle_classes = [ScopedRateThrottle, LoginIPThrottle, LoginUsernameThrottle]
+    throttle_scope = 'login'
 
 
 class ThrottledTokenRefreshView(TokenRefreshView):
-    throttle_classes = [LoginIPThrottle]
+    throttle_classes = [ScopedRateThrottle, LoginIPThrottle]
+    throttle_scope = 'login'
 from core.views import (
     ClientProfileViewSet, WorkerViewSet, PropertyViewSet, 
     ServiceCategoryViewSet, ServiceRequestViewSet,

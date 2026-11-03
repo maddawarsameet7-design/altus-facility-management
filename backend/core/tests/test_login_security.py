@@ -1,0 +1,179 @@
+"""
+core/tests/test_login_security.py
+
+Hardening and security regression tests for authentication:
+1. Valid credentials login (200 OK with tokens).
+2. Wrong password returns 401 Unauthorized.
+3. Throttle returns 429 after limit in production settings with Retry-After header.
+4. Dual-layer throttling: username-based throttling blocks credential stuffing across multiple IPs.
+5. Seed script refuses to execute when DEBUG=False (raises CommandError).
+6. CORS header is absent for untrusted origins when DEBUG=False.
+"""
+import pytest
+from django.urls import reverse
+from django.core.cache import cache
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.test import override_settings
+from rest_framework.test import APIClient
+from core.models import User
+
+
+@pytest.fixture(autouse=True)
+def clear_throttle_cache():
+    """Ensure cache is empty before each test so throttle counters start fresh."""
+    cache.clear()
+    yield
+    cache.clear()
+
+
+@pytest.fixture
+def client():
+    return APIClient()
+
+
+@pytest.fixture
+def test_user(db):
+    user = User.objects.create_user(
+        username='security_test_user',
+        password='ValidPassword123!',
+        email='sec@test.com',
+        role='MEMBER'
+    )
+    return user
+
+
+@pytest.mark.django_db
+class TestLoginSecurity:
+
+    def test_login_works_with_correct_credentials(self, client, test_user):
+        """Valid credentials return 200 with JWT access and refresh tokens."""
+        url = reverse('token_obtain_pair')
+        response = client.post(url, {
+            'username': 'security_test_user',
+            'password': 'ValidPassword123!'
+        }, format='json')
+
+        assert response.status_code == 200
+        assert 'access' in response.data
+        assert 'refresh' in response.data
+
+    def test_wrong_password_returns_401(self, client, test_user):
+        """Invalid credentials return 401 Unauthorized."""
+        url = reverse('token_obtain_pair')
+        response = client.post(url, {
+            'username': 'security_test_user',
+            'password': 'WrongPassword999!'
+        }, format='json')
+
+        assert response.status_code == 401
+        assert 'access' not in response.data
+
+    @override_settings(
+        DEBUG=False,
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': (
+                'rest_framework_simplejwt.authentication.JWTAuthentication',
+            ),
+            'DEFAULT_PERMISSION_CLASSES': (
+                'rest_framework.permissions.IsAuthenticated',
+            ),
+            'DEFAULT_THROTTLE_CLASSES': [
+                'rest_framework.throttling.AnonRateThrottle',
+                'rest_framework.throttling.UserRateThrottle',
+            ],
+            'DEFAULT_THROTTLE_RATES': {
+                'anon': '20/min',
+                'user': '200/min',
+                'login': '2/min',
+                'login_ip': '2/min',
+                'login_user': '2/min',
+            },
+        }
+    )
+    def test_throttle_returns_429_after_limit_in_production(self, client, test_user):
+        """In production throttling (2/min), third request returns 429 with Retry-After header."""
+        url = reverse('token_obtain_pair')
+
+        # First request: OK (or 401 for wrong pass)
+        r1 = client.post(url, {'username': 'security_test_user', 'password': 'bad'}, format='json')
+        assert r1.status_code == 401
+
+        # Second request: OK (or 401)
+        r2 = client.post(url, {'username': 'security_test_user', 'password': 'bad'}, format='json')
+        assert r2.status_code == 401
+
+        # Third request: Must be throttled with 429
+        r3 = client.post(url, {'username': 'security_test_user', 'password': 'bad'}, format='json')
+        assert r3.status_code == 429
+        # Check Retry-After header is populated
+        assert 'Retry-After' in r3.headers or 'retry-after' in r3.headers
+
+    @override_settings(
+        DEBUG=False,
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': (
+                'rest_framework_simplejwt.authentication.JWTAuthentication',
+            ),
+            'DEFAULT_PERMISSION_CLASSES': (
+                'rest_framework.permissions.IsAuthenticated',
+            ),
+            'DEFAULT_THROTTLE_RATES': {
+                'login_ip': '10/min',
+                'login_user': '2/min',  # Strict per-username rate
+            },
+        }
+    )
+    def test_dual_throttle_by_username_across_different_ips(self, client, test_user):
+        """Distributed credential stuffing from different IPs targeting the same username is blocked."""
+        url = reverse('token_obtain_pair')
+
+        # IP 1
+        r1 = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                         REMOTE_ADDR='198.51.100.1', format='json')
+        assert r1.status_code == 401
+
+        # IP 2
+        r2 = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                         REMOTE_ADDR='198.51.100.2', format='json')
+        assert r2.status_code == 401
+
+        # IP 3: Different IP, but targeted username exceeded threshold -> 429
+        r3 = client.post(url, {'username': 'security_test_user', 'password': 'bad'},
+                         REMOTE_ADDR='198.51.100.3', format='json')
+        assert r3.status_code == 429
+
+    def test_seed_script_refuses_to_run_when_debug_false(self):
+        """seed_data command must refuse to run and raise CommandError if DEBUG is False."""
+        with override_settings(DEBUG=False):
+            with pytest.raises(CommandError) as exc_info:
+                call_command('seed_data')
+            assert "Refusing to execute seed_data in production (DEBUG=False)" in str(exc_info.value)
+
+    @override_settings(
+        DEBUG=False,
+        CORS_ALLOW_ALL_ORIGINS=False,
+        CORS_ALLOWED_ORIGINS=['https://altsan.com']
+    )
+    def test_cors_header_absent_for_unknown_origin_when_debug_false(self, client):
+        """When DEBUG=False, requests from untrusted origins do NOT get Access-Control-Allow-Origin."""
+        url = reverse('token_obtain_pair')
+        # Untrusted origin
+        response = client.post(
+            url,
+            {'username': 'test', 'password': 'bad'},
+            HTTP_ORIGIN='https://evil-unauthorized.com',
+            format='json'
+        )
+        assert 'Access-Control-Allow-Origin' not in response.headers
+        assert response.headers.get('Access-Control-Allow-Origin') != 'https://evil-unauthorized.com'
+        assert response.headers.get('Access-Control-Allow-Origin') != '*'
+
+        # Trusted origin gets proper CORS header
+        trusted_response = client.post(
+            url,
+            {'username': 'test', 'password': 'bad'},
+            HTTP_ORIGIN='https://altsan.com',
+            format='json'
+        )
+        assert trusted_response.headers.get('Access-Control-Allow-Origin') == 'https://altsan.com'
