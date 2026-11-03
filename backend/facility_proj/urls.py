@@ -23,7 +23,8 @@ from core.views import (
     ClientProfileViewSet, WorkerViewSet, PropertyViewSet, 
     ServiceCategoryViewSet, ServiceRequestViewSet,
     ReviewViewSet, ChatMessageViewSet, 
-    UserProfileView, RegisterView, DashboardStatsView, DeviceTokenView
+    UserProfileView, RegisterView, DashboardStatsView, DeviceTokenView,
+    HealthCheckView
 )
 from core.views_attendance import (
     ClockInView, ClockOutView, MyAttendanceHistoryView,
@@ -54,6 +55,7 @@ urlpatterns = [
     path('api/auth/login/', ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', ThrottledTokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),
+    path('api/health/', HealthCheckView.as_view(), name='health_check'),
     
     # User profile & dashboard (must be before the router include)
     path('api/user/me/', UserProfileView.as_view(), name='user_profile'),

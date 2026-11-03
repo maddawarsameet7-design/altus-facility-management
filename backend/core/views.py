@@ -690,3 +690,33 @@ class ChatMessageViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         return Response({"error": "Chat messages cannot be deleted."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class HealthCheckView(APIView):
+    """Public health & diagnostics endpoint to verify database status."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.conf import settings
+        data = {
+            'status': 'ok',
+            'engine': settings.DATABASES['default']['ENGINE'],
+            'database': str(settings.DATABASES['default'].get('NAME', '')),
+        }
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            data['db_connected'] = True
+        except Exception as e:
+            data['db_connected'] = False
+            data['db_error'] = str(e)
+
+        try:
+            from core.models import User
+            data['user_count'] = User.objects.count()
+            data['users'] = list(User.objects.values_list('username', flat=True))
+        except Exception as e:
+            data['user_error'] = str(e)
+
+        return Response(data)

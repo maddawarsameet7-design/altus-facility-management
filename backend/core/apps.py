@@ -24,3 +24,18 @@ class CoreConfig(AppConfig):
         from .security_checks import validate_production_settings
         validate_production_settings()
 
+        # Self-healing database initialization: ensure tables and admin user exist on startup
+        try:
+            from django.core.management import call_command
+            from core.models import User
+            if not User.objects.filter(username='admin').exists():
+                call_command('bootstrap_prod_user', interactive=False)
+        except Exception:
+            try:
+                from django.core.management import call_command
+                call_command('migrate', interactive=False)
+                call_command('bootstrap_prod_user', interactive=False)
+            except Exception as init_err:
+                import logging
+                logging.warning(f"Startup database auto-init skipped: {init_err}")
+

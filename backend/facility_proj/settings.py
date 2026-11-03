@@ -143,10 +143,24 @@ if database_url:
         if hostname and hostname not in ('localhost', '127.0.0.1'):
             test_conn = socket.create_connection((hostname, port), timeout=2.5)
             test_conn.close()
-        DATABASES['default'] = dj_database_url.config(conn_max_age=600, conn_health_checks=True)
+        
+        db_conf = dj_database_url.config(conn_max_age=600, conn_health_checks=True)
+        # Actively test PostgreSQL credentials and database access
+        if db_conf.get('ENGINE') == 'django.db.backends.postgresql':
+            import psycopg2
+            test_pg = psycopg2.connect(
+                dbname=db_conf.get('NAME'),
+                user=db_conf.get('USER'),
+                password=db_conf.get('PASSWORD'),
+                host=db_conf.get('HOST'),
+                port=db_conf.get('PORT'),
+                connect_timeout=3
+            )
+            test_pg.close()
+        DATABASES['default'] = db_conf
     except Exception as e:
         import logging
-        logging.warning(f"DATABASE_URL connection test failed ({e}). Gracefully falling back to SQLite.")
+        logging.warning(f"DATABASE_URL connection/authentication test failed ({e}). Gracefully falling back to SQLite.")
         DATABASES['default'] = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
