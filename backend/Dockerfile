@@ -19,4 +19,4 @@ COPY . /app/
 EXPOSE 8000
 
 # Run entrypoint script (if any) or migration + server
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py seed_data && python manage.py runserver 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py migrate && if [ \"$DEBUG\" = \"True\" ] || [ \"$DEBUG\" = \"true\" ] || [ \"$DEBUG\" = \"1\" ]; then python manage.py seed_data || true; fi && daphne -b 0.0.0.0 -p 8000 facility_proj.asgi:application"]
