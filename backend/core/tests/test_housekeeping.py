@@ -1139,7 +1139,7 @@ class TestHousekeepingTaskManagement:
         )
         assert r_ok1.status_code == 201
 
-        # Second upload exceeds cap
+        # Second upload exceeds custom cap
         valid_img2 = make_test_image()
         r_cap = api_client.post(
             f"/api/housekeeping/tasks/{task.id}/photos/",
@@ -1149,12 +1149,37 @@ class TestHousekeepingTaskManagement:
         assert r_cap.status_code == 400
         assert "limit" in r_cap.data['error'].lower()
 
+        # 4. Default photo cap enforcement (default is 6 photos per task)
+        sett.max_photos_per_task = 6
+        sett.save()
+        task_default = TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Default Cap Test", due_date=today, shift_start_at=s_start, shift_end_at=s_end,
+            status='IN_PROGRESS', claimed_by=wp1
+        )
+        for i in range(6):
+            r_ok = api_client.post(
+                f"/api/housekeeping/tasks/{task_default.id}/photos/",
+                {"file": make_test_image(), "client_uuid": str(uuid.uuid4()), "kind": "BEFORE" if i == 0 else "AFTER", "captured_at": timezone.now().isoformat(), "lat": 18.5204, "lng": 73.8567},
+                format='multipart'
+            )
+            assert r_ok.status_code == 201, f"Failed at photo {i+1}: {r_ok.data}"
+
+        # 7th photo exceeds default cap of 6
+        r_over = api_client.post(
+            f"/api/housekeeping/tasks/{task_default.id}/photos/",
+            {"file": make_test_image(), "client_uuid": str(uuid.uuid4()), "kind": "AFTER", "captured_at": timezone.now().isoformat(), "lat": 18.5204, "lng": 73.8567},
+            format='multipart'
+        )
+        assert r_over.status_code == 400
+        assert "max 6" in r_over.data['error'] or "limit" in r_over.data['error'].lower()
+
     def test_captured_at_future_and_outside_shift_flagged(
         self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, kolkata_tz
     ):
         """
         Future capture timestamp is rejected (400).
-        Capture timestamp outside shift start/end window is flagged OUTSIDE_SHIFT.
+        Capture timestamp outside shift start/end window is flagged OUTSIDE_SHIFT_WINDOW and NEEDS_REVIEW (201).
         """
         u1, wp1 = worker_hk_1
         today = timezone.localdate()
@@ -1178,7 +1203,7 @@ class TestHousekeepingTaskManagement:
         )
         api_client.force_authenticate(user=u1)
 
-        # 1. Future capture time (> 5 min future) -> 400
+        # 1. Future capture time (> 5 min future) -> 400 Bad Request
         future_time = (timezone.now() + timedelta(minutes=15)).isoformat()
         r_future = api_client.post(
             f"/api/housekeeping/tasks/{task.id}/photos/",
@@ -1188,7 +1213,7 @@ class TestHousekeepingTaskManagement:
         assert r_future.status_code == 400
         assert "future" in r_future.data['error'].lower()
 
-        # 2. Outside shift window flagged OUTSIDE_SHIFT
+        # 2. Outside shift window is NOT rejected; accepted (201) and flagged OUTSIDE_SHIFT_WINDOW and NEEDS_REVIEW
         early_time = (s_start - timedelta(hours=2)).isoformat()
         r_outside = api_client.post(
             f"/api/housekeeping/tasks/{task.id}/photos/",
@@ -1205,6 +1230,7 @@ class TestHousekeepingTaskManagement:
         assert r_outside.status_code == 201
         p_out = TaskPhoto.objects.get(id=r_outside.data['id'])
         assert 'OUTSIDE_SHIFT_WINDOW' in (p_out.flags or [])
+        assert 'NEEDS_REVIEW' in (p_out.flags or [])
 
     def test_pending_or_inactive_member_cannot_raise_complaint(
         self, api_client, society_a, site_a

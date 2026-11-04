@@ -126,12 +126,13 @@ def validate_photo_capture_gps(
     if abs((now - captured_at).total_seconds()) > 900:
         flags.append('TIME_MISMATCH')
 
-    # 3. Shift window check
+    # 3. Shift window check (Flagged for review, not rejected)
     if shift_start_at and shift_end_at:
         early_bound = shift_start_at - timedelta(minutes=30)
         late_bound = shift_end_at + timedelta(minutes=30)
         if captured_at < early_bound or captured_at > late_bound:
             flags.append('OUTSIDE_SHIFT_WINDOW')
+            flags.append('NEEDS_REVIEW')
 
     # 4. Mock location flag
     if is_mock:
