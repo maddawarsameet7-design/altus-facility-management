@@ -55,8 +55,21 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkerProfile
-        fields = ['id', 'user', 'phone', 'verification_status', 'average_rating', 'current_lat', 'current_lng']
-        read_only_fields = ['id', 'verification_status', 'average_rating']
+        fields = [
+            'id', 'user', 'phone', 'verification_status', 'average_rating',
+            'current_lat', 'current_lng', 'new_device_approved',
+            'bank_account_number', 'bank_ifsc', 'compensation_rate'
+        ]
+        read_only_fields = ['id', 'verification_status', 'average_rating', 'new_device_approved']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Item 6: Until supervisor approves new device, hide bank and compensation data
+        if not getattr(instance, 'new_device_approved', True):
+            ret['bank_account_number'] = None
+            ret['bank_ifsc'] = None
+            ret['compensation_rate'] = None
+        return ret
 
 
 class ServiceCategorySerializer(serializers.ModelSerializer):

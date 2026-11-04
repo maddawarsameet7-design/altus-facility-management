@@ -2,6 +2,7 @@ import uuid
 import random
 import string
 import secrets
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -254,7 +255,7 @@ class WorkerProfile(models.Model):
     """Profile for Service Providers. Workers are deployed to societies via roster — no direct society FK."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile')
-    phone = models.CharField(max_length=20)
+    phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
     STATUS_CHOICES = [
         ('PENDING', 'Pending Verification'),
         ('VERIFIED', 'Verified'),
@@ -275,6 +276,18 @@ class WorkerProfile(models.Model):
     last_login_at = models.DateTimeField(null=True, blank=True)
     sessions_revoked_at = models.DateTimeField(null=True, blank=True)
     new_device_approved = models.BooleanField(default=True)
+    bank_account_number = models.CharField(max_length=30, blank=True, null=True)
+    bank_ifsc = models.CharField(max_length=20, blank=True, null=True)
+    compensation_rate = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    def save(self, *args, **kwargs):
+        if self.phone:
+            from core.otp_utils import normalize_phone
+            norm = normalize_phone(self.phone)
+            self.phone = norm if norm else None
+        elif self.phone == '':
+            self.phone = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"

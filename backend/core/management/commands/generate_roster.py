@@ -99,8 +99,8 @@ class Command(BaseCommand):
                         created_count += 1
                     else:
                         # Amendment 4: May update future slots with no attendance when assignments change,
-                        # never past slots or slots with attendance.
-                        if target_date >= start_date and slot.shift_start_at > now and not hasattr(slot, 'attendance_event'):
+                        # never past slots, slots with attendance, or already COVERED replacement slots.
+                        if target_date >= start_date and slot.shift_start_at > now and not hasattr(slot, 'attendance_event') and slot.status != 'COVERED':
                             if slot.worker != assigned_worker or slot.shift_start_at != start_dt or slot.shift_end_at != end_dt:
                                 slot.worker = assigned_worker
                                 slot.status = target_status

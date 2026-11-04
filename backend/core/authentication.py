@@ -31,10 +31,12 @@ class WorkerAwareJWTAuthentication(JWTAuthentication):
                 iat = validated_token.get('iat')
                 if iat:
                     token_issued_at = datetime.fromtimestamp(iat, tz=dt_tz.utc)
-                    if token_issued_at < revoked_at:
+                    # Amendment 14 & Gap Fix: Reject token if issued at or before revocation (including same-second edge)
+                    if token_issued_at <= revoked_at:
                         raise exceptions.AuthenticationFailed(
                             "Worker session has been revoked. Please log in again.",
                             code='session_revoked'
                         )
 
         return user
+

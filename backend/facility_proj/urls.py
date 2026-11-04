@@ -27,7 +27,8 @@ from core.views import (
     HealthCheckView
 )
 from core.views_otp import (
-    WorkerOTPRequestView, WorkerOTPVerifyView, RevokeWorkerSessionsView
+    WorkerOTPRequestView, WorkerOTPVerifyView, RevokeWorkerSessionsView,
+    IssueFallbackLoginCodeView, ApproveWorkerDeviceView, WorkerPayslipView
 )
 from core.views_attendance import (
     ClockInView, ClockOutView, MyAttendanceHistoryView,
@@ -113,6 +114,9 @@ urlpatterns = [
     # Worker location update (REST fallback)
     path('api/workers/location/', WorkerLocationUpdateView.as_view(), name='worker_location_update'),
     path('api/workers/<uuid:pk>/revoke-sessions/', RevokeWorkerSessionsView.as_view(), name='worker_revoke_sessions'),
+    path('api/workers/<uuid:pk>/issue-login-code/', IssueFallbackLoginCodeView.as_view(), name='worker_issue_login_code'),
+    path('api/workers/<uuid:pk>/device-approval/', ApproveWorkerDeviceView.as_view(), name='worker_device_approval'),
+    path('api/workers/<uuid:pk>/payslips/', WorkerPayslipView.as_view(), name='worker_payslips'),
 
     # Society join (invite code)
     path('api/societies/join/', JoinSocietyView.as_view(), name='society_join'),

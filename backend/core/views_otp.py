@@ -10,7 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User, WorkerProfile, OTPChallenge, AuditLog, Society
-from .permissions import IsDirectorOnly
+from .permissions import IsDirectorOnly, IsOpsUser
 from .otp_utils import normalize_phone, generate_otp_code, hash_otp_code, verify_otp_code
 from .sms import send_otp_async
 
@@ -275,3 +275,170 @@ class RevokeWorkerSessionsView(APIView):
             "worker_id": str(worker.id),
             "sessions_revoked_at": now.isoformat()
         }, status=status.HTTP_200_OK)
+
+
+class IssueFallbackLoginCodeView(APIView):
+    """
+    POST /api/workers/{id}/issue-login-code/
+    Supervisor/Director can issue a one-time login code for a worker.
+    - Expires in 10 minutes.
+    - Single use (via OTPChallenge table with device_id='FALLBACK_LOGIN').
+    - Fully audited in AuditLog.
+    - Never logged or stored in plain text.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsOpsUser]
+
+    def post(self, request, pk):
+        worker = get_object_or_404(WorkerProfile.objects.select_related('user'), id=pk)
+        if getattr(worker, 'verification_status', '') in ['SUSPENDED', 'EXITED']:
+            return Response(
+                {"error": "Cannot issue fallback login code for suspended or exited worker."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not worker.phone:
+            return Response(
+                {"error": "Worker has no registered phone number."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            reason = f"Fallback login code issued by {request.user.role} ({request.user.username})"
+
+        now = timezone.now()
+        expires_at = now + timedelta(minutes=10)
+        code = generate_otp_code(6)
+        code_hash = hash_otp_code(worker.phone, code)
+
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+        if ip and ',' in ip:
+            ip = ip.split(',')[0].strip()
+
+        # Invalidate previous unconsumed fallback codes for this phone
+        OTPChallenge.objects.filter(
+            phone=worker.phone,
+            device_id='FALLBACK_LOGIN',
+            consumed_at__isnull=True
+        ).update(consumed_at=now)
+
+        # Store HMAC hashed challenge — code is NEVER stored in plain text
+        OTPChallenge.objects.create(
+            phone=worker.phone,
+            code_hash=code_hash,
+            ip_address=ip,
+            device_id='FALLBACK_LOGIN',
+            expires_at=expires_at
+        )
+
+        # Target society for AuditLog
+        target_society = None
+        asgn = worker.roster_assignments.first()
+        if asgn:
+            target_society = asgn.society
+        else:
+            target_society = Society.objects.first()
+
+        if target_society:
+            AuditLog.objects.create(
+                society=target_society,
+                actor=request.user,
+                action='ISSUE_FALLBACK_LOGIN_CODE',
+                target_model='WorkerProfile',
+                target_id=worker.id,
+                changes={
+                    'expires_at': expires_at.isoformat(),
+                    'phone': worker.phone,
+                    'issued_by': request.user.username
+                },
+                reason=reason
+            )
+
+        # Returned once to the authorized supervisor in the HTTPS response payload.
+        # NEVER recorded in logger or stored in database.
+        return Response({
+            "status": "Fallback login code issued successfully.",
+            "worker_id": str(worker.id),
+            "phone": worker.phone,
+            "login_code": code,
+            "expires_at": expires_at.isoformat(),
+            "expires_in_minutes": 10
+        }, status=status.HTTP_200_OK)
+
+
+class ApproveWorkerDeviceView(APIView):
+    """
+    POST /api/workers/{id}/device-approval/
+    Supervisor/Director approves or rejects a worker's new device.
+    Until approved, financial data (bank details and payslips) remains redacted.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsOpsUser]
+
+    def post(self, request, pk):
+        worker = get_object_or_404(WorkerProfile.objects.select_related('user'), id=pk)
+        approved = bool(request.data.get('approved', False))
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            reason = f"Device {'approved' if approved else 'rejected'} by {request.user.role} ({request.user.username})"
+
+        worker.new_device_approved = approved
+        worker.save(update_fields=['new_device_approved'])
+
+        target_society = None
+        asgn = worker.roster_assignments.first()
+        if asgn:
+            target_society = asgn.society
+        else:
+            target_society = Society.objects.first()
+
+        if target_society:
+            AuditLog.objects.create(
+                society=target_society,
+                actor=request.user,
+                action='APPROVE_DEVICE' if approved else 'REJECT_DEVICE',
+                target_model='WorkerProfile',
+                target_id=worker.id,
+                changes={'new_device_approved': approved, 'device_id': worker.device_id},
+                reason=reason
+            )
+
+        return Response({
+            "status": f"Device {'approved' if approved else 'rejected'} successfully.",
+            "worker_id": str(worker.id),
+            "new_device_approved": worker.new_device_approved
+        }, status=status.HTTP_200_OK)
+
+
+class WorkerPayslipView(APIView):
+    """
+    GET /api/workers/{id}/payslips/
+    Endpoint returning worker compensation and payslip records.
+    Item 6: Until a Supervisor approves a new device, access to payslips and bank data is locked.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        worker = get_object_or_404(WorkerProfile.objects.select_related('user'), id=pk)
+
+        # Worker can view their own; Ops users can view any
+        is_owner = (request.user.id == worker.user_id)
+        is_ops = (getattr(request.user, 'role', '') in ('SUPERVISOR', 'DIRECTOR'))
+        if not (is_owner or is_ops):
+            return Response({"error": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Lock access if new device is not approved
+        if not getattr(worker, 'new_device_approved', True):
+            return Response(
+                {"error": "Access to payslips and financial details is restricted until your new device is approved by a supervisor."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return Response({
+            "worker_id": str(worker.id),
+            "bank_account_number": worker.bank_account_number,
+            "bank_ifsc": worker.bank_ifsc,
+            "compensation_rate": str(worker.compensation_rate),
+            "payslips": []
+        }, status=status.HTTP_200_OK)
+
+
