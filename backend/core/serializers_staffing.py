@@ -151,9 +151,9 @@ class AttendanceEventSerializer(serializers.ModelSerializer):
 
 
 class AlertSerializer(serializers.ModelSerializer):
-    post_name = serializers.CharField(source='roster_entry.post.name', read_only=True)
-    shift_name = serializers.CharField(source='roster_entry.shift.name', read_only=True)
-    date = serializers.DateField(source='roster_entry.date', read_only=True)
+    post_name = serializers.CharField(source='roster_entry.post.name', read_only=True, default='')
+    shift_name = serializers.CharField(source='roster_entry.shift.name', read_only=True, default='')
+    date = serializers.DateField(source='roster_entry.date', read_only=True, default=None)
 
     class Meta:
         model = Alert

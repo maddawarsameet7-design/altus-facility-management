@@ -636,11 +636,106 @@ class TestHousekeepingTaskManagement:
         )
         assert res.status_code == 201
 
-        # Rework task generated
+        # Rework task generated with shift window matching morning shift
         rework_task = TaskInstance.objects.filter(is_rework=True, post=post_a).first()
         assert rework_task is not None
         assert "Rework" in rework_task.name
         assert rework_task.photo_required == 'BEFORE_AFTER'
+        assert rework_task.shift == shift_morning
+        assert rework_task.shift_start_at is not None
+        assert rework_task.shift_end_at is not None
+
+    def test_rework_picks_next_scheduled_shift_and_skips_inactive(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, supervisor_a, kolkata_tz
+    ):
+        """
+        When inspection occurs after morning shift ends:
+        - Skips inactive afternoon shift.
+        - Picks the next scheduled active evening shift.
+        - Sets task due times from that shift.
+        """
+        today = timezone.localdate()
+        # Make morning shift inactive
+        shift_morning.is_active = False
+        shift_morning.save()
+
+        # Create an inactive afternoon shift
+        Shift.objects.create(
+            society=society_a, post=post_a, name="Inactive Afternoon",
+            start_time=time(15, 0), end_time=time(18, 0),
+            days_of_week=[0, 1, 2, 3, 4, 5, 6], is_active=False
+        )
+
+        # Create active evening shift
+        shift_evening = Shift.objects.create(
+            society=society_a, post=post_a, name="Active Evening",
+            start_time=time(18, 0), end_time=time(23, 0),
+            days_of_week=[0, 1, 2, 3, 4, 5, 6], is_active=True
+        )
+
+        api_client.force_authenticate(user=supervisor_a)
+        res = api_client.post(
+            "/api/housekeeping/inspections/",
+            {
+                "post": str(post_a.id),
+                "area": str(area_lobby.id),
+                "date": today.isoformat(),
+                "score": 1,
+                "status": "FAILED",
+                "notes": "Floor dirty"
+            },
+            format='json'
+        )
+        assert res.status_code == 201
+
+        rework = TaskInstance.objects.filter(is_rework=True, post=post_a).first()
+        assert rework is not None
+        assert rework.shift == shift_evening
+        expected_start = timezone.make_aware(datetime.combine(today, time(18, 0)), kolkata_tz).astimezone(dt_tz.utc)
+        expected_end = timezone.make_aware(datetime.combine(today, time(23, 0)), kolkata_tz).astimezone(dt_tz.utc)
+        assert rework.shift_start_at == expected_start
+        assert rework.shift_end_at == expected_end
+
+    def test_rework_no_active_shift_creates_supervisor_alert(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, supervisor_a
+    ):
+        """
+        When post has NO active shift (e.g. all shifts deactivated):
+        - Does NOT invent an arbitrary time or create a TaskInstance.
+        - Creates an Alert for the Supervisor with type REWORK_NO_SHIFT.
+        - Creates a direct Notification for the Supervisor.
+        """
+        shift_morning.is_active = False
+        shift_morning.save()
+
+        api_client.force_authenticate(user=supervisor_a)
+        res = api_client.post(
+            "/api/housekeeping/inspections/",
+            {
+                "post": str(post_a.id),
+                "area": str(area_lobby.id),
+                "date": timezone.localdate().isoformat(),
+                "score": 1,
+                "status": "FAILED",
+                "notes": "Spill unattended"
+            },
+            format='json'
+        )
+        assert res.status_code == 201
+
+        # No TaskInstance created with invented times
+        assert TaskInstance.objects.filter(is_rework=True, post=post_a).exists() is False
+
+        # Alert created for Supervisor
+        alert = Alert.objects.filter(society=society_a, alert_type='REWORK_NO_SHIFT').first()
+        assert alert is not None
+        assert alert.roster_entry is None
+        assert "requires rework, but no active shift" in alert.notes
+
+        # Notification sent to Supervisor
+        notif = Notification.objects.filter(recipient=supervisor_a, notification_type='REWORK_NO_SHIFT').first()
+        assert notif is not None
+        assert "No Scheduled Shift Available" in notif.title
 
     def test_complaint_lifecycle_and_reopen_on_client_rejection(
         self, api_client, society_a, site_a, member_a, supervisor_a

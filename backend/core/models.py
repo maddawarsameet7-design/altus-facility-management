@@ -844,9 +844,10 @@ class Alert(models.Model):
         ('ABSENT', 'Worker Absent'),
         ('LATE', 'Worker Late'),
         ('UNFILLED', 'Shift Unfilled'),
+        ('REWORK_NO_SHIFT', 'Rework Has No Scheduled Shift'),
     ]
-    alert_type = models.CharField(max_length=20, choices=ALERT_TYPES)
-    roster_entry = models.ForeignKey(DailyRoster, on_delete=models.CASCADE, related_name='alerts')
+    alert_type = models.CharField(max_length=30, choices=ALERT_TYPES)
+    roster_entry = models.ForeignKey(DailyRoster, on_delete=models.CASCADE, null=True, blank=True, related_name='alerts')
     STATUS_CHOICES = [
         ('OPEN', 'Open'),
         ('ACKNOWLEDGED', 'Acknowledged'),

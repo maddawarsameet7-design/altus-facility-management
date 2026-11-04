@@ -40,7 +40,8 @@ from core.serializers_housekeeping import (
 )
 from core.housekeeping_utils import (
     process_and_sanitize_image, validate_photo_capture_gps,
-    calculate_monthly_quality_score, create_or_get_quality_score_snapshot
+    calculate_monthly_quality_score, create_or_get_quality_score_snapshot,
+    find_rework_shift_and_window
 )
 
 
@@ -825,10 +826,12 @@ class InspectionViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
 
         # If FAILED or NEEDS_REWORK: generate rework task
         if inspection.status in ('FAILED', 'NEEDS_REWORK'):
-            shift = inspection.post.shifts.first()
-            if shift:
-                start_dt = timezone.now()
-                end_dt = start_dt + timedelta(hours=4)
+            shift, due_date, start_dt, end_dt = find_rework_shift_and_window(
+                post=inspection.post,
+                inspection_dt=inspection.created_at or timezone.now()
+            )
+
+            if shift and due_date and start_dt and end_dt:
                 TaskInstance.objects.create(
                     society=society,
                     post=inspection.post,
@@ -837,11 +840,37 @@ class InspectionViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
                     name=f"Rework: {inspection.notes or 'Quality remediation'}",
                     photo_required='BEFORE_AFTER',
                     estimated_minutes=45,
-                    due_date=inspection.date,
+                    due_date=due_date,
                     shift_start_at=start_dt,
                     shift_end_at=end_dt,
                     is_rework=True,
                     status='PENDING'
+                )
+            else:
+                # No active shift covers or is scheduled for this post! Do NOT invent a time.
+                # Create an Alert for the Supervisor:
+                Alert.objects.create(
+                    society=society,
+                    roster_entry=None,
+                    alert_type='REWORK_NO_SHIFT',
+                    notes=f"Inspection {inspection.id} scored {inspection.score}/5 requires rework, but no active shift is scheduled on post '{inspection.post.name}'."
+                )
+                Notification.objects.create(
+                    society=society,
+                    recipient=self.request.user,
+                    notification_type='REWORK_NO_SHIFT',
+                    title='Rework Required: No Scheduled Shift Available',
+                    body=f"Inspection at {inspection.post.name} requires rework, but no active shift is scheduled on this post.",
+                    related_model='Inspection',
+                    related_id=inspection.id
+                )
+                AuditLog.objects.create(
+                    society=society,
+                    actor=self.request.user,
+                    action='REWORK_NO_SHIFT_ALERT',
+                    target_model='Inspection',
+                    target_id=inspection.id,
+                    reason=f"Inspection scored {inspection.score}/5 requires rework, but post '{inspection.post.name}' has no active scheduled shifts."
                 )
 
         AuditLog.objects.create(

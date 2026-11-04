@@ -16,6 +16,7 @@ from core.models import (
     Site, SocietySettings, TaskInstance, Inspection, Complaint,
     QualityScoreSnapshot
 )
+from core.staffing_utils import parse_days_of_week
 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -159,6 +160,78 @@ def validate_photo_capture_gps(
         flags.append('NO_GPS_COORDINATES')
 
     return True, None, flags, distance
+
+
+def find_rework_shift_and_window(
+    post,
+    inspection_dt: datetime
+) -> Tuple[Optional[Any], Optional[datetime.date], Optional[datetime], Optional[datetime]]:
+    """
+    Finds the operating shift and UTC window for a rework task:
+    1. Only active shifts (is_active=True) of the post are considered.
+    2. First priority: Pick the shift that covers the inspection time (including overnight shifts).
+    3. Second priority: If no shift covers right now, pick the next scheduled shift of that post.
+    4. If none exists (no active shifts or none scheduled on days_of_week), returns (None, None, None, None).
+    Returns: (shift, due_date, shift_start_at, shift_end_at)
+    """
+    shifts = list(post.shifts.filter(is_active=True).order_by('start_time'))
+    if not shifts:
+        return None, None, None, None
+
+    try:
+        kolkata_tz = zoneinfo.ZoneInfo("Asia/Kolkata")
+    except Exception:
+        from zoneinfo import ZoneInfo
+        kolkata_tz = ZoneInfo("Asia/Kolkata")
+
+    insp_local = inspection_dt.astimezone(kolkata_tz)
+    today = insp_local.date()
+
+    # Step A: Check if any active shift currently covers the inspection time
+    # Check today and yesterday (to handle shifts crossing midnight into today)
+    for day in (today, today - timedelta(days=1)):
+        weekday = day.weekday()
+        for shift in shifts:
+            shift_days = parse_days_of_week(shift.days_of_week)
+            if weekday not in shift_days:
+                continue
+            start_naive = datetime.combine(day, shift.start_time)
+            start_dt = timezone.make_aware(start_naive, kolkata_tz).astimezone(dt_tz.utc)
+            if shift.crosses_midnight:
+                end_naive = datetime.combine(day + timedelta(days=1), shift.end_time)
+            else:
+                end_naive = datetime.combine(day, shift.end_time)
+            end_dt = timezone.make_aware(end_naive, kolkata_tz).astimezone(dt_tz.utc)
+
+            if start_dt <= inspection_dt <= end_dt:
+                return shift, day, start_dt, end_dt
+
+    # Step B: If not covered, find the NEXT scheduled shift on this post
+    candidate_shifts = []
+    for day_offset in range(0, 15):
+        target_date = today + timedelta(days=day_offset)
+        weekday = target_date.weekday()
+        for shift in shifts:
+            shift_days = parse_days_of_week(shift.days_of_week)
+            if weekday not in shift_days:
+                continue
+            start_naive = datetime.combine(target_date, shift.start_time)
+            start_dt = timezone.make_aware(start_naive, kolkata_tz).astimezone(dt_tz.utc)
+            if shift.crosses_midnight:
+                end_naive = datetime.combine(target_date + timedelta(days=1), shift.end_time)
+            else:
+                end_naive = datetime.combine(target_date, shift.end_time)
+            end_dt = timezone.make_aware(end_naive, kolkata_tz).astimezone(dt_tz.utc)
+
+            if start_dt > inspection_dt:
+                candidate_shifts.append((start_dt, shift, target_date, end_dt))
+
+    if candidate_shifts:
+        candidate_shifts.sort(key=lambda x: x[0])
+        best = candidate_shifts[0]
+        return best[1], best[2], best[0], best[3]
+
+    return None, None, None, None
 
 
 def calculate_monthly_quality_score(site: Site, year: int, month: int) -> Dict[str, Any]:
