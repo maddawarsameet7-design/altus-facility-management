@@ -76,6 +76,7 @@ class TestDeployBlockers:
         with mock.patch.dict(os.environ, {}, clear=True):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY='a' * 32,
                 ALLOWED_HOSTS=['altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -97,6 +98,7 @@ class TestDeployBlockers:
         with mock.patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///db.sqlite3'}):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY='a' * 32,
                 ALLOWED_HOSTS=['altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -118,6 +120,7 @@ class TestDeployBlockers:
         with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://user:pass@localhost:5432/db'}):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY='a' * 32,
                 ALLOWED_HOSTS=['altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -140,6 +143,7 @@ class TestDeployBlockers:
         with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://user:pass@localhost:5432/db'}):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY=sec,
                 ALLOWED_HOSTS=['altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -161,6 +165,7 @@ class TestDeployBlockers:
         with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://user:pass@localhost:5432/db'}):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY='a' * 32,
                 ALLOWED_HOSTS=['altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -182,6 +187,7 @@ class TestDeployBlockers:
         with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://user:pass@localhost:5432/db'}):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY='a' * 32,
                 ALLOWED_HOSTS=['altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -197,6 +203,46 @@ class TestDeployBlockers:
                 with pytest.raises(ImproperlyConfigured) as exc_info:
                     validate_production_settings()
                 assert "SMS provider credentials missing" in str(exc_info.value)
+
+    def test_startup_fails_when_testing_set_while_debug_false(self):
+        """Startup must fail if TESTING is set while DEBUG=False."""
+        # 1. Via settings.TESTING = True
+        with override_settings(DEBUG=False, TESTING=True):
+            with pytest.raises(ImproperlyConfigured) as exc1:
+                validate_production_settings()
+            assert "TESTING flag cannot be enabled when DEBUG=False" in str(exc1.value)
+
+        # 2. Via os.environ['TESTING'] = 'true'
+        with mock.patch.dict(os.environ, {'TESTING': 'true'}):
+            with override_settings(DEBUG=False, TESTING=False):
+                with pytest.raises(ImproperlyConfigured) as exc2:
+                    validate_production_settings()
+                assert "TESTING flag cannot be enabled when DEBUG=False" in str(exc2.value)
+
+    def test_production_settings_otp_throttles_strict_regardless_of_sys_argv(self):
+        """
+        Production settings (DEBUG=False, no TESTING) must never give otp_request or
+        otp_verify a rate above 10/min and 15/min, even when sys.argv contains the word 'test'.
+        """
+        import sys
+        import importlib
+        from unittest import mock
+        import facility_proj.settings as prod_settings
+
+        fake_argv = ['python', 'manage.py', 'test', 'core.tests', '--test']
+        with mock.patch.object(sys, 'argv', fake_argv):
+            with mock.patch.dict(os.environ, {'DEBUG': 'False', 'TESTING': ''}, clear=False):
+                reloaded = importlib.reload(prod_settings)
+                rates = reloaded.REST_FRAMEWORK.get('DEFAULT_THROTTLE_RATES', {})
+
+                otp_req = rates.get('otp_request', '')
+                otp_ver = rates.get('otp_verify', '')
+
+                def parse_rate_val(r):
+                    return int(r.split('/')[0])
+
+                assert parse_rate_val(otp_req) <= 10, f"otp_request rate '{otp_req}' exceeds production limit of 10/min!"
+                assert parse_rate_val(otp_ver) <= 15, f"otp_verify rate '{otp_ver}' exceeds production limit of 15/min!"
 
     def test_supervisor_scoped_issue_login_code(
         self, api_client, society_alpha, society_beta, supervisor_alpha, director_user, worker_1, worker_2

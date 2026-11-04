@@ -1,10 +1,18 @@
 # ==============================================================================
 # Altus Platform - Render Deployment Blueprint
 # Includes Web Service, Managed PostgreSQL, Redis Key-Value Store, and Cron Jobs
+#
+# STAGING & MULTI-ENVIRONMENT PARAMETERIZATION:
+# All resource names, environment groups, and cross-service linkages are parameterized
+# with `${STAGE:-prod}`.
+# - For Production deployment: Defaults to `prod` (e.g. `altus-prod-backend`, `altus-prod-postgres`).
+# - For Staging deployment: Set `STAGE=staging` during template preprocessing or CI/CD
+#   (e.g., `STAGE=staging envsubst < render.yaml > render.staging.yaml`) to provision
+#   an isolated, collision-free staging stack sharing identical infrastructure declarations.
 # ==============================================================================
 
 envVarGroups:
-  - name: altus-shared-env
+  - name: altus-${STAGE:-prod}-shared-env
     envVars:
       - key: DEBUG
         value: "False"
@@ -36,7 +44,7 @@ services:
   # Used for Django Channels WebSockets, distributed locks, and cache
   # Estimated Cost: Starter Plan ($10/month)
   - type: redis
-    name: altus-redis
+    name: altus-${STAGE:-prod}-redis
     plan: starter
     ipAllowList: [] # Private network access only
 
@@ -44,225 +52,241 @@ services:
   # Hosts REST API, Django Admin, and WebSocket Consumers
   # Estimated Cost: Standard Plan ($25/month)
   - type: web
-    name: altus-backend
+    name: altus-${STAGE:-prod}-backend
     runtime: python
     rootDir: backend
     buildCommand: "./build.sh"
     startCommand: "daphne -b 0.0.0.0 -p $PORT facility_proj.asgi:application"
     plan: standard
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         generateValue: true
       - key: OTP_HMAC_SECRET
         generateValue: true
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
   # ── 3. Cron Job 1: Daily Staffing Roster Generation ──────────────────────────
   # Runs daily at 18:30 UTC = 00:00 IST (Daily Midnight IST)
   # Estimated Cost: Starter Compute ($1-$2/month prorated on execution time)
   - type: cron
-    name: altus-cron-generate-roster
+    name: altus-${STAGE:-prod}-cron-generate-roster
     runtime: python
     rootDir: backend
     schedule: "30 18 * * *" # 18:30 UTC = 00:00 IST (Daily midnight IST)
     command: "python manage.py generate_roster"
     plan: starter
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: SECRET_KEY
       - key: OTP_HMAC_SECRET
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
   # ── 4. Cron Job 2: Mark Absent Shifts ────────────────────────────────────────
   # Runs every 5 minutes (UTC / IST) to transition unclocked slots past grace period
   # Estimated Cost: Starter Compute ($3-$5/month prorated)
   - type: cron
-    name: altus-cron-mark-absent-shifts
+    name: altus-${STAGE:-prod}-cron-mark-absent-shifts
     runtime: python
     rootDir: backend
     schedule: "*/5 * * * *" # Every 5 minutes (UTC / IST)
     command: "python manage.py mark_absent_shifts"
     plan: starter
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: SECRET_KEY
       - key: OTP_HMAC_SECRET
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
   # ── 5. Cron Job 3: Process Replacements & Escalation ─────────────────────────
-  # Runs every 1 minute (UTC / IST) to dispatch replacement offers and escalate
-  # Estimated Cost: Starter Compute ($5-$10/month prorated, ~43,200 invocations/mo)
+  # ARCHITECTURAL & BLUEPRINT RISK ASSESSMENT:
+  # - Container Spin-Up Overhead / Cold Starts:
+  #   Running this job on a 2-minute cadence spawns a fresh ephemeral container ~720 times/day
+  #   (~21,600 times/month). Each container requires 10-25 seconds to spin up, initialize the
+  #   runtime, and bootstrap Django settings before executing the command.
+  # - Overlap & Concurrency Risk:
+  #   If an execution cycle takes longer than 2 minutes (e.g. during database load, locking, or
+  #   downstream SMS gateway latency), Render will schedule the next instance concurrently.
+  #   While our database-level partial unique constraints and atomic conditional updates prevent
+  #   duplicate acceptance, overlapping runs risk connection pool exhaustion and redundant work.
+  # - Database Connection Churn:
+  #   Every execution establishes fresh PostgreSQL and Redis connections rather than reusing
+  #   persistent connection pools, adding latency and load to the database cluster.
+  # - Recommendation for Scale:
+  #   Migrate high-frequency workflows (<= 2 min) from Render Cron Jobs to a persistent background
+  #   worker service (e.g. Celery Beat/Worker or a long-running daemon `process_replacements --daemon`)
+  #   which is cheaper, deterministic, and eliminates container cold-start overhead.
+  # Estimated Cost: Starter Compute ($5-$10/month prorated, ~21,600 invocations/mo)
   - type: cron
-    name: altus-cron-process-replacements
+    name: altus-${STAGE:-prod}-cron-process-replacements
     runtime: python
     rootDir: backend
-    schedule: "* * * * *" # Every 1 minute (UTC / IST)
+    schedule: "*/2 * * * *" # Every 2 minutes (UTC / IST)
     command: "python manage.py process_replacements"
     plan: starter
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: SECRET_KEY
       - key: OTP_HMAC_SECRET
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
   # ── 6. Cron Job 4: Daily Housekeeping Tasks Generation ───────────────────────
   # Runs daily at 18:30 UTC = 00:00 IST (Daily Midnight IST)
   # Estimated Cost: Starter Compute ($1-$2/month prorated)
   - type: cron
-    name: altus-cron-generate-daily-tasks
+    name: altus-${STAGE:-prod}-cron-generate-daily-tasks
     runtime: python
     rootDir: backend
     schedule: "30 18 * * *" # 18:30 UTC = 00:00 IST (Daily midnight IST)
     command: "python manage.py generate_daily_tasks"
     plan: starter
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: SECRET_KEY
       - key: OTP_HMAC_SECRET
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
   # ── 7. Cron Job 5: Mark Overdue / Missed Housekeeping Tasks ───────────────────
   # Runs every 10 minutes (UTC / IST)
   # Estimated Cost: Starter Compute ($2-$4/month prorated)
   - type: cron
-    name: altus-cron-mark-missed-tasks
+    name: altus-${STAGE:-prod}-cron-mark-missed-tasks
     runtime: python
     rootDir: backend
     schedule: "*/10 * * * *" # Every 10 minutes (UTC / IST)
     command: "python manage.py mark_missed_tasks"
     plan: starter
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: SECRET_KEY
       - key: OTP_HMAC_SECRET
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
   # ── 8. Cron Job 6: Cleanup Expired Private Housekeeping Photos ───────────────
   # Runs weekly on Sunday at 02:00 UTC = 07:30 IST Sunday
   # Estimated Cost: < $1/month prorated
   - type: cron
-    name: altus-cron-cleanup-expired-photos
+    name: altus-${STAGE:-prod}-cron-cleanup-expired-photos
     runtime: python
     rootDir: backend
     schedule: "0 2 * * 0" # 02:00 UTC Sunday = 07:30 IST Sunday
     command: "python manage.py cleanup_expired_photos --dry-run"
     plan: starter
     envVars:
-      - fromGroup: altus-shared-env
+      - fromGroup: altus-${STAGE:-prod}-shared-env
       - key: SECRET_KEY
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: SECRET_KEY
       - key: OTP_HMAC_SECRET
         fromService:
           type: web
-          name: altus-backend
+          name: altus-${STAGE:-prod}-backend
           envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
-          name: altus-postgres
+          name: altus-${STAGE:-prod}-postgres
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis
-          name: altus-redis
+          name: altus-${STAGE:-prod}-redis
           property: connectionString
 
 databases:
   # ── PostgreSQL Managed Database ──────────────────────────────────────────────
   # High-availability transactional datastore
   # Estimated Cost: Standard Plan ($20/month) (or Starter Plan at $7/month)
-  - name: altus-postgres
+  - name: altus-${STAGE:-prod}-postgres
     plan: standard
-    databaseName: altus
-    user: altus_user
+    databaseName: altus_${STAGE:-prod}
+    user: altus_${STAGE:-prod}_user

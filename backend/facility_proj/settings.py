@@ -1,5 +1,4 @@
 import os
-import sys
 from datetime import timedelta
 from pathlib import Path
 import dj_database_url
@@ -218,8 +217,8 @@ REST_FRAMEWORK = {
         'clock_in': '60/min' if DEBUG else '10/min',
         'clock_out': '60/min' if DEBUG else '10/min',
         'selfie': '60/min' if DEBUG else '30/min',
-        'otp_request': '60/min' if (DEBUG or 'pytest' in sys.modules or any('test' in arg for arg in sys.argv)) else '10/min',
-        'otp_verify': '60/min' if (DEBUG or 'pytest' in sys.modules or any('test' in arg for arg in sys.argv)) else '15/min',
+        'otp_request': '60/min' if DEBUG else '10/min',
+        'otp_verify': '60/min' if DEBUG else '15/min',
         'complaint_create': '60/min' if DEBUG else '20/min',
         'supply_request_create': '60/min' if DEBUG else '20/min',
     },
@@ -310,12 +309,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Ensure staticfiles directory exists to eliminate startup warning
 STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
-# ── Fast Password Hasher for Tests ──────────────────────────────────────────
-import sys
-if 'pytest' in sys.modules or any('test' in arg for arg in sys.argv):
-    PASSWORD_HASHERS = [
-        'django.contrib.auth.hashers.MD5PasswordHasher',
-    ]
+TESTING = False
 
 # ── OTP & SMS Configuration ─────────────────────────────────────────────────
 OTP_HMAC_SECRET = os.environ.get('OTP_HMAC_SECRET')

@@ -321,9 +321,10 @@ class TestLoginSecurity:
     def test_startup_check_passes_with_valid_production_settings(self):
         """With DEBUG=False and proper production secrets configured, startup check passes cleanly."""
         from unittest import mock
-        with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://postgres:1234@localhost:5432/altus'}):
+        with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://postgres:1234@localhost:5432/altus', 'TESTING': ''}):
             with override_settings(
                 DEBUG=False,
+                TESTING=False,
                 SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
                 ALLOWED_HOSTS=['api.altsan.com', 'altsan.com'],
                 CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com'],
@@ -343,6 +344,7 @@ class TestLoginSecurity:
         """With DEBUG=False, refuses to boot if PRIVATE_STORAGE_BUCKET is missing."""
         with override_settings(
             DEBUG=False,
+            TESTING=False,
             SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
             ALLOWED_HOSTS=['api.altsan.com'],
             CORS_ALLOWED_ORIGINS=['https://altsan.com'],
@@ -357,6 +359,7 @@ class TestLoginSecurity:
         """With DEBUG=False, refuses to boot if SMS_PROVIDER is missing or on console backend."""
         with override_settings(
             DEBUG=False,
+            TESTING=False,
             SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
             ALLOWED_HOSTS=['api.altsan.com'],
             CORS_ALLOWED_ORIGINS=['https://altsan.com'],

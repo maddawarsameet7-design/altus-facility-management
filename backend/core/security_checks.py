@@ -25,6 +25,15 @@ def validate_production_settings():
     if getattr(settings, 'DEBUG', False):
         return
 
+    # Check TESTING flag: must never be enabled when DEBUG=False
+    testing_flag = getattr(settings, 'TESTING', False)
+    if not testing_flag and os.environ.get('TESTING'):
+        testing_flag = os.environ.get('TESTING')
+    if testing_flag and str(testing_flag).lower() in ('true', '1', 'yes', 't'):
+        raise ImproperlyConfigured(
+            "SECURITY CRITICAL: Production startup aborted! TESTING flag cannot be enabled when DEBUG=False."
+        )
+
     secret_key = getattr(settings, 'SECRET_KEY', '') or ''
     if not secret_key or len(secret_key) < 32 or any(secret_key.startswith(k) for k in INSECURE_SECRET_KEYS):
         raise ImproperlyConfigured(

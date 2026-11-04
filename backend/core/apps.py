@@ -2,13 +2,16 @@ import sys
 from django.apps import AppConfig
 
 
+from django.conf import settings
+
+
 class CoreConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'core'
 
     def ready(self):
         # Skip automatic startup abort during tests so pytest can use its own fixtures
-        if 'pytest' in sys.modules or any('test' in arg for arg in sys.argv):
+        if 'test' in settings.SETTINGS_MODULE.lower() or getattr(settings, 'TESTING', False) or os.environ.get('TESTING'):
             return
 
         # Skip during build / management commands (collectstatic, migrate, etc.)
