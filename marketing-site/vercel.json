@@ -29,5 +29,17 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/login",
+      "destination": "https://app.altsan.com/login",
+      "permanent": false
+    },
+    {
+      "source": "/app/:path*",
+      "destination": "https://app.altsan.com/:path*",
+      "permanent": false
+    }
   ]
 }
