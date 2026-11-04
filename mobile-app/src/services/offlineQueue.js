@@ -280,6 +280,8 @@ export const flushQueue = async (workerId) => {
 
           if (item.is_multipart) {
             const formData = new FormData();
+            formData.append('client_uuid', item.client_uuid);
+            formData.append('captured_at', item.captured_at);
             Object.entries(item.payload || {}).forEach(([k, v]) => {
               formData.append(k, v);
             });
@@ -288,7 +290,12 @@ export const flushQueue = async (workerId) => {
             }
             fetchOptions.body = formData;
           } else {
-            fetchOptions.body = JSON.stringify(item.payload || {});
+            const bodyPayload = {
+              client_uuid: item.client_uuid,
+              captured_at: item.captured_at,
+              ...(item.payload || {}),
+            };
+            fetchOptions.body = JSON.stringify(bodyPayload);
           }
 
           const res = await apiClient(item.endpoint, fetchOptions);
@@ -297,6 +304,7 @@ export const flushQueue = async (workerId) => {
           // Success: 200 / 201 (or idempotent replay 200)
           if (res.ok) {
             item.status = 'CONFIRMED';
+            item.synced_at = new Date().toISOString();
             item.server_response = data;
             item.last_error = null;
             await persistItem(item);
