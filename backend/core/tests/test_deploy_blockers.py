@@ -225,9 +225,17 @@ class TestDeployBlockers:
                 shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8)
             )
 
-            # Worker 2 is NOT on roster of Alpha Society (no roster record)
+            # Worker 2 is on roster of Beta Society (cross-society from Alpha)
+            site_b = society_beta.sites.first()
+            post_b = Post.objects.create(society=society_beta, site=site_b, name="Beta HK Post")
+            shift_b = Shift.objects.create(society=society_beta, post=post_b, name="Morn B", start_time=time(8, 0), end_time=time(16, 0))
+            DailyRoster.objects.create(
+                society=society_beta, post=post_b, shift=shift_b,
+                date=timezone.localdate(), slot_number=1, worker=wp2, status='SCHEDULED',
+                shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8)
+            )
 
-            # 1. Supervisor Alpha attempts for Worker 2 (cross-society / not on roster) -> 403 Forbidden
+            # 1. Supervisor Alpha attempts for Worker 2 (cross-society / not on supervisor's roster) -> 403 Forbidden
             api_client.force_authenticate(user=supervisor_alpha)
             res_cross = api_client.post(
                 f"/api/workers/{wp2.id}/issue-login-code/",

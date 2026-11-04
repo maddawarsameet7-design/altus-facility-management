@@ -70,7 +70,9 @@ def validate_production_settings():
         )
 
     # OTP_HMAC_SECRET check: missing or fallback to SECRET_KEY
-    otp_hmac_secret = getattr(settings, 'OTP_HMAC_SECRET', None) or os.environ.get('OTP_HMAC_SECRET', None)
+    otp_hmac_secret = getattr(settings, 'OTP_HMAC_SECRET', None)
+    if otp_hmac_secret is None:
+        otp_hmac_secret = os.environ.get('OTP_HMAC_SECRET', None)
     if not otp_hmac_secret or otp_hmac_secret == getattr(settings, 'SECRET_KEY', None) or len(otp_hmac_secret) < 16:
         raise ImproperlyConfigured(
             "SECURITY CRITICAL: Production startup aborted! OTP_HMAC_SECRET is missing or using SECRET_KEY. "
@@ -78,7 +80,9 @@ def validate_production_settings():
         )
 
     # REDIS_URL check: missing
-    redis_url = getattr(settings, 'REDIS_URL', None) or os.environ.get('REDIS_URL', None)
+    redis_url = getattr(settings, 'REDIS_URL', None)
+    if redis_url is None:
+        redis_url = os.environ.get('REDIS_URL', None)
     if not redis_url:
         raise ImproperlyConfigured(
             "SECURITY CRITICAL: Production startup aborted! REDIS_URL is missing when DEBUG=False."
