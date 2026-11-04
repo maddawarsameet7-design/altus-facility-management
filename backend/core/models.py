@@ -4,6 +4,7 @@ import string
 import secrets
 from decimal import Decimal
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -152,8 +153,40 @@ class SocietySettings(models.Model):
     replacement_escalation_minutes = models.IntegerField(default=60)
     min_rest_gap_hours = models.IntegerField(default=8)
 
+    # ── Housekeeping Operational Policies & Quality Weights ──
+    task_missed_grace_minutes = models.IntegerField(default=30)
+    max_photos_per_task = models.IntegerField(default=6)
+    PHOTO_GEOFENCE_POLICY_CHOICES = [
+        ('REJECT', 'Reject Photos Outside Geofence'),
+        ('FLAG', 'Flag Photos Outside Geofence for Review'),
+    ]
+    photo_geofence_policy = models.CharField(max_length=10, choices=PHOTO_GEOFENCE_POLICY_CHOICES, default='REJECT')
+    evidence_deadline_hours = models.IntegerField(default=24)
+    photo_retention_days = models.IntegerField(default=90)
+    completion_weight = models.IntegerField(default=40)
+    inspection_weight = models.IntegerField(default=40)
+    complaint_weight = models.IntegerField(default=20)
+
     class Meta:
         verbose_name_plural = 'Society Settings'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(completion_weight__gte=0) &
+                          models.Q(inspection_weight__gte=0) &
+                          models.Q(complaint_weight__gte=0),
+                name='society_settings_weights_gte_zero'
+            )
+        ]
+
+    def clean(self):
+        super().clean()
+        w_c = self.completion_weight if self.completion_weight is not None else 40
+        w_i = self.inspection_weight if self.inspection_weight is not None else 40
+        w_k = self.complaint_weight if self.complaint_weight is not None else 20
+        if w_c + w_i + w_k != 100:
+            raise ValidationError("Quality score weights (completion, inspection, complaint) must sum to exactly 100.")
+        if min(w_c, w_i, w_k) < 0:
+            raise ValidationError("Quality score weights must be non-negative.")
 
     def __str__(self):
         return f"Settings for {self.society.name}"
@@ -1034,3 +1067,467 @@ class OTPChallenge(models.Model):
 
     def __str__(self):
         return f"OTPChallenge for {self.phone} [{self.created_at}]"
+
+
+# ─── HOUSEKEEPING TASK MANAGEMENT MODELS ─────────────────────────────────────
+
+def task_photo_upload_path(instance, filename):
+    import os, uuid
+    ext = os.path.splitext(filename)[1].lower() or '.jpg'
+    return f"housekeeping/tasks/{instance.society_id}/{uuid.uuid4()}{ext}"
+
+
+def task_thumbnail_upload_path(instance, filename):
+    import os, uuid
+    ext = os.path.splitext(filename)[1].lower() or '.jpg'
+    return f"housekeeping/thumbnails/{instance.society_id}/{uuid.uuid4()}{ext}"
+
+
+def inspection_photo_upload_path(instance, filename):
+    import os, uuid
+    ext = os.path.splitext(filename)[1].lower() or '.jpg'
+    return f"housekeeping/inspections/{instance.society_id}/{uuid.uuid4()}{ext}"
+
+
+def complaint_photo_upload_path(instance, filename):
+    import os, uuid
+    ext = os.path.splitext(filename)[1].lower() or '.jpg'
+    return f"housekeeping/complaints/{instance.society_id}/{uuid.uuid4()}{ext}"
+
+
+class Area(models.Model):
+    """
+    Physical area or zone within a Site (e.g. Lobby, Stairs, Lift, Washroom, Garden).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='areas')
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='areas')
+    name = models.CharField(max_length=100)
+    floor_or_block = models.CharField(max_length=50, blank=True, default='')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['site', 'name', 'floor_or_block'], name='unique_site_area_block')
+        ]
+        ordering = ['name', 'floor_or_block']
+
+    def clean(self):
+        super().clean()
+        if self.site_id and self.society_id:
+            if self.site.society_id != self.society_id:
+                raise ValidationError({'site': 'Site must belong to the same society as Area.'})
+
+    def __str__(self):
+        loc = f" ({self.floor_or_block})" if self.floor_or_block else ""
+        return f"{self.name}{loc} @ {self.site.name}"
+
+
+class TaskTemplate(models.Model):
+    """
+    Defines a recurring housekeeping task assigned to a post, area, and shift.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='task_templates')
+    post = models.ForeignKey(Post, on_delete=models.PROTECT, related_name='task_templates')
+    area = models.ForeignKey(Area, on_delete=models.PROTECT, related_name='task_templates')
+    shift = models.ForeignKey(Shift, on_delete=models.PROTECT, related_name='task_templates')
+    name = models.CharField(max_length=150)
+    FREQUENCY_CHOICES = [
+        ('DAILY', 'Daily'),
+        ('WEEKLY', 'Weekly'),
+        ('MONTHLY', 'Monthly'),
+    ]
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='DAILY')
+    days_of_week = models.JSONField(default=list, blank=True)
+    day_of_month = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)])
+    PHOTO_REQ_CHOICES = [
+        ('NONE', 'None'),
+        ('BEFORE_AFTER', 'Before & After'),
+        ('AFTER_ONLY', 'After Only'),
+    ]
+    photo_required = models.CharField(max_length=20, choices=PHOTO_REQ_CHOICES, default='NONE')
+    estimated_minutes = models.IntegerField(default=30)
+    sort_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    effective_from = models.DateField(default=timezone.localdate)
+    effective_to = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+
+    def clean(self):
+        super().clean()
+        if self.post_id and self.society_id and self.post.society_id != self.society_id:
+            raise ValidationError({'post': 'Post must belong to the same society as TaskTemplate.'})
+        if self.area_id and self.society_id and self.area.society_id != self.society_id:
+            raise ValidationError({'area': 'Area must belong to the same society as TaskTemplate.'})
+        if self.shift_id and self.society_id and self.shift.society_id != self.society_id:
+            raise ValidationError({'shift': 'Shift must belong to the same society as TaskTemplate.'})
+        if self.shift_id and self.post_id and self.shift.post_id != self.post_id:
+            raise ValidationError({'shift': 'Shift must belong to the selected Post.'})
+        if self.area_id and self.post_id and self.area.site_id != self.post.site_id:
+            raise ValidationError({'area': 'Area must belong to the same Site as Post.'})
+        if self.frequency == 'WEEKLY' and not self.days_of_week:
+            raise ValidationError({'days_of_week': 'Weekly templates must specify operating days_of_week.'})
+        if self.frequency == 'MONTHLY' and not self.day_of_month:
+            raise ValidationError({'day_of_month': 'Monthly templates must specify day_of_month.'})
+
+    def __str__(self):
+        return f"{self.name} ({self.area.name} / {self.shift.name})"
+
+
+class TaskInstance(models.Model):
+    """
+    Generated concrete task for a specific date and shift.
+    Belongs to the post and shift (not permanently bound to one worker).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='task_instances')
+    template = models.ForeignKey(TaskTemplate, on_delete=models.PROTECT, null=True, blank=True, related_name='instances')
+    post = models.ForeignKey(Post, on_delete=models.PROTECT, related_name='task_instances')
+    shift = models.ForeignKey(Shift, on_delete=models.PROTECT, related_name='task_instances')
+    area = models.ForeignKey(Area, on_delete=models.PROTECT, related_name='task_instances')
+    name = models.CharField(max_length=150)
+    photo_required = models.CharField(max_length=20, default='NONE')
+    estimated_minutes = models.IntegerField(default=30)
+    due_date = models.DateField(db_index=True)
+    shift_start_at = models.DateTimeField()
+    shift_end_at = models.DateTimeField()
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('AWAITING_EVIDENCE', 'Awaiting Evidence'),
+        ('DONE', 'Done'),
+        ('SKIPPED', 'Skipped'),
+        ('MISSED', 'Missed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING', db_index=True)
+    expected_photo_uuids = models.JSONField(default=list, blank=True)
+    evidence_deadline = models.DateTimeField(null=True, blank=True)
+    claimed_by = models.ForeignKey(WorkerProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='claimed_tasks')
+    completed_by = models.ForeignKey(WorkerProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='completed_tasks')
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    SKIP_REASON_CHOICES = [
+        ('AREA_LOCKED', 'Area Locked'),
+        ('RESIDENT_REQUEST', 'Resident Request'),
+        ('NO_SUPPLIES', 'No Supplies Available'),
+        ('EXCUSED', 'Excused by Supervisor'),
+        ('OTHER', 'Other Reason'),
+    ]
+    skip_reason = models.CharField(max_length=30, blank=True, null=True, choices=SKIP_REASON_CHOICES)
+    is_excused = models.BooleanField(default=False)
+    excused_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='excused_tasks')
+    excuse_reason = models.TextField(blank=True, default='')
+    notes = models.TextField(blank=True, default='')
+    is_rework = models.BooleanField(default=False)
+    needs_review = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_tasks')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['template', 'due_date'],
+                condition=models.Q(is_rework=False) & models.Q(template__isnull=False),
+                name='unique_task_template_due_date'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['society', 'due_date']),
+            models.Index(fields=['post', 'due_date']),
+            models.Index(fields=['claimed_by', 'due_date']),
+            models.Index(fields=['status', 'shift_end_at']),
+        ]
+        ordering = ['due_date', 'shift_start_at', 'id']
+
+    def clean(self):
+        super().clean()
+        if self.post_id and self.society_id and self.post.society_id != self.society_id:
+            raise ValidationError({'post': 'Post must belong to the same society as TaskInstance.'})
+        if self.shift_id and self.society_id and self.shift.society_id != self.society_id:
+            raise ValidationError({'shift': 'Shift must belong to the same society as TaskInstance.'})
+        if self.area_id and self.society_id and self.area.society_id != self.society_id:
+            raise ValidationError({'area': 'Area must belong to the same society as TaskInstance.'})
+        if self.shift_id and self.post_id and self.shift.post_id != self.post_id:
+            raise ValidationError({'shift': 'Shift must belong to the selected Post.'})
+        if self.area_id and self.post_id and self.area.site_id != self.post.site_id:
+            raise ValidationError({'area': 'Area must belong to the same Site as Post.'})
+        if self.template_id and self.template.society_id != self.society_id:
+            raise ValidationError({'template': 'Template must belong to the same society as TaskInstance.'})
+
+    def __str__(self):
+        return f"{self.name} on {self.due_date} ({self.status})"
+
+
+class TaskPhoto(models.Model):
+    """
+    Evidence photo captured for a task instance with capture-time GPS coordinates.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='task_photos')
+    task_instance = models.ForeignKey(TaskInstance, on_delete=models.PROTECT, related_name='photos')
+    KIND_CHOICES = [
+        ('BEFORE', 'Before Cleaning'),
+        ('AFTER', 'After Cleaning'),
+    ]
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    file = models.FileField(upload_to=task_photo_upload_path, storage=get_private_storage_wrapper)
+    thumbnail = models.FileField(upload_to=task_thumbnail_upload_path, storage=get_private_storage_wrapper, null=True, blank=True)
+    client_uuid = models.UUIDField(db_index=True)
+    captured_at = models.DateTimeField()
+    server_received_at = models.DateTimeField(auto_now_add=True)
+    gps_latitude = models.FloatField(null=True, blank=True)
+    gps_longitude = models.FloatField(null=True, blank=True)
+    gps_accuracy_m = models.FloatField(null=True, blank=True)
+    distance_from_site_m = models.FloatField(null=True, blank=True)
+    flags = models.JSONField(default=list, blank=True)
+    uploaded_by = models.ForeignKey(WorkerProfile, on_delete=models.PROTECT, related_name='task_photos')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['client_uuid', 'uploaded_by'], name='unique_task_photo_client_uploader')
+        ]
+        ordering = ['captured_at']
+
+    def clean(self):
+        super().clean()
+        if self.task_instance_id and self.society_id and self.task_instance.society_id != self.society_id:
+            raise ValidationError({'task_instance': 'TaskInstance must belong to the same society as TaskPhoto.'})
+
+    def __str__(self):
+        return f"{self.kind} photo for {self.task_instance.name} ({self.client_uuid})"
+
+
+class Inspection(models.Model):
+    """
+    Quality inspection performed by a Supervisor or Director.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='inspections')
+    post = models.ForeignKey(Post, on_delete=models.PROTECT, related_name='inspections')
+    area = models.ForeignKey(Area, on_delete=models.PROTECT, null=True, blank=True, related_name='inspections')
+    inspector = models.ForeignKey(User, on_delete=models.PROTECT, related_name='inspections_conducted')
+    date = models.DateField(default=timezone.localdate)
+    score = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    notes = models.TextField(blank=True, default='')
+    STATUS_CHOICES = [
+        ('PASSED', 'Passed (Score 4-5)'),
+        ('NEEDS_REWORK', 'Needs Rework (Score 2-3)'),
+        ('FAILED', 'Failed (Score 1)'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    shared_with_client = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def clean(self):
+        super().clean()
+        if self.post_id and self.society_id and self.post.society_id != self.society_id:
+            raise ValidationError({'post': 'Post must belong to the same society as Inspection.'})
+        if self.area_id and self.society_id and self.area.society_id != self.society_id:
+            raise ValidationError({'area': 'Area must belong to the same society as Inspection.'})
+        if self.inspector_id:
+            role = getattr(self.inspector, 'role', '')
+            if role not in ('SUPERVISOR', 'DIRECTOR'):
+                raise ValidationError({'inspector': 'Inspector must have role SUPERVISOR or DIRECTOR.'})
+            if role == 'SUPERVISOR' and self.society_id:
+                has_mem = Membership.objects.filter(user=self.inspector, society_id=self.society_id, is_active=True).exists()
+                if not has_mem:
+                    raise ValidationError({'inspector': 'Supervisor must have active membership in this society.'})
+
+    def __str__(self):
+        return f"Inspection {self.score}/5 @ {self.post.name} by {self.inspector.username} ({self.date})"
+
+
+class InspectionPhoto(models.Model):
+    """
+    Evidence photo attached to an inspection.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='inspection_photos')
+    inspection = models.ForeignKey(Inspection, on_delete=models.PROTECT, related_name='photos')
+    file = models.FileField(upload_to=inspection_photo_upload_path, storage=get_private_storage_wrapper)
+    caption = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        super().clean()
+        if self.inspection_id and self.society_id and self.inspection.society_id != self.society_id:
+            raise ValidationError({'inspection': 'Inspection must belong to the same society.'})
+
+    def __str__(self):
+        return f"InspectionPhoto for {self.inspection_id}"
+
+
+class Complaint(models.Model):
+    """
+    Housekeeping complaint raised by a society Member or Chairman.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='complaints')
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='complaints')
+    post = models.ForeignKey(Post, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
+    area = models.ForeignKey(Area, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
+    raised_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='complaints_raised')
+    description = models.TextField()
+    photo = models.FileField(upload_to=complaint_photo_upload_path, storage=get_private_storage_wrapper, null=True, blank=True)
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('ACKNOWLEDGED', 'Acknowledged'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+        ('REJECTED', 'Rejected'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', db_index=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints_assigned')
+    resolution_notes = models.TextField(blank=True, default='')
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    client_confirmed = models.BooleanField(null=True, blank=True)
+    reopened_count = models.IntegerField(default=0)
+    rejection_reason = models.TextField(blank=True, default='')
+    disputed_by_client = models.BooleanField(default=False)
+    dispute_notes = models.TextField(blank=True, default='')
+    escalated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def clean(self):
+        super().clean()
+        if self.site_id and self.society_id and self.site.society_id != self.society_id:
+            raise ValidationError({'site': 'Site must belong to the same society as Complaint.'})
+        if self.post_id and self.society_id and self.post.society_id != self.society_id:
+            raise ValidationError({'post': 'Post must belong to the same society as Complaint.'})
+        if self.area_id and self.society_id and self.area.society_id != self.society_id:
+            raise ValidationError({'area': 'Area must belong to the same society as Complaint.'})
+        if self.raised_by_id and self.society_id:
+            role = getattr(self.raised_by, 'role', '')
+            if role != 'DIRECTOR':
+                has_mem = Membership.objects.filter(user=self.raised_by, society_id=self.society_id, is_active=True).exists()
+                if not has_mem:
+                    raise ValidationError({'raised_by': 'User raising complaint must have an active membership in this society.'})
+        if self.assigned_to_id and self.society_id:
+            role = getattr(self.assigned_to, 'role', '')
+            if role not in ('SUPERVISOR', 'DIRECTOR'):
+                raise ValidationError({'assigned_to': 'Assignee must be a Supervisor or Director.'})
+            if role == 'SUPERVISOR':
+                has_mem = Membership.objects.filter(user=self.assigned_to, society_id=self.society_id, is_active=True).exists()
+                if not has_mem:
+                    raise ValidationError({'assigned_to': 'Supervisor must have an active membership in this society.'})
+
+    def __str__(self):
+        return f"Complaint #{str(self.id)[:8]} ({self.status}) @ {self.site.name}"
+
+
+class SupplyItem(models.Model):
+    """
+    Inventory item stocked for housekeeping (e.g. chemicals, mop heads, garbage bags).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='supply_items')
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=50, blank=True, default='Cleaning Supplies')
+    unit = models.CharField(max_length=20, default='pcs')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['society', 'name'], name='unique_society_supply_item')
+        ]
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.unit}) [{self.society.name}]"
+
+
+class SupplyRequest(models.Model):
+    """
+    Supply request submitted by a worker and approved/issued by a supervisor.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='supply_requests')
+    item = models.ForeignKey(SupplyItem, on_delete=models.PROTECT, related_name='requests')
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
+    requested_by = models.ForeignKey(WorkerProfile, on_delete=models.PROTECT, related_name='supply_requests')
+    STATUS_CHOICES = [
+        ('REQUESTED', 'Requested'),
+        ('APPROVED', 'Approved'),
+        ('ISSUED', 'Issued'),
+        ('REJECTED', 'Rejected'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='REQUESTED', db_index=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_supply_requests')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def clean(self):
+        super().clean()
+        if self.item_id and self.society_id and self.item.society_id != self.society_id:
+            raise ValidationError({'item': 'SupplyItem must belong to the same society.'})
+        if self.reviewed_by_id:
+            role = getattr(self.reviewed_by, 'role', '')
+            if role not in ('SUPERVISOR', 'DIRECTOR'):
+                raise ValidationError({'reviewed_by': 'Reviewer must have role SUPERVISOR or DIRECTOR.'})
+
+    def __str__(self):
+        return f"SupplyRequest {self.quantity} {self.item.name} ({self.status})"
+
+
+class QualityScoreSnapshot(models.Model):
+    """
+    Immutable monthly quality score snapshot for client billing & SLA verification.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='quality_snapshots')
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='quality_snapshots')
+    month = models.CharField(max_length=7, db_index=True)
+    score = models.DecimalField(max_digits=5, decimal_places=2)
+    task_completion_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    inspection_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    complaint_sla_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    weights_used = models.JSONField(default=dict)
+    breakdown = models.JSONField(default=dict)
+    locked_at = models.DateTimeField(default=timezone.now)
+    is_locked = models.BooleanField(default=True)
+    corrected_at = models.DateTimeField(null=True, blank=True)
+    correction_notes = models.TextField(blank=True, default='')
+    corrected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['site', 'month'], name='unique_site_month_quality_snapshot')
+        ]
+        ordering = ['-month']
+
+    def clean(self):
+        super().clean()
+        if self.site_id and self.society_id and self.site.society_id != self.society_id:
+            raise ValidationError({'site': 'Site must belong to the same society.'})
+
+    def __str__(self):
+        return f"QualityScore {self.score}% for {self.site.name} ({self.month})"
+

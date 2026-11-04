@@ -8,7 +8,10 @@ from .models import (
     Post, Shift, RosterAssignment, DailyRoster, LeaveRecord,
     AttendanceEvent, Alert, AuditLog,
     ReplacementRequest, ReplacementOffer, Notification,
-    OTPChallenge
+    OTPChallenge,
+    Area, TaskTemplate, TaskInstance, TaskPhoto,
+    Inspection, InspectionPhoto, Complaint,
+    SupplyItem, SupplyRequest, QualityScoreSnapshot
 )
 
 
@@ -155,3 +158,13 @@ admin.site.register(ReplacementRequest)
 admin.site.register(ReplacementOffer)
 admin.site.register(Notification)
 admin.site.register(OTPChallenge)
+admin.site.register(Area)
+admin.site.register(TaskTemplate)
+admin.site.register(TaskInstance)
+admin.site.register(TaskPhoto)
+admin.site.register(Inspection)
+admin.site.register(InspectionPhoto)
+admin.site.register(Complaint)
+admin.site.register(SupplyItem)
+admin.site.register(SupplyRequest)
+admin.site.register(QualityScoreSnapshot)
