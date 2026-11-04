@@ -47,6 +47,12 @@ from core.views_staffing import (
     ReplacementRequestViewSet, MyOffersView, AcceptOfferView,
     DeclineOfferView, ReplacementMetricsView, NotificationViewSet
 )
+from core.views_housekeeping import (
+    AreaViewSet, TaskTemplateViewSet, TaskInstanceViewSet,
+    HousekeepingBoardView, InspectionViewSet, ComplaintViewSet,
+    SupplyItemViewSet, SupplyRequestViewSet, QualityScoreView,
+    PhotoFileDownloadView
+)
 
 router = DefaultRouter()
 router.register(r'clients', ClientProfileViewSet, basename='client')
@@ -69,6 +75,13 @@ router.register(r'roster/alerts', AlertViewSet, basename='roster-alert')
 router.register(r'roster/audit-logs', AuditLogViewSet, basename='roster-audit-log')
 router.register(r'roster/replacements', ReplacementRequestViewSet, basename='roster-replacement')
 router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'housekeeping/areas', AreaViewSet, basename='housekeeping-area')
+router.register(r'housekeeping/templates', TaskTemplateViewSet, basename='housekeeping-template')
+router.register(r'housekeeping/tasks', TaskInstanceViewSet, basename='housekeeping-task')
+router.register(r'housekeeping/inspections', InspectionViewSet, basename='housekeeping-inspection')
+router.register(r'housekeeping/complaints', ComplaintViewSet, basename='housekeeping-complaint')
+router.register(r'housekeeping/supplies', SupplyItemViewSet, basename='housekeeping-supply-item')
+router.register(r'housekeeping/supply-requests', SupplyRequestViewSet, basename='housekeeping-supply-request')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -117,6 +130,11 @@ urlpatterns = [
     path('api/workers/<uuid:pk>/issue-login-code/', IssueFallbackLoginCodeView.as_view(), name='worker_issue_login_code'),
     path('api/workers/<uuid:pk>/device-approval/', ApproveWorkerDeviceView.as_view(), name='worker_device_approval'),
     path('api/workers/<uuid:pk>/payslips/', WorkerPayslipView.as_view(), name='worker_payslips'),
+
+    # Housekeeping specialized views
+    path('api/housekeeping/board/', HousekeepingBoardView.as_view(), name='housekeeping_board'),
+    path('api/housekeeping/quality-score/', QualityScoreView.as_view(), name='housekeeping_quality_score'),
+    path('api/housekeeping/photos/<uuid:pk>/file/', PhotoFileDownloadView.as_view(), name='housekeeping_photo_file'),
 
     # Society join (invite code)
     path('api/societies/join/', JoinSocietyView.as_view(), name='society_join'),
