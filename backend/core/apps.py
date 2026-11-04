@@ -1,8 +1,8 @@
+import os
 import sys
 from django.apps import AppConfig
-
-
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 
 class CoreConfig(AppConfig):
@@ -10,8 +10,12 @@ class CoreConfig(AppConfig):
     name = 'core'
 
     def ready(self):
-        # Skip automatic startup abort during tests so pytest can use its own fixtures
-        if 'test' in settings.SETTINGS_MODULE.lower() or getattr(settings, 'TESTING', False) or os.environ.get('TESTING'):
+        # Startup-check skip depends ONLY on an explicit TESTING environment variable.
+        # App must refuse to start if TESTING is set while DEBUG=False.
+        testing_active = os.environ.get('TESTING', '').strip().lower() in ('true', '1', 't', 'yes')
+        if testing_active:
+            if not getattr(settings, 'DEBUG', False):
+                raise ImproperlyConfigured("TESTING environment variable cannot be active when DEBUG=False.")
             return
 
         # Skip during build / management commands (collectstatic, migrate, etc.)
