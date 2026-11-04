@@ -1,35 +1,15 @@
 # ==============================================================================
 # Altus Platform - Render Deployment Blueprint
-# Includes Web Service and Production Staffing/Housekeeping Scheduled Cron Jobs
+# Includes Web Service, Managed PostgreSQL, Redis Key-Value Store, and Cron Jobs
 # ==============================================================================
 
-services:
-  # ── Web Application Service ──────────────────────────────────────────────────
-  - type: web
-    name: altus-backend
-    runtime: python
-    rootDir: backend
-    buildCommand: "./build.sh"
-    startCommand: "daphne -b 0.0.0.0 -p $PORT facility_proj.asgi:application"
-    plan: standard
+envVarGroups:
+  - name: altus-shared-env
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.8
       - key: DEBUG
         value: "False"
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DATABASE_URL
-        fromDatabase:
-          name: altus-postgres
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: altus-redis
-          property: connectionString
-      - key: OTP_HMAC_SECRET
-        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.8
       - key: PRIVATE_STORAGE_BUCKET
         sync: false
       - key: AWS_STORAGE_BUCKET_NAME
@@ -51,17 +31,63 @@ services:
       - key: SMS_DAILY_GLOBAL_CAP
         value: "500"
 
-  # ── Cron Job 1: Daily Staffing Roster Generation ─────────────────────────────
+services:
+  # ── 1. Redis Key-Value Store Service (Render Key Value) ──────────────────────
+  # Used for Django Channels WebSockets, distributed locks, and cache
+  # Estimated Cost: Starter Plan ($10/month)
+  - type: redis
+    name: altus-redis
+    plan: starter
+    ipAllowList: [] # Private network access only
+
+  # ── 2. Web Application Service (ASGI / Daphne) ───────────────────────────────
+  # Hosts REST API, Django Admin, and WebSocket Consumers
+  # Estimated Cost: Standard Plan ($25/month)
+  - type: web
+    name: altus-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: "./build.sh"
+    startCommand: "daphne -b 0.0.0.0 -p $PORT facility_proj.asgi:application"
+    plan: standard
+    envVars:
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OTP_HMAC_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: altus-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: altus-redis
+          property: connectionString
+
+  # ── 3. Cron Job 1: Daily Staffing Roster Generation ──────────────────────────
+  # Runs daily at 18:30 UTC = 00:00 IST (Daily Midnight IST)
+  # Estimated Cost: Starter Compute ($1-$2/month prorated on execution time)
   - type: cron
     name: altus-cron-generate-roster
     runtime: python
     rootDir: backend
-    schedule: "0 0 * * *"
+    schedule: "30 18 * * *" # 18:30 UTC = 00:00 IST (Daily midnight IST)
     command: "python manage.py generate_roster"
     plan: starter
     envVars:
-      - key: DEBUG
-        value: "False"
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: SECRET_KEY
+      - key: OTP_HMAC_SECRET
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
           name: altus-postgres
@@ -71,23 +97,29 @@ services:
           type: redis
           name: altus-redis
           property: connectionString
-      - key: OTP_HMAC_SECRET
-        fromService:
-          type: web
-          name: altus-backend
-          envVarKey: OTP_HMAC_SECRET
 
-  # ── Cron Job 2: Mark Absent Shifts (Every 5 minutes) ─────────────────────────
+  # ── 4. Cron Job 2: Mark Absent Shifts ────────────────────────────────────────
+  # Runs every 5 minutes (UTC / IST) to transition unclocked slots past grace period
+  # Estimated Cost: Starter Compute ($3-$5/month prorated)
   - type: cron
     name: altus-cron-mark-absent-shifts
     runtime: python
     rootDir: backend
-    schedule: "*/5 * * * *"
+    schedule: "*/5 * * * *" # Every 5 minutes (UTC / IST)
     command: "python manage.py mark_absent_shifts"
     plan: starter
     envVars:
-      - key: DEBUG
-        value: "False"
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: SECRET_KEY
+      - key: OTP_HMAC_SECRET
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
           name: altus-postgres
@@ -97,23 +129,29 @@ services:
           type: redis
           name: altus-redis
           property: connectionString
-      - key: OTP_HMAC_SECRET
-        fromService:
-          type: web
-          name: altus-backend
-          envVarKey: OTP_HMAC_SECRET
 
-  # ── Cron Job 3: Process Replacements & Escalation (Every 1 minute) ───────────
+  # ── 5. Cron Job 3: Process Replacements & Escalation ─────────────────────────
+  # Runs every 1 minute (UTC / IST) to dispatch replacement offers and escalate
+  # Estimated Cost: Starter Compute ($5-$10/month prorated, ~43,200 invocations/mo)
   - type: cron
     name: altus-cron-process-replacements
     runtime: python
     rootDir: backend
-    schedule: "* * * * *"
+    schedule: "* * * * *" # Every 1 minute (UTC / IST)
     command: "python manage.py process_replacements"
     plan: starter
     envVars:
-      - key: DEBUG
-        value: "False"
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: SECRET_KEY
+      - key: OTP_HMAC_SECRET
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
           name: altus-postgres
@@ -123,23 +161,29 @@ services:
           type: redis
           name: altus-redis
           property: connectionString
-      - key: OTP_HMAC_SECRET
-        fromService:
-          type: web
-          name: altus-backend
-          envVarKey: OTP_HMAC_SECRET
 
-  # ── Cron Job 4: Daily Housekeeping Tasks Generation ──────────────────────────
+  # ── 6. Cron Job 4: Daily Housekeeping Tasks Generation ───────────────────────
+  # Runs daily at 18:30 UTC = 00:00 IST (Daily Midnight IST)
+  # Estimated Cost: Starter Compute ($1-$2/month prorated)
   - type: cron
     name: altus-cron-generate-daily-tasks
     runtime: python
     rootDir: backend
-    schedule: "0 0 * * *"
+    schedule: "30 18 * * *" # 18:30 UTC = 00:00 IST (Daily midnight IST)
     command: "python manage.py generate_daily_tasks"
     plan: starter
     envVars:
-      - key: DEBUG
-        value: "False"
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: SECRET_KEY
+      - key: OTP_HMAC_SECRET
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
           name: altus-postgres
@@ -149,23 +193,29 @@ services:
           type: redis
           name: altus-redis
           property: connectionString
-      - key: OTP_HMAC_SECRET
-        fromService:
-          type: web
-          name: altus-backend
-          envVarKey: OTP_HMAC_SECRET
 
-  # ── Cron Job 5: Mark Overdue / Missed Housekeeping Tasks (Every 10 minutes) ──
+  # ── 7. Cron Job 5: Mark Overdue / Missed Housekeeping Tasks ───────────────────
+  # Runs every 10 minutes (UTC / IST)
+  # Estimated Cost: Starter Compute ($2-$4/month prorated)
   - type: cron
     name: altus-cron-mark-missed-tasks
     runtime: python
     rootDir: backend
-    schedule: "*/10 * * * *"
+    schedule: "*/10 * * * *" # Every 10 minutes (UTC / IST)
     command: "python manage.py mark_missed_tasks"
     plan: starter
     envVars:
-      - key: DEBUG
-        value: "False"
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: SECRET_KEY
+      - key: OTP_HMAC_SECRET
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
           name: altus-postgres
@@ -175,24 +225,29 @@ services:
           type: redis
           name: altus-redis
           property: connectionString
-      - key: OTP_HMAC_SECRET
-        fromService:
-          type: web
-          name: altus-backend
-          envVarKey: OTP_HMAC_SECRET
 
-  # ── Cron Job 6: Cleanup Expired Private Housekeeping Photos (Weekly Sunday) ──
-  # Runs with --dry-run first by default to safely evaluate photos before pruning
+  # ── 8. Cron Job 6: Cleanup Expired Private Housekeeping Photos ───────────────
+  # Runs weekly on Sunday at 02:00 UTC = 07:30 IST Sunday
+  # Estimated Cost: < $1/month prorated
   - type: cron
     name: altus-cron-cleanup-expired-photos
     runtime: python
     rootDir: backend
-    schedule: "0 2 * * 0"
+    schedule: "0 2 * * 0" # 02:00 UTC Sunday = 07:30 IST Sunday
     command: "python manage.py cleanup_expired_photos --dry-run"
     plan: starter
     envVars:
-      - key: DEBUG
-        value: "False"
+      - fromGroup: altus-shared-env
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: SECRET_KEY
+      - key: OTP_HMAC_SECRET
+        fromService:
+          type: web
+          name: altus-backend
+          envVarKey: OTP_HMAC_SECRET
       - key: DATABASE_URL
         fromDatabase:
           name: altus-postgres
@@ -202,15 +257,12 @@ services:
           type: redis
           name: altus-redis
           property: connectionString
-      - key: OTP_HMAC_SECRET
-        fromService:
-          type: web
-          name: altus-backend
-          envVarKey: OTP_HMAC_SECRET
 
 databases:
+  # ── PostgreSQL Managed Database ──────────────────────────────────────────────
+  # High-availability transactional datastore
+  # Estimated Cost: Standard Plan ($20/month) (or Starter Plan at $7/month)
   - name: altus-postgres
     plan: standard
     databaseName: altus
     user: altus_user
-
