@@ -1,1 +1,1 @@
-export * from './src/config/site';
+export * from './src/config/site.ts';
