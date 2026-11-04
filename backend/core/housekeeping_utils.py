@@ -199,7 +199,13 @@ def calculate_monthly_quality_score(site: Site, year: int, month: int) -> Dict[s
         due_date__lte=last_date
     )
 
-    # Exclude rework duplicates from base denominator (rework counted once)
+    # ── Quality Score Denominator Accounting: Rework Counted Once ─────────────
+    # Rework tasks created from failed/needs-rework inspections carry is_rework=True.
+    # They are strictly excluded from both the quality score denominator and numerator.
+    # The original failed task remains in the denominator (counted once).
+    # If the original task was not done, it degrades the score; the remedial rework
+    # task resolves physical cleanliness on-site but does not artificially inflate
+    # the planned completion score or double-count in the denominator.
     base_tasks = month_tasks.filter(is_rework=False)
 
     total_tasks_count = base_tasks.count()

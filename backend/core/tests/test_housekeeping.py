@@ -815,11 +815,15 @@ class TestHousekeepingTaskManagement:
         # Backdate created_at
         TaskPhoto.objects.filter(id=photo.id).update(created_at=timezone.now() - timedelta(days=120))
 
-        # Dry run reports count without deleting
+        # Default run is dry-run: reports count without deleting
+        call_command('cleanup_expired_photos')
+        assert TaskPhoto.objects.filter(id=photo.id).exists() is True
+
+        # Explicit dry_run=True flag also reports without deleting
         call_command('cleanup_expired_photos', dry_run=True)
         assert TaskPhoto.objects.filter(id=photo.id).exists() is True
 
-        # Execution deletes
-        call_command('cleanup_expired_photos')
+        # Commit flag executes actual deletion
+        call_command('cleanup_expired_photos', commit=True)
         assert TaskPhoto.objects.filter(id=photo.id).exists() is False
 
