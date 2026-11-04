@@ -282,17 +282,32 @@ export const flushQueue = async (workerId) => {
             const formData = new FormData();
             formData.append('client_uuid', item.client_uuid);
             formData.append('captured_at', item.captured_at);
+            if (item.action_type === 'CLOCK_IN') {
+              formData.append('clock_in_uuid', item.payload?.clock_in_uuid || item.client_uuid);
+              formData.append('client_timestamp', item.payload?.client_timestamp || item.captured_at);
+            }
             Object.entries(item.payload || {}).forEach(([k, v]) => {
-              formData.append(k, v);
+              if (v !== undefined && v !== null) {
+                formData.append(k, v);
+              }
             });
             if (item.file_blob) {
-              formData.append('file', item.file_blob, `${item.client_uuid}.jpg`);
+              const fileKey = item.action_type === 'CLOCK_IN' ? 'selfie' : 'file';
+              formData.append(fileKey, item.file_blob, `${item.client_uuid}.jpg`);
             }
             fetchOptions.body = formData;
           } else {
             const bodyPayload = {
               client_uuid: item.client_uuid,
               captured_at: item.captured_at,
+              ...(item.action_type === 'CLOCK_IN' ? {
+                clock_in_uuid: item.payload?.clock_in_uuid || item.client_uuid,
+                client_timestamp: item.payload?.client_timestamp || item.captured_at,
+              } : {}),
+              ...(item.action_type === 'CLOCK_OUT' ? {
+                clock_out_uuid: item.payload?.clock_out_uuid || item.client_uuid,
+                client_timestamp: item.payload?.client_timestamp || item.captured_at,
+              } : {}),
               ...(item.payload || {}),
             };
             fetchOptions.body = JSON.stringify(bodyPayload);

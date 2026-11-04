@@ -105,6 +105,17 @@ const TaskChecklist = ({ worker, isClockedIn, activeSlot, onNotice }) => {
     const clientUuid = generateUUID();
 
     try {
+      // Check for locally queued un-synced photos for this task (Amendment 2 & 6)
+      const workerItems = await getItemsForWorker(worker.id);
+      const pendingPhotoUuids = workerItems
+        .filter(
+          (i) =>
+            i.action_type === 'PHOTO_UPLOAD' &&
+            (i.payload?.task_id === task.id || i.endpoint?.includes(task.id)) &&
+            i.status !== 'CONFIRMED'
+        )
+        .map((i) => i.client_uuid);
+
       await enqueueMutation({
         client_uuid: clientUuid,
         worker_id: worker.id,
@@ -114,6 +125,7 @@ const TaskChecklist = ({ worker, isClockedIn, activeSlot, onNotice }) => {
         payload: {
           task_id: task.id,
           action_timestamp: new Date().toISOString(),
+          expected_photo_uuids: pendingPhotoUuids,
         },
       });
 

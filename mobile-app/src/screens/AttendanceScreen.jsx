@@ -11,6 +11,7 @@ import {
 } from '../services/offlineQueue.js';
 import { captureInstantLocation, captureCompressedPhoto } from '../services/nativePlugins.js';
 import { generateUUID } from '../utils/uuid.js';
+import { buildClockInPayload, buildClockOutPayload } from '../services/requestBuilders.js';
 import { useI18n } from '../context/I18nContext.jsx';
 import './AttendanceScreen.css';
 
@@ -55,10 +56,23 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
   // Queued state tracking
   const [clockInQueued, setClockInQueued] = useState(false);
   const [queuedItemError, setQueuedItemError] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  const [pendingQueueCount, setPendingQueueCount] = useState(0);
 
   // Selfie capture state
   const [capturedSelfie, setCapturedSelfie] = useState(null);
   const [showSelfiePrompt, setShowSelfiePrompt] = useState(false);
+
+  // Persistent storage inspection (Amendment 5)
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+      navigator.storage.persist().then((granted) => {
+        console.log('[Storage] navigator.storage.persist() granted:', granted);
+      }).catch((err) => {
+        console.warn('[Storage] persist check error:', err);
+      });
+    }
+  }, []);
 
   // Live clock ticker
   useEffect(() => {
@@ -83,6 +97,17 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
       (i) => i.action_type === 'CLOCK_IN' && (i.status === 'PENDING' || i.status === 'IN_FLIGHT' || i.status === 'RETRYABLE_ERROR')
     );
     setClockInQueued(Boolean(activeClockIn));
+
+    const pending = items.filter(
+      (i) => i.status === 'PENDING' || i.status === 'IN_FLIGHT' || i.status === 'RETRYABLE_ERROR'
+    );
+    setPendingQueueCount(pending.length);
+
+    const confirmed = items.filter((i) => i.status === 'CONFIRMED' && i.synced_at);
+    if (confirmed.length > 0) {
+      const latest = [...confirmed].sort((a, b) => new Date(b.synced_at) - new Date(a.synced_at))[0];
+      setLastSyncedAt(latest.synced_at);
+    }
 
     const failedItem = items.find(
       (i) => i.status === 'CONFLICT_ERROR' || i.status === 'PERMANENT_ERROR' || i.status === 'DEPENDENCY_HALTED'
@@ -170,16 +195,14 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
     const gps = await captureInstantLocation();
     setGpsCoords(gps);
 
-    const payload = {
-      clock_in_uuid: clientUuid,
+    const payload = buildClockInPayload({
+      clockInUuid: clientUuid,
+      rosterEntryId: activeSlot?.roster_entry_id,
       lat: gps.lat,
       lng: gps.lng,
       accuracy: gps.accuracy,
-      client_timestamp: new Date().toISOString(),
-    };
-    if (activeSlot?.roster_entry_id) {
-      payload.roster_entry_id = activeSlot.roster_entry_id;
-    }
+      clientTimestamp: new Date().toISOString(),
+    });
 
     try {
       await enqueueMutation({
@@ -216,6 +239,11 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
 
     const clientUuid = generateUUID();
     const clientTimestamp = new Date().toISOString();
+    const payload = buildClockOutPayload({
+      clockOutUuid: clientUuid,
+      rosterEntryId: activeSlot?.roster_entry_id,
+      clientTimestamp,
+    });
 
     try {
       await enqueueMutation({
@@ -223,11 +251,7 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
         worker_id: worker.id,
         action_type: 'CLOCK_OUT',
         endpoint: '/roster/clock-out/',
-        payload: {
-          clock_out_uuid: clientUuid,
-          roster_entry_id: activeSlot?.roster_entry_id,
-          client_timestamp: clientTimestamp,
-        },
+        payload,
         roster_entry_id: activeSlot?.roster_entry_id,
         captured_at: clientTimestamp,
       });
@@ -275,6 +299,20 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
             <span>{noticeMsg}</span>
           </div>
         )}
+
+        {/* Sync Status & Pending Queue Count Bar (Amendment 5) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#94a3b8', margin: '4px 0 14px', padding: '0 4px' }}>
+          <span>🔄 {lastSyncedAt ? `${t('last_synced')}: ${formatTime(lastSyncedAt)}` : `${t('last_synced')}: —`}</span>
+          {pendingQueueCount > 0 ? (
+            <span style={{ color: '#f59e0b', fontWeight: 700 }}>
+              ⏳ {pendingQueueCount} {t('queue_pending_badge')}
+            </span>
+          ) : (
+            <span style={{ color: '#10b981', fontWeight: 700 }}>
+              ✓ {t('synced_all')}
+            </span>
+          )}
+        </div>
 
         {/* Real-time Replacement Shift Alert Banner */}
         <ReplacementBanner
