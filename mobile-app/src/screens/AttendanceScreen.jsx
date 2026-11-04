@@ -2,34 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import altsanLogo from '../assets/altsan-logo.png';
 import TaskChecklist from '../components/TaskChecklist.jsx';
 import ReplacementBanner from '../components/ReplacementBanner.jsx';
+import { apiClient } from '../services/apiClient.js';
+import {
+  enqueueMutation,
+  getItem,
+  getItemsForWorker,
+  subscribeQueueEvents,
+} from '../services/offlineQueue.js';
+import { captureInstantLocation, captureCompressedPhoto } from '../services/nativePlugins.js';
 import { generateUUID } from '../utils/uuid.js';
+import { useI18n } from '../context/I18nContext.jsx';
 import './AttendanceScreen.css';
 
-// ── Dynamic API Configuration ─────────────────────────────────────
-const resolveApiBase = () => {
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
-  }
-  return 'https://api.altsan.com/api';
-};
-
-const API_BASE = resolveApiBase();
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('altsan_token') || localStorage.getItem('access_token') || '';
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
-
-const extractList = (data) => {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.results)) return data.results;
-  return [];
-};
-
-// ── Utility ────────────────────────────────────────────────────
 const formatDuration = (hours) => {
   if (!hours && hours !== 0) return '—';
   const h = Math.floor(hours);
@@ -53,120 +37,109 @@ const formatDate = (isoString) => {
   return d.toLocaleDateString([], { day: '2-digit', month: 'short' });
 };
 
-// ── Component ──────────────────────────────────────────────────
-const AttendanceScreen = ({ assignmentId: propAssignmentId, onTabChange }) => {
-  const [assignmentId, setAssignmentId] = useState(propAssignmentId || null);
+const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => {
+  const { t, getFriendlyError } = useI18n();
+
   const [activeSlot, setActiveSlot] = useState(null);
   const [schedule, setSchedule] = useState([]);
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [location, setLocation] = useState('Acquiring GPS location…');
+  const [locationText, setLocationText] = useState('Acquiring GPS location…');
   const [gpsCoords, setGpsCoords] = useState({ lat: null, lng: null, accuracy: 10 });
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
-  const [selfieFile, setSelfieFile] = useState(null);
-  const [selfiePreview, setSelfiePreview] = useState(null);
+  const [noticeMsg, setNoticeMsg] = useState(null);
+
+  // Queued state tracking
+  const [clockInQueued, setClockInQueued] = useState(false);
+  const [queuedItemError, setQueuedItemError] = useState(null);
+
+  // Selfie capture state
+  const [capturedSelfie, setCapturedSelfie] = useState(null);
   const [showSelfiePrompt, setShowSelfiePrompt] = useState(false);
 
-  // Sync prop changes
-  useEffect(() => {
-    if (propAssignmentId) {
-      setAssignmentId(propAssignmentId);
-    }
-  }, [propAssignmentId]);
-
-  // Clean up selfie preview on unmount
-  useEffect(() => {
-    return () => {
-      if (selfiePreview) URL.revokeObjectURL(selfiePreview);
-    };
-  }, [selfiePreview]);
-
-  // ── Clock ticker ───────────────────────────────────────────
+  // Live clock ticker
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // ── GPS Tracking ───────────────────────────────────────────
+  // GPS Acquisition at startup
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocation('GPS unavailable (Campus mode)');
-      setGpsCoords({ lat: 18.5204, lng: 73.8567, accuracy: 15 });
-      return;
-    }
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const coords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy || 10,
-        };
-        setGpsCoords(coords);
-        setLocation(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} (±${Math.round(coords.accuracy)}m)`);
-      },
-      () => {
-        // Fallback to campus coordinates if permission denied
-        setGpsCoords({ lat: 18.5204, lng: 73.8567, accuracy: 20 });
-        setLocation('18.5204, 73.8567 (Campus GPS)');
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
+    captureInstantLocation().then((coords) => {
+      setGpsCoords(coords);
+      setLocationText(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} (±${Math.round(coords.accuracy)}m)`);
+    });
   }, []);
 
-  // ── Load Worker Roster Schedule ────────────────────────────
+  // Sync / Queue Status listener
+  const checkQueuedStatus = useCallback(async () => {
+    if (!worker?.id) return;
+    const items = await getItemsForWorker(worker.id);
+
+    const activeClockIn = items.find(
+      (i) => i.action_type === 'CLOCK_IN' && (i.status === 'PENDING' || i.status === 'IN_FLIGHT' || i.status === 'RETRYABLE_ERROR')
+    );
+    setClockInQueued(Boolean(activeClockIn));
+
+    const failedItem = items.find(
+      (i) => i.status === 'CONFLICT_ERROR' || i.status === 'PERMANENT_ERROR' || i.status === 'DEPENDENCY_HALTED'
+    );
+    if (failedItem) {
+      setQueuedItemError(failedItem.last_error);
+    } else {
+      setQueuedItemError(null);
+    }
+  }, [worker?.id]);
+
+  useEffect(() => {
+    checkQueuedStatus();
+    const unsub = subscribeQueueEvents(checkQueuedStatus);
+    return () => unsub();
+  }, [checkQueuedStatus]);
+
+  // Load Worker Schedule
   const loadSchedule = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/roster/my-schedule/`, {
-        headers: getAuthHeaders(),
-      });
+      const res = await apiClient('/roster/my-schedule/');
       if (!res.ok) return;
       const data = await res.json();
-      const slots = extractList(data);
+      const slots = Array.isArray(data) ? data : data.results || [];
       setSchedule(slots);
 
-      // Find current active or nearest scheduled slot for today
       if (slots.length > 0) {
         const todayStr = new Date().toISOString().slice(0, 10);
-        const todaySlot = slots.find((s) => s.date === todayStr || s.status === 'PRESENT' || s.status === 'SCHEDULED');
-        if (todaySlot) {
-          setActiveSlot(todaySlot);
-          if (todaySlot.status === 'PRESENT') {
+        const slot = slots.find((s) => s.date === todayStr || s.status === 'PRESENT' || s.status === 'SCHEDULED');
+        if (slot) {
+          setActiveSlot(slot);
+          if (slot.status === 'PRESENT') {
             setIsClockedIn(true);
           }
         }
       }
     } catch (err) {
-      console.warn('Roster schedule load warning:', err.message);
+      console.warn('[AttendanceScreen] Schedule load error:', err.message);
     }
   }, []);
 
-  // ── Load history & active attendance session ───────────────
+  // Load Verified Shift History
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/attendance/my-history/`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error('Could not load history');
+      const res = await apiClient('/attendance/my-history/');
+      if (!res.ok) return;
       const data = await res.json();
-      const records = extractList(data);
+      const records = Array.isArray(data) ? data : data.results || [];
       setHistory(records);
 
-      // Detect if already clocked in (clock_in set, clock_out null)
       const active = records.find((r) => r.clock_in && !r.clock_out);
       if (active) {
         setIsClockedIn(true);
         setClockInTime(active.clock_in);
-        if (active.assignment) {
-          setAssignmentId(active.assignment);
-        }
       }
     } catch (err) {
-      console.warn('History load failed:', err.message);
+      console.warn('[AttendanceScreen] History load error:', err.message);
     }
   }, []);
 
@@ -175,177 +148,95 @@ const AttendanceScreen = ({ assignmentId: propAssignmentId, onTabChange }) => {
     loadHistory();
   }, [loadSchedule, loadHistory]);
 
-  const handleSelfieSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (selfiePreview) URL.revokeObjectURL(selfiePreview);
-    setSelfieFile(file);
-    setSelfiePreview(URL.createObjectURL(file));
+  // ── Native Selfie Capture ──────────────────────────────────────
+  const handleTakeSelfie = async () => {
+    try {
+      const photo = await captureCompressedPhoto({ type: 'SELFIE' });
+      setCapturedSelfie(photo);
+      setGpsCoords({ lat: photo.lat, lng: photo.lng, accuracy: photo.accuracy });
+      setLocationText(`${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)} (±${Math.round(photo.accuracy)}m)`);
+    } catch (err) {
+      setError(getFriendlyError(err));
+    }
   };
 
-  // ── Unified Clock In (Roster primary with legacy fallback) ─
+  // ── Clock-In Mutation (Persistent Offline Queue) ───────────────
   const handleClockIn = async () => {
     setIsLoading(true);
     setError(null);
-    setSuccessMsg(null);
+    setNoticeMsg(null);
 
-    const clockInUuid = generateUUID();
-    const lat = gpsCoords.lat || 18.5204;
-    const lng = gpsCoords.lng || 73.8567;
-    const accuracy = gpsCoords.accuracy || 10.0;
-    const clientTimestamp = new Date().toISOString();
+    const clientUuid = generateUUID();
+    const gps = await captureInstantLocation();
+    setGpsCoords(gps);
 
-    // 1. Try Roster Clock-in First
+    const payload = {
+      clock_in_uuid: clientUuid,
+      lat: gps.lat,
+      lng: gps.lng,
+      accuracy: gps.accuracy,
+      client_timestamp: new Date().toISOString(),
+    };
+    if (activeSlot?.roster_entry_id) {
+      payload.roster_entry_id = activeSlot.roster_entry_id;
+    }
+
     try {
-      let rosterSuccess = false;
-      const rosterPayload = {
-        clock_in_uuid: clockInUuid,
-        lat,
-        lng,
-        accuracy,
-        client_timestamp: clientTimestamp,
-      };
-      if (activeSlot?.roster_entry_id) {
-        rosterPayload.roster_entry_id = activeSlot.roster_entry_id;
-      }
+      await enqueueMutation({
+        client_uuid: clientUuid,
+        worker_id: worker.id,
+        action_type: 'CLOCK_IN',
+        endpoint: '/roster/clock-in/',
+        payload,
+        roster_entry_id: activeSlot?.roster_entry_id,
+        captured_at: payload.client_timestamp,
+        is_multipart: Boolean(capturedSelfie),
+        file_blob: capturedSelfie?.blob || null,
+      });
 
-      // If selfie attached, send multipart
-      let res;
-      if (selfieFile) {
-        const formData = new FormData();
-        Object.entries(rosterPayload).forEach(([k, v]) => formData.append(k, v));
-        formData.append('selfie', selfieFile);
-        const headers = { ...getAuthHeaders() };
-        delete headers['Content-Type'];
-        res = await fetch(`${API_BASE}/roster/clock-in/`, {
-          method: 'POST',
-          headers,
-          body: formData,
-        });
-      } else {
-        res = await fetch(`${API_BASE}/roster/clock-in/`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(rosterPayload),
-        });
-      }
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setIsClockedIn(true);
-        setClockInTime(data.clock_in_at || clientTimestamp);
-        setSuccessMsg('Clocked into roster shift with GPS! ✅');
-        setShowSelfiePrompt(false);
-        setTimeout(() => setSuccessMsg(null), 3500);
-        await Promise.all([loadSchedule(), loadHistory()]);
-        rosterSuccess = true;
-        return;
-      }
-
-      // If selfie was required by society settings
-      if (res.status === 400 && data.error && data.error.toLowerCase().includes('selfie')) {
-        setShowSelfiePrompt(true);
-        throw new Error('Selfie photo verification is required to clock in.');
-      }
-
-      // If 409 slot covered by replacement
-      if (res.status === 409) {
-        throw new Error(data.error || 'This roster slot is already active or assigned to another worker.');
-      }
-
-      // If 400/404 on roster slot (e.g. no scheduled roster slot), fallback to legacy request attendance
-      if (!rosterSuccess && (res.status === 400 || res.status === 404)) {
-        if (!assignmentId) {
-          throw new Error(data.error || 'No scheduled roster shift found for this time window.');
-        }
-        // Fallback to legacy attendance
-        const legacyRes = await fetch(`${API_BASE}/attendance/clock-in/`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            assignment_id: assignmentId,
-            lat,
-            lng,
-          }),
-        });
-        const legacyData = await legacyRes.json();
-        if (!legacyRes.ok) {
-          throw new Error(legacyData.error || legacyData.detail || 'Clock-in failed.');
-        }
-        setIsClockedIn(true);
-        setClockInTime(legacyData.clock_in);
-        setSuccessMsg('Clocked in successfully with GPS! ✅');
-        setTimeout(() => setSuccessMsg(null), 3000);
-        await loadHistory();
-        return;
-      }
-
-      throw new Error(data.error || 'Clock-in failed');
+      // Optimistic local state (Amendment 2)
+      setIsClockedIn(true);
+      setClockInTime(payload.client_timestamp);
+      setClockInQueued(true);
+      setNoticeMsg(t('shift_saved_unconfirmed'));
+      setShowSelfiePrompt(false);
+      setCapturedSelfie(null);
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Unified Clock Out ──────────────────────────────────────
+  // ── Clock-Out Mutation (Persistent Offline Queue) ──────────────
   const handleClockOut = async () => {
     setIsLoading(true);
     setError(null);
-    setSuccessMsg(null);
+    setNoticeMsg(null);
 
-    const clockOutUuid = generateUUID();
+    const clientUuid = generateUUID();
     const clientTimestamp = new Date().toISOString();
 
     try {
-      // 1. Try Roster Clock-out
-      const res = await fetch(`${API_BASE}/roster/clock-out/`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          clock_out_uuid: clockOutUuid,
+      await enqueueMutation({
+        client_uuid: clientUuid,
+        worker_id: worker.id,
+        action_type: 'CLOCK_OUT',
+        endpoint: '/roster/clock-out/',
+        payload: {
+          clock_out_uuid: clientUuid,
           roster_entry_id: activeSlot?.roster_entry_id,
           client_timestamp: clientTimestamp,
-        }),
+        },
+        roster_entry_id: activeSlot?.roster_entry_id,
+        captured_at: clientTimestamp,
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setIsClockedIn(false);
-        setClockInTime(null);
-        setSuccessMsg('Clocked out of shift. Operations logged! 🎉');
-        setTimeout(() => setSuccessMsg(null), 3500);
-        await Promise.all([loadSchedule(), loadHistory()]);
-        return;
-      }
-
-      // Fallback to legacy clock-out if assignment exists
-      if (assignmentId) {
-        const legacyRes = await fetch(`${API_BASE}/attendance/clock-out/`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            assignment_id: assignmentId,
-            lat: gpsCoords.lat || 18.5204,
-            lng: gpsCoords.lng || 73.8567,
-            proof_of_work_url: 'https://images.unsplash.com/photo-584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800',
-          }),
-        });
-        const legacyData = await legacyRes.json();
-        if (!legacyRes.ok) throw new Error(legacyData.error || 'Clock-out failed');
-
-        setIsClockedIn(false);
-        setClockInTime(null);
-        setSuccessMsg('Clocked out. Shift logged with verified proof! 🎉');
-        setTimeout(() => setSuccessMsg(null), 3000);
-        await loadHistory();
-        return;
-      }
-
-      throw new Error(data.error || 'Clock-out failed.');
+      setIsClockedIn(false);
+      setClockInTime(null);
+      setNoticeMsg(t('task_status_saved_unconfirmed'));
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err));
     } finally {
       setIsLoading(false);
     }
@@ -356,48 +247,42 @@ const AttendanceScreen = ({ assignmentId: propAssignmentId, onTabChange }) => {
     else handleClockIn();
   };
 
-  const handleToastNotice = (msg, type = 'info') => {
-    if (type === 'error') {
-      setError(msg);
-      setSuccessMsg(null);
-    } else {
-      setSuccessMsg(msg);
-      setError(null);
-      setTimeout(() => setSuccessMsg(null), 3500);
-    }
-  };
-
   return (
     <div className="mobile-app-container">
       <header className="mobile-header">
-        <img src={altsanLogo} alt="Altsan" className="header-mini-logo" />
-        <h1>Attendance & Shifts</h1>
-        <div className="notification-icon" title="GPS Signal Verified">
-          🟢
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img src={altsanLogo} alt="Altsan" className="header-mini-logo" />
+          <h1 style={{ fontSize: '18px', fontWeight: 800 }}>{t('nav_attendance')}</h1>
         </div>
+        <button type="button" className="lang-toggle-btn" onClick={onLanguageToggle}>
+          🌐 {locale === 'hi' ? 'EN' : 'हिन्दी'}
+        </button>
       </header>
 
       <main className="attendance-main">
-        {/* Toast notifications */}
-        {error && (
+        {/* Error / Conflict Alert with Supervisor Instruction */}
+        {(error || queuedItemError) && (
           <div className="toast toast-error" role="alert">
-            <span>⚠️ {error}</span>
-            <button className="toast-close" onClick={() => setError(null)}>
+            <span>⚠️ {error || queuedItemError}</span>
+            <button className="toast-close" onClick={() => { setError(null); setQueuedItemError(null); }}>
               ✕
             </button>
           </div>
         )}
-        {successMsg && (
+
+        {noticeMsg && (
           <div className="toast toast-success" role="status">
-            <span>{successMsg}</span>
+            <span>{noticeMsg}</span>
           </div>
         )}
 
         {/* Real-time Replacement Shift Alert Banner */}
         <ReplacementBanner
-          apiBase={API_BASE}
-          authHeaders={getAuthHeaders}
-          onNotice={handleToastNotice}
+          worker={worker}
+          onNotice={(msg, type) => {
+            if (type === 'error') setError(msg);
+            else setNoticeMsg(msg);
+          }}
           onScheduleUpdated={() => {
             loadSchedule();
             loadHistory();
@@ -410,153 +295,156 @@ const AttendanceScreen = ({ assignmentId: propAssignmentId, onTabChange }) => {
           <p>{currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
 
-        {/* GPS Location Tag */}
+        {/* GPS Geofence Status Card */}
         <section className="location-card">
           <div className="location-icon">📍</div>
           <div className="location-info">
-            <span className="label">GPS Geofence Status</span>
-            <span className="value">{location}</span>
+            <span className="label">GPS Status</span>
+            <span className="value">{locationText}</span>
           </div>
         </section>
 
-        {/* Active Shift / Post Context Card */}
+        {/* Assigned Shift Card */}
         {activeSlot ? (
           <section className="job-context-card">
             <div className="job-society-badge">
               <span>🏢 {activeSlot.society_name} • {activeSlot.site_name}</span>
             </div>
-            <h3>Roster Assignment</h3>
+            <h3>{t('shift_card_title')}</h3>
             <div className="job-brief">
               <div className="job-primary">
                 <strong>{activeSlot.post_name}</strong>
                 <span>{activeSlot.shift_name} ({formatTime(activeSlot.shift_start_at)} – {formatTime(activeSlot.shift_end_at)})</span>
               </div>
               {isClockedIn && (
-                <div className="job-shift live-badge">
-                  🟢 Live on Shift {clockInTime ? `— since ${formatTime(clockInTime)}` : ''}
+                <div style={{ marginTop: '8px' }}>
+                  {clockInQueued ? (
+                    <span className="badge-unconfirmed">⏳ {t('shift_saved_unconfirmed')}</span>
+                  ) : (
+                    <span className="badge-confirmed">🟢 {t('shift_status_active', { time: formatTime(clockInTime) })}</span>
+                  )}
                 </div>
               )}
             </div>
           </section>
         ) : (
           <section className="job-context-card empty-job">
-            <h3>Scheduled Shift</h3>
-            <p className="job-hint">
-              {schedule.length > 0
-                ? `${schedule.length} scheduled shifts on your roster calendar.`
-                : 'No shift roster scheduled for today. Ready for standby or job queue.'}
-            </p>
+            <h3>{t('shift_card_title')}</h3>
+            <p className="job-hint">{t('shift_card_no_shift')}</p>
           </section>
         )}
 
-        {/* Selfie Capture Prompt if required */}
+        {/* Selfie Verification Modal / Trigger */}
         {showSelfiePrompt && !isClockedIn && (
           <div
             style={{
-              background: '#131b2e',
-              border: '1px solid #3b82f6',
+              background: '#10172a',
+              border: '2px solid #3b82f6',
               borderRadius: '16px',
               padding: '16px',
               marginBottom: '16px',
               textAlign: 'center',
             }}
           >
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#93c5fd', marginBottom: '10px' }}>
-              📸 Society requires identity verification selfie to clock in
+            <p style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd', marginBottom: '12px' }}>
+              📸 {t('shift_selfie_prompt')}
             </p>
-            {selfiePreview ? (
+            {capturedSelfie ? (
               <div style={{ position: 'relative', display: 'inline-block', marginBottom: '10px' }}>
                 <img
-                  src={selfiePreview}
-                  alt="Selfie Preview"
-                  style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }}
+                  src={capturedSelfie.web_preview}
+                  alt="Selfie"
+                  style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #10b981' }}
                 />
                 <button
-                  onClick={() => {
-                    setSelfieFile(null);
-                    setSelfiePreview(null);
-                  }}
+                  type="button"
+                  onClick={() => setCapturedSelfie(null)}
                   style={{
                     position: 'absolute',
                     top: '-4px',
                     right: '-4px',
-                    background: '#ef4444',
+                    background: '#dc2626',
                     color: 'white',
                     border: 'none',
                     borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
+                    width: '28px',
+                    height: '28px',
                     cursor: 'pointer',
+                    fontWeight: 'bold',
                   }}
                 >
                   ✕
                 </button>
               </div>
             ) : (
-              <label
+              <button
+                type="button"
+                onClick={handleTakeSelfie}
                 style={{
-                  display: 'inline-block',
-                  background: '#1a253c',
-                  border: '1px dashed #38bdf8',
-                  padding: '10px 18px',
+                  background: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
                   borderRadius: '12px',
-                  color: '#38bdf8',
-                  fontSize: '13px',
-                  fontWeight: 700,
+                  fontSize: '14px',
+                  fontWeight: 800,
                   cursor: 'pointer',
+                  minHeight: '48px',
                 }}
               >
-                🤳 Take Clock-In Selfie
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  onChange={handleSelfieSelect}
-                  style={{ display: 'none' }}
-                />
-              </label>
+                🤳 {t('shift_selfie_take')}
+              </button>
             )}
           </div>
         )}
 
-        {/* Clock In / Out Main Button */}
+        {/* Main Clock Toggle Button (Sunlight Large Touch Target) */}
         <div className="clock-action">
           <button
             id="clock-toggle-btn"
             className={`clock-btn ${isClockedIn ? 'out' : 'in'} ${isLoading ? 'loading' : ''}`}
             onClick={handleClockToggle}
             disabled={isLoading}
+            style={{ minHeight: '80px' }}
           >
             <div className="btn-circle">
               {isLoading ? (
                 <div className="spinner" />
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                 </svg>
               )}
             </div>
-            <span>{isLoading ? 'Processing…' : isClockedIn ? 'Clock Out Shift' : 'Clock In Shift'}</span>
+            <span>
+              {isLoading
+                ? '…'
+                : isClockedIn
+                ? t('shift_clock_out_btn')
+                : t('shift_clock_in_btn')}
+            </span>
           </button>
           <p className="clock-hint">
             {isClockedIn
-              ? `Shift active since ${formatTime(clockInTime)}`
-              : activeSlot
-              ? `Ready for ${activeSlot.post_name}`
-              : 'Ready to Clock In'}
+              ? clockInQueued
+                ? t('shift_saved_unconfirmed')
+                : t('shift_status_active', { time: formatTime(clockInTime) })
+              : t('shift_status_ready')}
           </p>
         </div>
 
-        {/* Housekeeping Tasks & Photo Checklist */}
+        {/* Shift Housekeeping Tasks (Offline Enqueued) */}
         <TaskChecklist
-          apiBase={API_BASE}
-          authHeaders={getAuthHeaders}
+          worker={worker}
           isClockedIn={isClockedIn}
-          gpsCoords={gpsCoords}
-          onNotice={handleToastNotice}
+          activeSlot={activeSlot}
+          onNotice={(msg, type) => {
+            if (type === 'error') setError(msg);
+            else setNoticeMsg(msg);
+          }}
         />
 
-        {/* Shift History Log */}
+        {/* Verified Attendance History */}
         <section className="attendance-history" style={{ marginTop: '28px' }}>
           <div className="history-header">
             <h3>Recent Shift Attendance</h3>
@@ -586,21 +474,17 @@ const AttendanceScreen = ({ assignmentId: propAssignmentId, onTabChange }) => {
 
       {/* Mobile Bottom Navigation */}
       <nav className="mobile-tab-bar">
-        <div className="tab-item" onClick={() => onTabChange?.('home')}>
-          <div className="tab-icon">🏠</div>
-          <span>Home</span>
-        </div>
         <div className="tab-item active" onClick={() => onTabChange?.('attendance')}>
           <div className="tab-icon">🕒</div>
-          <span>Attendance</span>
+          <span>{t('nav_attendance')}</span>
         </div>
         <div className="tab-item" onClick={() => onTabChange?.('jobs')}>
           <div className="tab-icon">💼</div>
-          <span>Jobs</span>
+          <span>{t('nav_jobs')}</span>
         </div>
         <div className="tab-item" onClick={() => onTabChange?.('earnings')}>
           <div className="tab-icon">💰</div>
-          <span>Earnings</span>
+          <span>{t('nav_earnings')}</span>
         </div>
       </nav>
     </div>

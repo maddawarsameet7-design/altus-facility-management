@@ -1,79 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { generateUUID } from '../utils/uuid.js';
+import React, { useState } from 'react';
+import { captureCompressedPhoto } from '../services/nativePlugins.js';
+import { enqueueMutation } from '../services/offlineQueue.js';
+import { useI18n } from '../context/I18nContext.jsx';
 
-const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onPhotoUploaded }) => {
+const PhotoCaptureModal = ({ task, worker, onClose, onPhotoQueued }) => {
+  const { t, getFriendlyError } = useI18n();
   const [kind, setKind] = useState('AFTER');
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Clean up object URL on unmount
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  const handleFileChange = (e) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setFile(selected);
-    setPreviewUrl(URL.createObjectURL(selected));
+  const handleTriggerCamera = async () => {
+    setLoading(true);
     setError(null);
+    try {
+      const result = await captureCompressedPhoto({ type: 'TASK', kind });
+      setCapturedPhoto(result);
+    } catch (err) {
+      setError(getFriendlyError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpload = async () => {
-    if (!file) {
-      setError('Please take or select a photo.');
-      return;
-    }
-
-    setUploading(true);
+  const handleSaveAndEnqueue = async () => {
+    if (!capturedPhoto || !worker?.id) return;
+    setLoading(true);
     setError(null);
 
-    const clientUuid = generateUUID();
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('client_uuid', clientUuid);
-    formData.append('kind', kind);
-    formData.append('captured_at', new Date().toISOString());
-
-    if (gpsCoords?.lat !== null && gpsCoords?.lng !== null) {
-      formData.append('lat', gpsCoords.lat);
-      formData.append('lng', gpsCoords.lng);
-      formData.append('gps_accuracy_m', gpsCoords.accuracy || 10.0);
-    } else {
-      // Default fallback
-      formData.append('lat', 18.5204);
-      formData.append('lng', 73.8567);
-      formData.append('gps_accuracy_m', 15.0);
-    }
-
     try {
-      const headers = { ...authHeaders };
-      // Note: Do not set Content-Type header when using FormData; fetch handles multipart boundary automatically
-      delete headers['Content-Type'];
-
-      const res = await fetch(`${apiBase}/housekeeping/tasks/${task.id}/photos/`, {
+      await enqueueMutation({
+        client_uuid: capturedPhoto.client_uuid,
+        worker_id: worker.id,
+        action_type: 'PHOTO_UPLOAD',
+        endpoint: `/housekeeping/tasks/${task.id}/photos/`,
         method: 'POST',
-        headers,
-        body: formData,
+        payload: {
+          client_uuid: capturedPhoto.client_uuid,
+          kind: capturedPhoto.kind,
+          lat: capturedPhoto.lat,
+          lng: capturedPhoto.lng,
+          gps_accuracy_m: capturedPhoto.accuracy,
+          captured_at: capturedPhoto.captured_at,
+          task_id: task.id,
+        },
+        captured_at: capturedPhoto.captured_at,
+        is_multipart: true,
+        file_blob: capturedPhoto.blob,
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to upload photo evidence.');
-      }
-
-      onPhotoUploaded?.(data);
+      onPhotoQueued?.(capturedPhoto);
       onClose();
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err));
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
@@ -82,13 +63,12 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
         zIndex: 1000,
-        animation: 'fadeIn 0.2s ease',
       }}
       onClick={onClose}
     >
@@ -96,12 +76,12 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
         style={{
           width: '100%',
           maxWidth: '480px',
-          background: '#131b2e',
+          background: '#10172a',
           borderTopLeftRadius: '24px',
           borderTopRightRadius: '24px',
           padding: '24px',
-          borderTop: '1px solid rgba(255,255,255,0.15)',
-          color: '#f8fafc',
+          borderTop: '1px solid rgba(255,255,255,0.2)',
+          color: '#ffffff',
           maxHeight: '90vh',
           overflowY: 'auto',
         }}
@@ -109,18 +89,12 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800 }}>Capture Photo Evidence</h3>
-            <p style={{ fontSize: '12px', color: '#94a3b8' }}>{task.name} ({task.area_name || task.area?.name || 'Area'})</p>
+            <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{t('task_add_photo')}</h3>
+            <p style={{ fontSize: '13px', color: '#cbd5e1' }}>{task.name}</p>
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#94a3b8',
-              fontSize: '20px',
-              cursor: 'pointer',
-            }}
+            style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '24px', cursor: 'pointer' }}
           >
             ✕
           </button>
@@ -135,85 +109,77 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
               borderRadius: '10px',
               fontSize: '13px',
               marginBottom: '16px',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
             }}
           >
             ⚠️ {error}
           </div>
         )}
 
-        {/* Kind Toggle (Before vs After) */}
+        {/* Kind Toggle */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
-            Evidence Phase
-          </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
               onClick={() => setKind('BEFORE')}
               style={{
                 flex: 1,
-                padding: '10px',
-                borderRadius: '10px',
-                background: kind === 'BEFORE' ? '#f59e0b' : '#1a253c',
-                color: kind === 'BEFORE' ? '#000' : '#cbd5e1',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '13px',
+                padding: '12px',
+                borderRadius: '12px',
+                background: kind === 'BEFORE' ? '#d97706' : '#17223b',
+                color: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontWeight: 800,
+                fontSize: '14px',
                 cursor: 'pointer',
               }}
             >
-              🟡 Before Cleaning
+              {t('task_photo_before')}
             </button>
             <button
               type="button"
               onClick={() => setKind('AFTER')}
               style={{
                 flex: 1,
-                padding: '10px',
-                borderRadius: '10px',
-                background: kind === 'AFTER' ? '#10b981' : '#1a253c',
-                color: kind === 'AFTER' ? '#fff' : '#cbd5e1',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '13px',
+                padding: '12px',
+                borderRadius: '12px',
+                background: kind === 'AFTER' ? '#059669' : '#17223b',
+                color: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontWeight: 800,
+                fontSize: '14px',
                 cursor: 'pointer',
               }}
             >
-              🟢 After Cleaning
+              {t('task_photo_after')}
             </button>
           </div>
         </div>
 
-        {/* Photo Selection / Camera Preview */}
+        {/* Shutter Camera Trigger / Preview */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
-            Photo Capture
-          </label>
-          {previewUrl ? (
-            <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+          {capturedPhoto?.web_preview ? (
+            <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', border: '2px solid #10b981' }}>
               <img
-                src={previewUrl}
-                alt="Preview"
-                style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }}
+                src={capturedPhoto.web_preview}
+                alt="Captured Evidence"
+                style={{ width: '100%', height: '240px', objectFit: 'cover', display: 'block' }}
               />
               <button
                 type="button"
-                onClick={() => {
-                  setFile(null);
-                  setPreviewUrl(null);
-                }}
+                onClick={() => setCapturedPhoto(null)}
                 style={{
                   position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  background: 'rgba(0,0,0,0.6)',
+                  top: '12px',
+                  right: '12px',
+                  background: 'rgba(0,0,0,0.7)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
+                  width: '36px',
+                  height: '36px',
                   cursor: 'pointer',
+                  fontSize: '16px',
                   fontWeight: 'bold',
                 }}
               >
@@ -221,93 +187,90 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
               </button>
             </div>
           ) : (
-            <label
+            <button
+              type="button"
+              onClick={handleTriggerCamera}
+              disabled={loading}
               style={{
+                width: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '36px 16px',
-                border: '2px dashed rgba(255,255,255,0.2)',
-                borderRadius: '14px',
-                background: '#1a253c',
+                border: '2px dashed #3b82f6',
+                borderRadius: '16px',
+                background: '#17223b',
                 cursor: 'pointer',
-                textAlign: 'center',
+                color: '#ffffff',
               }}
             >
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>📷</div>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#38bdf8' }}>Tap to Take Photo or Browse</span>
-              <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Camera with GPS Geotag</span>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-              />
-            </label>
+              <div style={{ fontSize: '42px', marginBottom: '8px' }}>📷</div>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: '#38bdf8' }}>
+                {t('task_add_photo')}
+              </span>
+              <span style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '4px' }}>
+                (GPS Geotag at Shutter Time)
+              </span>
+            </button>
           )}
         </div>
 
-        {/* GPS context badge */}
-        <div
-          style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
-            borderRadius: '10px',
-            padding: '10px 14px',
-            fontSize: '12px',
-            color: '#93c5fd',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <span>📍</span>
-          <span>
-            {gpsCoords?.lat ? `GPS: ${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)} (±${Math.round(gpsCoords.accuracy || 10)}m)` : 'GPS: Active Site Coordinates'}
-          </span>
-        </div>
+        {capturedPhoto && (
+          <div
+            style={{
+              background: 'rgba(59, 130, 246, 0.15)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              fontSize: '12px',
+              color: '#93c5fd',
+              marginBottom: '20px',
+            }}
+          >
+            📍 GPS: {capturedPhoto.lat?.toFixed(4)}, {capturedPhoto.lng?.toFixed(4)} (±{Math.round(capturedPhoto.accuracy || 10)}m)
+          </div>
+        )}
 
-        {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"
             onClick={onClose}
-            disabled={uploading}
+            disabled={loading}
             style={{
               flex: 1,
               padding: '14px',
               borderRadius: '12px',
               background: '#1e293b',
-              color: '#94a3b8',
+              color: '#cbd5e1',
               border: 'none',
               fontWeight: 700,
               fontSize: '14px',
               cursor: 'pointer',
+              minHeight: '48px',
             }}
           >
-            Cancel
+            रद्द करें / Cancel
           </button>
           <button
             type="button"
-            onClick={handleUpload}
-            disabled={uploading || !file}
+            onClick={handleSaveAndEnqueue}
+            disabled={loading || !capturedPhoto}
             style={{
               flex: 2,
               padding: '14px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
               color: 'white',
               border: 'none',
-              fontWeight: 700,
-              fontSize: '14px',
-              cursor: uploading || !file ? 'not-allowed' : 'pointer',
-              opacity: uploading || !file ? 0.6 : 1,
+              fontWeight: 800,
+              fontSize: '15px',
+              cursor: loading || !capturedPhoto ? 'not-allowed' : 'pointer',
+              opacity: loading || !capturedPhoto ? 0.6 : 1,
+              minHeight: '48px',
             }}
           >
-            {uploading ? 'Uploading Evidence…' : 'Submit Evidence ✅'}
+            {loading ? 'सहेज रहे हैं…' : t('task_photo_upload_btn')}
           </button>
         </div>
       </div>
@@ -316,4 +279,3 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
 };
 
 export default PhotoCaptureModal;
-
