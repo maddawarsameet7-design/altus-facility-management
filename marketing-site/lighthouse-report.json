@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-11-04T14:53:06.593Z",
+  "url": "http://127.0.0.1:4321/",
+  "scores": {
+    "performance": 100,
+    "accessibility": 95,
+    "bestPractices": 100,
+    "seo": 100
+  },
+  "audits": {
+    "fcp": "1.4 s",
+    "lcp": "1.4 s",
+    "tbt": "10 ms",
+    "cls": "0",
+    "speedIndex": "1.4 s"
+  }
+}

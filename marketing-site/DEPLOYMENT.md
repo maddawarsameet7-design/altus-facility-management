@@ -173,3 +173,4 @@ If a critical issue occurs during the domain transition (e.g., unexpected API fa
    * Revert the `frontend-web` noindex commit until the migration is rescheduled.
 4. **Clear Caches:**
    * Purge Cloudflare or edge CDN caches to ensure users receive the restored routes.
+
