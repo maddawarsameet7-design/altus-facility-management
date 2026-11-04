@@ -33,6 +33,9 @@ export const subscribeClockDrift = (listener) => {
 
 export const getClockOffsetMs = () => serverClockOffsetMs;
 export const getIsClockDrifted = () => isClockDrifted;
+export const setServerClockOffsetForTesting = (offset) => {
+  serverClockOffsetMs = offset;
+};
 
 /**
  * Inspect Date header from server response to compute clock drift.
