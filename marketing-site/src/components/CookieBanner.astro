@@ -1,0 +1,137 @@
+---
+const analyticsId = import.meta.env.PUBLIC_ANALYTICS_ID;
+---
+
+{analyticsId && (
+  <div id="cookie-banner" class="cookie-banner" role="region" aria-label="Cookie and Privacy Consent">
+    <div class="container banner-inner">
+      <div class="banner-text">
+        <p>
+          We use strictly necessary cookies to ensure site functionality, and optional privacy-friendly analytics to understand visitor interest. No tracking occurs without your explicit consent.
+        </p>
+      </div>
+      <div class="banner-actions">
+        <button id="cookie-accept" class="btn btn-sm btn-accept" type="button">
+          Accept
+        </button>
+        <button id="cookie-decline" class="btn btn-sm btn-decline" type="button">
+          Decline
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ analyticsId }}>
+    (function () {
+      const banner = document.getElementById('cookie-banner');
+      const acceptBtn = document.getElementById('cookie-accept');
+      const declineBtn = document.getElementById('cookie-decline');
+
+      const consent = localStorage.getItem('altsan_analytics_consent');
+
+      function loadAnalytics() {
+        if (!analyticsId) return;
+        // Example Plausible / Google Analytics loader
+        const script = document.createElement('script');
+        script.async = true;
+        if (analyticsId.startsWith('G-')) {
+          script.src = `https://www.googletagmanager.com/gtag/js?id=${analyticsId}`;
+          document.head.appendChild(script);
+          window.dataLayer = window.dataLayer || [];
+          function gtag() { window.dataLayer.push(arguments); }
+          gtag('js', new Date());
+          gtag('config', analyticsId, { anonymize_ip: true });
+        } else {
+          // Plausible default
+          script.defer = true;
+          script.setAttribute('data-domain', analyticsId);
+          script.src = 'https://plausible.io/js/script.js';
+          document.head.appendChild(script);
+        }
+      }
+
+      if (consent === 'accepted') {
+        loadAnalytics();
+      } else if (!consent) {
+        if (banner) banner.style.display = 'block';
+      }
+
+      if (acceptBtn) {
+        acceptBtn.addEventListener('click', function () {
+          localStorage.setItem('altsan_analytics_consent', 'accepted');
+          if (banner) banner.style.display = 'none';
+          loadAnalytics();
+        });
+      }
+
+      if (declineBtn) {
+        declineBtn.addEventListener('click', function () {
+          localStorage.setItem('altsan_analytics_consent', 'declined');
+          if (banner) banner.style.display = 'none';
+        });
+      }
+    })();
+  </script>
+)}
+
+<style>
+  .cookie-banner {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    padding: 1rem 0;
+    border-top: 2px solid var(--color-coral);
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25);
+    font-size: 0.875rem;
+  }
+
+  .banner-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .banner-text {
+    flex: 1;
+    min-width: 280px;
+    line-height: 1.5;
+  }
+
+  .banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .btn-sm {
+    padding: 0.45rem 1rem;
+    font-size: 0.825rem;
+    border-radius: 6px;
+  }
+
+  .btn-accept {
+    background-color: var(--color-coral);
+    color: #ffffff;
+  }
+  .btn-accept:hover {
+    background-color: var(--color-coral-hover);
+  }
+
+  .btn-decline {
+    background: transparent;
+    color: #94A3B8;
+    border: 1px solid #475569;
+  }
+  .btn-decline:hover {
+    color: #ffffff;
+    border-color: #94A3B8;
+  }
+</style>
+

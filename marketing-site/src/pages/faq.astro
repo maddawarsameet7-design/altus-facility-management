@@ -1,0 +1,222 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `Frequently Asked Questions: Facility Staffing & Operations | ${siteConfig.name}`;
+const pageDesc =
+  'Answers to common questions regarding Altsan facility staffing: geofenced shift attendance, photo checklists, supervisor audits, and society billing.';
+
+const faqs = [
+  {
+    question: 'What specific facility services does Altsan provide?',
+    answer:
+      'Altsan specializes strictly in professional housekeeping, common-area sanitation, and allied facility maintenance for housing complexes, hospitals, and commercial buildings. We do not provide armed or unarmed security guards or PSARA-licensed private security services.',
+  },
+  {
+    question: 'How is worker attendance verified on our property?',
+    answer:
+      'Workers clock in and out using our mobile application. The application verifies their physical coordinates against your property’s GPS geofence boundary. Clock-ins attempted outside the premises are blocked, eliminating phantom attendance and paper register manipulation.',
+  },
+  {
+    question: 'What happens when an assigned worker is sick or on leave?',
+    answer:
+      'Our field supervisors oversee a structured reliever replacement workflow. When an absence is recorded or leave is approved, eligible nearby verified staff are offered the slot to ensure your required post headcount is maintained.',
+  },
+  {
+    question: 'How do you ensure cleaning tasks are actually performed well?',
+    answer:
+      'Tasks for each shift are generated from property templates. Cleaning personnel upload timestamped photo evidence upon completing designated areas like lobbies, lifts, and clubhouses. Field supervisors conduct physical spot audits, and any unsatisfactory task triggers a mandatory rework assignment.',
+  },
+  {
+    question: 'What verification is conducted before staff are deployed?',
+    answer:
+      'All workers undergo direct onboarding including government identity verification (such as Aadhaar or Voter ID), address verification, and reference checks. They receive practical training on institutional chemical dilutions, safety equipment, and color-coded microfiber tools to prevent cross-contamination.',
+  },
+  {
+    question: 'How does invoicing work for housing societies and commercial clients?',
+    answer:
+      'Invoices are generated at the end of each billing cycle backed by auditable shift attendance logs. Societies pay only for contracted and verified shifts; any unfulfilled shift hours are transparently credited.',
+  },
+  {
+    question: 'Can residents or committee members raise cleaning complaints?',
+    answer:
+      'Yes. Society administrators and residents can log complaints with photo documentation through our portal. Complaints are assigned directly to the area supervisor, and resolution requires validation before closure.',
+  },
+  {
+    question: 'Which cities and regions does Altsan currently operate in?',
+    answer:
+      `Altsan currently deploys facility teams across ${siteConfig.serviceAreas.join(' and ')}, Maharashtra. Expansion to adjacent municipal zones is evaluated on demand.`,
+  },
+];
+
+// Generate FAQPage JSON-LD
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer,
+    },
+  })),
+};
+---
+
+<Layout title={pageTitle} description={pageDesc} canonicalPath="/faq" jsonLd={faqJsonLd}>
+  <header class="page-header">
+    <div class="container text-center">
+      <span class="eyebrow-light">Got Questions?</span>
+      <h1 class="page-title">Frequently Asked Questions</h1>
+      <p class="page-subtitle">
+        Everything you need to know about our staffing deployment, attendance verification, quality audits, and billing transparency.
+      </p>
+    </div>
+  </header>
+
+  <section class="section bg-white">
+    <div class="container narrow">
+      <div class="faq-list">
+        {faqs.map((faq, idx) => (
+          <details class="faq-item" open={idx === 0}>
+            <summary class="faq-question">
+              <span>{faq.question}</span>
+              <span class="faq-arrow" aria-hidden="true">+</span>
+            </summary>
+            <div class="faq-answer">
+              <p>{faq.answer}</p>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div class="faq-footer-box">
+        <h3>Have a question not addressed here?</h3>
+        <p>Our operations team is available to discuss your property layout and staffing model.</p>
+        <a href="/contact" class="btn btn-primary">Speak With Operations</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0 3.5rem;
+  }
+  .eyebrow-light {
+    display: inline-block;
+    color: var(--color-coral);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 1.1rem;
+    color: #CBD5E1;
+    max-width: 680px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .section {
+    padding: 4.5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+  .narrow {
+    max-width: 780px;
+  }
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-bottom: 3.5rem;
+  }
+
+  .faq-item {
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .faq-item[open] {
+    border-color: #CBD5E1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+
+  .faq-question {
+    padding: 1.25rem 1.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-navy);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    user-select: none;
+  }
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-arrow {
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--color-coral);
+    transition: transform 0.2s ease;
+  }
+  .faq-item[open] .faq-arrow {
+    transform: rotate(45deg);
+  }
+
+  .faq-answer {
+    padding: 0 1.5rem 1.25rem;
+    border-top: 1px solid #F1F5F9;
+  }
+  .faq-answer p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-top: 0.75rem;
+  }
+
+  .faq-footer-box {
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+  }
+  .faq-footer-box h3 {
+    font-size: 1.35rem;
+    color: var(--color-navy);
+    margin-bottom: 0.5rem;
+  }
+  .faq-footer-box p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 2rem;
+    }
+  }
+</style>
+

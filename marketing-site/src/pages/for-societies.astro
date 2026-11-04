@@ -1,0 +1,317 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `Housekeeping Staffing for Housing Societies & MCs | ${siteConfig.name}`;
+const pageDesc =
+  'Dedicated facility housekeeping for Residential Housing Societies and Apartment Complexes. Geofenced attendance, photo checklists, complaint tracking, and auditable billing.';
+---
+
+<Layout title={pageTitle} description={pageDesc} canonicalPath="/for-societies">
+  <header class="page-header">
+    <div class="container text-center">
+      <span class="eyebrow-light">Residential Operations</span>
+      <h1 class="page-title">Managed Housekeeping Built for Housing Societies</h1>
+      <p class="page-subtitle">
+        Eliminate the recurring headaches of unannounced absenteeism, unverified paper registers, and endless resident cleaning complaints.
+      </p>
+    </div>
+  </header>
+
+  <!-- Committee Pain Points & Altsan Solutions -->
+  <section class="section bg-white">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="eyebrow">Practical Accountability</span>
+        <h2 class="section-title">Solving the Core Frustrations of Managing Committees</h2>
+        <p class="section-lead">
+          Housing society committee members serve voluntarily. You should not have to spend your evenings mediating disputes over uncleaned staircases or phantom contractor bills.
+        </p>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="solution-card">
+          <div class="problem-tag">The Common Frustration</div>
+          <h3>Unannounced Worker Absenteeism</h3>
+          <p class="problem-text">
+            Cleaners take days off without notice, leaving towers uncleaned and forcing residents to flood WhatsApp groups with complaints.
+          </p>
+          <div class="solution-tag">The Altsan Operating Model</div>
+          <p class="solution-text">
+            Our supervisory team actively manages reliever coverage. When a staff member reports leave, replacement workflows notify nearby verified staff to take up the post and maintain essential headcounts.
+          </p>
+        </div>
+
+        <div class="solution-card">
+          <div class="problem-tag">The Common Frustration</div>
+          <h3>Phantom Headcount & False Registers</h3>
+          <p class="problem-text">
+            Contractors bill for 10 cleaners every month while only 6 or 7 consistently show up on site. Paper registers are easily signed after the fact.
+          </p>
+          <div class="solution-tag">The Altsan Operating Model</div>
+          <p class="solution-text">
+            Workers clock in on a mobile application that verifies GPS location against your society's physical perimeter. Your monthly invoice is backed by verified attendance timestamps.
+          </p>
+        </div>
+
+        <div class="solution-card">
+          <div class="problem-tag">The Common Frustration</div>
+          <h3>Superficial Sweeping & Skipped Floors</h3>
+          <p class="problem-text">
+            Cleaners only mop visible lobby areas while fire stairwells, lift doors, podiums, and basement corridors go neglected for weeks.
+          </p>
+          <div class="solution-tag">The Altsan Operating Model</div>
+          <p class="solution-text">
+            Tasks are partitioned into specific areas (e.g. Wing A fire stairs, Podium washdown). Key milestones require timestamped photo proof before the task is marked completed in the system.
+          </p>
+        </div>
+
+        <div class="solution-card">
+          <div class="problem-tag">The Common Frustration</div>
+          <h3>No Structured Complaint Handling</h3>
+          <p class="problem-text">
+            Residents complain about garbage room odors or dirty lifts, but issues disappear without accountability or follow-through.
+          </p>
+          <div class="solution-tag">The Altsan Operating Model</div>
+          <p class="solution-text">
+            Complaints are formally logged and assigned directly to the field supervisor. If an issue is resolved unsatisfactorily, the committee can reject the closure to trigger mandatory rework.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Society Workflow Breakdown -->
+  <section class="section bg-light">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="eyebrow">Committee Overview</span>
+        <h2 class="section-title">What Your Society Receives</h2>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="feature-box">
+          <div class="f-icon">👥</div>
+          <h3>Dedicated Wing Staff</h3>
+          <p>
+            Assigned personnel who get to know the layout and residents of your specific towers, maintaining consistency rather than rotating unfamiliar strangers daily.
+          </p>
+        </div>
+
+        <div class="feature-box">
+          <div class="f-icon">📱</div>
+          <h3>Committee Dashboard Access</h3>
+          <p>
+            Society chairmen and estate managers can review daily shift coverage, attendance logs, and completed task photos directly through our secure platform.
+          </p>
+        </div>
+
+        <div class="feature-box">
+          <div class="f-icon">📑</div>
+          <h3>Dispute-Free Invoicing</h3>
+          <p>
+            End-of-month statements itemizing shifts delivered vs. shifts contracted. If a shift was unfilled, you are credited automatically.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Banner -->
+  <section class="cta-banner">
+    <div class="container text-center">
+      <h2>Bring Operational Discipline to Your Society</h2>
+      <p>
+        Invite us for an on-site joint inspection with your Managing Committee to assess common areas and provide a transparent quotation.
+      </p>
+      <div class="cta-btns">
+        <a href="/contact" class="btn btn-primary">Schedule Committee Walkthrough</a>
+        <a href="/faq" class="btn btn-outline-light">Read Housing Society FAQs</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0 3.5rem;
+  }
+  .eyebrow-light {
+    display: inline-block;
+    color: var(--color-coral);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 1.1rem;
+    color: #CBD5E1;
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .section {
+    padding: 4.5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+  .bg-light {
+    background-color: var(--color-bg);
+  }
+
+  .section-header {
+    max-width: 720px;
+    margin: 0 auto 3rem;
+  }
+  .text-center {
+    text-align: center;
+  }
+
+  .eyebrow {
+    color: var(--color-coral-dark);
+    font-size: 0.825rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+  }
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    margin-bottom: 0.75rem;
+  }
+  .section-lead {
+    font-size: 1.05rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    gap: 2rem;
+  }
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .solution-card {
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2.25rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  }
+
+  .problem-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #DC2626;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+  }
+
+  .solution-card h3 {
+    font-size: 1.25rem;
+    color: var(--color-navy);
+    margin-bottom: 0.5rem;
+  }
+
+  .problem-text {
+    font-size: 0.925rem;
+    color: #64748B;
+    line-height: 1.55;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px dashed var(--color-border);
+  }
+
+  .solution-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #059669;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+  }
+
+  .solution-text {
+    font-size: 0.925rem;
+    color: var(--color-text-main);
+    line-height: 1.6;
+  }
+
+  .feature-box {
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+  .f-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+  .feature-box h3 {
+    font-size: 1.15rem;
+    color: var(--color-navy);
+    margin-bottom: 0.5rem;
+  }
+  .feature-box p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+
+  .cta-banner {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0;
+  }
+  .cta-banner h2 {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+  .cta-banner p {
+    font-size: 1.05rem;
+    color: #CBD5E1;
+    margin-bottom: 2rem;
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cta-btns {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 860px) {
+    .page-title {
+      font-size: 2rem;
+    }
+    .grid-2,
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+

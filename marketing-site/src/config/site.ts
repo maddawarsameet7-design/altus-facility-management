@@ -189,3 +189,4 @@ export function validateSiteConfig(config: SiteConfig, isProduction: boolean): s
 
   return errors;
 }
+

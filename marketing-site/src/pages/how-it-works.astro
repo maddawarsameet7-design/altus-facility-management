@@ -1,0 +1,325 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `How It Works: Managed Staffing & Operational Oversight | ${siteConfig.name}`;
+const pageDesc =
+  'Understand how Altsan manages facility staffing: geofenced mobile attendance, photo-verified checklists, supervisor quality audits, and reliever workflows.';
+---
+
+<Layout title={pageTitle} description={pageDesc} canonicalPath="/how-it-works">
+  <header class="page-header">
+    <div class="container text-center">
+      <span class="eyebrow-light">Operating Architecture</span>
+      <h1 class="page-title">How Our Managed Staffing Model Operates</h1>
+      <p class="page-subtitle">
+        From initial property post definition to daily photo-verified checklists and transparent monthly reporting, here is how we ensure accountability.
+      </p>
+    </div>
+  </header>
+
+  <!-- Step-by-Step Lifecycle -->
+  <section class="section bg-white">
+    <div class="container">
+      <div class="workflow-list">
+        <!-- Stage 1 -->
+        <div class="workflow-step">
+          <div class="step-marker">
+            <span class="step-num">1</span>
+          </div>
+          <div class="step-content">
+            <span class="step-tag">Setup & Configuration</span>
+            <h2>Post Definition & Headcount Sizing</h2>
+            <p>
+              We conduct a comprehensive walkthrough of your property. Rather than deploying generic labor, we define discrete, accountable "Posts" (e.g., <em>Tower 1 Lobby & Corridors</em>, <em>Podium & Amenities</em>) paired with specific shift windows and required headcounts.
+            </p>
+            <ul>
+              <li>Physical boundaries and geofence perimeter mapped</li>
+              <li>Custom task templates established for daily, weekly, and monthly chores</li>
+              <li>Shift timings set to optimize cleaning before peak resident or office activity</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stage 2 -->
+        <div class="workflow-step">
+          <div class="step-marker">
+            <span class="step-num">2</span>
+          </div>
+          <div class="step-content">
+            <span class="step-tag">Workforce Onboarding</span>
+            <h2>Direct KYC Screening & Facility Training</h2>
+            <p>
+              Workers are directly onboarded with government ID verification (Aadhaar / Voter ID), permanent address KYC, and reference screening. Every cleaner undergoes structured orientation regarding machinery, dilution ratios for chemicals, and professional code of conduct.
+            </p>
+            <ul>
+              <li>Identity verification and contact verification</li>
+              <li>Color-coded cleaning tool training (preventing cross-contamination)</li>
+              <li>Uniform, safety gear, and badge issuance</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stage 3 -->
+        <div class="workflow-step">
+          <div class="step-marker">
+            <span class="step-num">3</span>
+          </div>
+          <div class="step-content">
+            <span class="step-tag">Shift Execution</span>
+            <h2>Geofenced Attendance & Daily Roster Generation</h2>
+            <p>
+              Each day at midnight, the daily roster is scheduled for the upcoming shifts. When workers arrive on-site, they clock in using our mobile application. The system validates their physical location against your property's GPS geofence radius.
+            </p>
+            <ul>
+              <li>Clock-ins outside the property geofence boundary are blocked</li>
+              <li>Grace periods are strictly monitored; late arrivals trigger supervisor alerts</li>
+              <li>Only real clocked-in hours count toward staffing records</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stage 4 -->
+        <div class="workflow-step">
+          <div class="step-marker">
+            <span class="step-num">4</span>
+          </div>
+          <div class="step-content">
+            <span class="step-tag">Quality Assurance</span>
+            <h2>Photo-Verified Checklists & Supervisor Inspections</h2>
+            <p>
+              Cleaning tasks are not left to memory. The on-site team receives designated digital checklists on their shift screen. When completing key common areas, staff submit timestamped photo evidence.
+            </p>
+            <ul>
+              <li>Photo-required tasks must be documented to be marked complete</li>
+              <li>Field supervisors conduct physical spot inspections and grade task completion</li>
+              <li>Any inspection marked as failed automatically creates an expedited rework order</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stage 5 -->
+        <div class="workflow-step">
+          <div class="step-marker">
+            <span class="step-num">5</span>
+          </div>
+          <div class="step-content">
+            <span class="step-tag">Continuity of Service</span>
+            <h2>Supervisor Reliever & Replacement Workflow</h2>
+            <p>
+              When a deployed staff member requests planned leave or reports an emergency illness, our supervisors initiate a structured reliever request. Nearby verified relievers are dispatched to fill the slot, keeping your property staffed.
+            </p>
+            <ul>
+              <li>Automated alerts when shifts are unfilled past grace period</li>
+              <li>Reliever deployment logged transparently in the shift roster</li>
+              <li>Mandatory rest intervals enforced between shifts to prevent staff burnout</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stage 6 -->
+        <div class="workflow-step">
+          <div class="step-marker">
+            <span class="step-num">6</span>
+          </div>
+          <div class="step-content">
+            <span class="step-tag">Transparency & Billing</span>
+            <h2>Monthly Quality Reports & Invoice Reconciliation</h2>
+            <p>
+              At the close of each billing cycle, property management receives an objective operational report. Invoices align directly with verified shift hours, supervisor scores, and resident complaint resolution logs.
+            </p>
+            <ul>
+              <li>Auditable roster log detailing every worker shift and reliever hours</li>
+              <li>Inspection scoring history and rework closure records</li>
+              <li>Clear, dispute-free billing supported by operational data</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Banner -->
+  <section class="cta-banner">
+    <div class="container text-center">
+      <h2>See How This Fits Your Property</h2>
+      <p>
+        Let our team assess your property layout and propose an operational post plan.
+      </p>
+      <div class="cta-btns">
+        <a href="/contact" class="btn btn-primary">Schedule Property Assessment</a>
+        <a href="/housekeeping" class="btn btn-outline-light">Review Cleaning Scope</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0 3.5rem;
+  }
+  .eyebrow-light {
+    display: inline-block;
+    color: var(--color-coral);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 1.1rem;
+    color: #CBD5E1;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .section {
+    padding: 5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+
+  .workflow-list {
+    max-width: 820px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    position: relative;
+  }
+  .workflow-list::before {
+    content: '';
+    position: absolute;
+    top: 2rem;
+    bottom: 2rem;
+    left: 24px;
+    width: 2px;
+    background: #E2E8F0;
+    z-index: 1;
+  }
+
+  .workflow-step {
+    display: flex;
+    gap: 2rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .step-marker {
+    flex-shrink: 0;
+  }
+  .step-num {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--color-navy);
+    color: #ffffff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 3px rgba(27, 24, 55, 0.15);
+  }
+
+  .step-content {
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2.25rem;
+    flex: 1;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  }
+
+  .step-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-coral-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-content h2 {
+    font-size: 1.4rem;
+    color: var(--color-navy);
+    margin-bottom: 0.75rem;
+  }
+
+  .step-content p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+  }
+
+  .step-content ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .step-content li {
+    font-size: 0.875rem;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .step-content li::before {
+    content: '✓';
+    color: #10B981;
+    font-weight: bold;
+  }
+
+  .cta-banner {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0;
+  }
+  .cta-banner h2 {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+  .cta-banner p {
+    font-size: 1.05rem;
+    color: #CBD5E1;
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cta-btns {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 720px) {
+    .workflow-list::before {
+      display: none;
+    }
+    .workflow-step {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .page-title {
+      font-size: 2rem;
+    }
+  }
+</style>
+

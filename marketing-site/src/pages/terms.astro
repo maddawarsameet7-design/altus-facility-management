@@ -1,0 +1,175 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `Terms of Service (Draft) | ${siteConfig.name}`;
+const pageDesc =
+  'Preliminary draft of the Altsan Terms of Service governing website usage, staffing inquiry submissions, and general service boundaries.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDesc}
+  canonicalPath="/terms"
+  isDraftLegal={true}
+>
+  <header class="page-header">
+    <div class="container text-center">
+      <span class="eyebrow-light">Preliminary Operational Document</span>
+      <h1 class="page-title">Terms of Service (Draft)</h1>
+      <p class="page-subtitle">
+        Status: <strong>DRAFT — PENDING FORMAL LEGAL REVIEW</strong>. Not for contractual reliance.
+      </p>
+    </div>
+  </header>
+
+  <section class="section bg-white">
+    <div class="container narrow legal-content">
+      <div class="draft-callout">
+        <p>
+          <strong>Notice to Visitors:</strong> This document represents a working operational draft of Terms of Service for {siteConfig.legalName}. It has not been finalized and is currently under review by legal counsel. It is excluded from public search engine indexes. Commercial staffing engagements are governed by separate bilateral contracts.
+        </p>
+      </div>
+
+      <h2>1. Purpose of This Website</h2>
+      <p>
+        The website located at <code>{siteConfig.url}</code> serves to provide preliminary informational details regarding Altsan's facility housekeeping services and to accept operational inquiries from prospective clients.
+      </p>
+
+      <h2>2. Nature of Service Scope</h2>
+      <p>
+        Altsan provides managed facility staffing, common-area cleaning, and operational maintenance.
+      </p>
+      <div class="disclaimer-panel">
+        <p>
+          <strong>Service Scope Boundary:</strong> {siteConfig.claims.psaraExclusionDisclaimer}
+        </p>
+      </div>
+
+      <h2>3. Informational Estimates vs. Binding Contracts</h2>
+      <p>
+        Information, pricing indications, or headcount proposals provided through website interactions or initial walkthroughs do not constitute a binding legal contract. A binding facility staffing agreement is created exclusively upon the formal execution of a written Service Level Agreement (SLA) signed by authorized representatives of both parties.
+      </p>
+
+      <h2>4. Intellectual Property & Brand Assets</h2>
+      <p>
+        The Altsan brand name, hummingbird logo, software workflows, website copy, and proprietary checklist structures are the intellectual property of {siteConfig.legalName}. Unauthorized reproduction, scraping, or misrepresentation is prohibited.
+      </p>
+
+      <h2>5. Client Property Obligations</h2>
+      <p>
+        For contracted properties, clients are required to provide safe physical access to designated common areas, adequate lighting, water supply, and secure storage for equipment and institutional cleaning agents necessary to carry out scheduled duties.
+      </p>
+
+      <h2>6. Operational Platform Access</h2>
+      <p>
+        Access to the web and mobile platform at <code>{siteConfig.appUrl}</code> is restricted to authorized society committee members, supervisors, and workforce personnel. Credentials may not be shared across non-authorized parties.
+      </p>
+
+      <h2>7. Legal Jurisdiction & Inquiries</h2>
+      <p>
+        This draft document is formulated under the laws of the Republic of India with jurisdiction in Pune, Maharashtra. For legal notices or contractual inquiries, contact:
+      </p>
+      <address class="contact-box">
+        <strong>{siteConfig.legalName}</strong><br />
+        Legal & Corporate Affairs<br />
+        Email: <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a><br />
+        Phone: <a href={`tel:${siteConfig.phone}`}>{siteConfig.phoneFormatted}</a><br />
+        Address: {siteConfig.address.streetAddress}, {siteConfig.address.addressLocality}, {siteConfig.address.addressRegion} — {siteConfig.address.postalCode}
+      </address>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0 3.5rem;
+  }
+  .eyebrow-light {
+    display: inline-block;
+    color: #F59E0B;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 1.05rem;
+    color: #CBD5E1;
+  }
+
+  .section {
+    padding: 4.5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+  .narrow {
+    max-width: 780px;
+  }
+
+  .legal-content h2 {
+    font-size: 1.35rem;
+    color: var(--color-navy);
+    margin: 2rem 0 0.75rem;
+  }
+  .legal-content p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+    margin-bottom: 1rem;
+  }
+
+  .draft-callout {
+    background-color: #FEF3C7;
+    border-left: 4px solid #F59E0B;
+    padding: 1.25rem;
+    border-radius: 4px;
+    margin-bottom: 2rem;
+  }
+  .draft-callout p {
+    color: #92400E;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .disclaimer-panel {
+    background: #F1F5F9;
+    border-left: 4px solid var(--color-navy);
+    padding: 1rem 1.25rem;
+    border-radius: 4px;
+    margin-bottom: 1.25rem;
+  }
+  .disclaimer-panel p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-text-main);
+  }
+
+  .contact-box {
+    font-style: normal;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 2rem;
+    }
+  }
+</style>
+

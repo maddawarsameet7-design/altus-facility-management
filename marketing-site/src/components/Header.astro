@@ -1,0 +1,262 @@
+---
+import { siteConfig } from '../config/site';
+
+const currentPath = Astro.url.pathname;
+const appUrl = import.meta.env.APP_URL || siteConfig.appUrl;
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <!-- Brand Logo -->
+    <a href="/" class="brand-link" aria-label="Altsan Homepage">
+      <img
+        src="/logo64-transparent.png"
+        alt="Altsan Hummingbird Logo"
+        width="38"
+        height="38"
+        class="brand-icon"
+      />
+      <span class="brand-name">Altsan</span>
+    </a>
+
+    <!-- Mobile Nav Toggle (CSS-checkbox driven for zero-JS reliability) -->
+    <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-hidden="true" />
+    <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation menu">
+      <span class="hamburger"></span>
+    </label>
+
+    <!-- Navigation Links -->
+    <nav class="nav-menu" aria-label="Main Navigation">
+      <ul class="nav-list">
+        {siteConfig.navigation.links.map((link) => {
+          const isActive = currentPath === link.href || (link.href !== '/' && currentPath.startsWith(link.href));
+          return (
+            <li class="nav-item">
+              <a
+                href={link.href}
+                class={`nav-link ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {link.name}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+
+      <!-- Action items: Language Pill & Sign-in Link -->
+      <div class="nav-actions">
+        <span class="lang-indicator" title="English (Hindi version planned)" aria-label="Language: English">
+          🌐 EN
+        </span>
+        <a
+          href={appUrl}
+          class="btn btn-signin"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Sign In
+        </a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+  }
+
+  .brand-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+  }
+  .brand-link:hover {
+    color: #ffffff;
+  }
+
+  .brand-icon {
+    display: block;
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    color: #ffffff;
+  }
+
+  .nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .nav-list {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    gap: 1.25rem;
+  }
+
+  .nav-link {
+    color: #CBD5E1;
+    text-decoration: none;
+    font-size: 0.925rem;
+    font-weight: 500;
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+  }
+  .nav-link:hover {
+    color: #ffffff;
+  }
+  .nav-link.active {
+    color: #ffffff;
+    font-weight: 600;
+    border-bottom: 2px solid var(--color-coral);
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: 0.5rem;
+  }
+
+  .lang-indicator {
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: #CBD5E1;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    user-select: none;
+  }
+
+  .btn-signin {
+    background-color: var(--color-coral);
+    color: #ffffff !important;
+    padding: 0.5rem 1.15rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+  }
+  .btn-signin:hover {
+    background-color: var(--color-coral-hover);
+    transform: translateY(-1px);
+  }
+
+  /* Hamburger toggle input */
+  .nav-toggle-input {
+    display: none;
+  }
+  .nav-toggle-label {
+    display: none;
+    cursor: pointer;
+    padding: 0.5rem;
+  }
+  .hamburger {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: #ffffff;
+    position: relative;
+    transition: background 0.2s ease;
+  }
+  .hamburger::before,
+  .hamburger::after {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: #ffffff;
+    position: absolute;
+    transition: all 0.2s ease;
+  }
+  .hamburger::before {
+    top: -7px;
+  }
+  .hamburger::after {
+    bottom: -7px;
+  }
+
+  /* Responsive Mobile Navigation */
+  @media (max-width: 880px) {
+    .nav-toggle-label {
+      display: block;
+    }
+
+    .nav-menu {
+      position: absolute;
+      top: 72px;
+      left: 0;
+      right: 0;
+      background-color: var(--color-navy);
+      flex-direction: column;
+      align-items: stretch;
+      padding: 1.5rem;
+      gap: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      display: none;
+    }
+
+    .nav-list {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 0.65rem 0.5rem;
+      font-size: 1rem;
+    }
+
+    .nav-actions {
+      flex-direction: row;
+      justify-content: space-between;
+      margin-left: 0;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-toggle-input:checked ~ .nav-menu {
+      display: flex;
+    }
+
+    .nav-toggle-input:checked ~ .nav-toggle-label .hamburger {
+      background: transparent;
+    }
+    .nav-toggle-input:checked ~ .nav-toggle-label .hamburger::before {
+      transform: rotate(45deg);
+      top: 0;
+    }
+    .nav-toggle-input:checked ~ .nav-toggle-label .hamburger::after {
+      transform: rotate(-45deg);
+      bottom: 0;
+    }
+  }
+</style>
+

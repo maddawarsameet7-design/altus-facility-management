@@ -1,0 +1,246 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ContactForm from '../components/ContactForm.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `Contact & Staffing Inquiries | ${siteConfig.name}`;
+const pageDesc =
+  'Get in touch with Altsan for housekeeping proposals, facility walkthroughs, and operational inquiries. Direct contact info and responsive staffing support.';
+---
+
+<Layout title={pageTitle} description={pageDesc} canonicalPath="/contact">
+  <header class="page-header">
+    <div class="container text-center">
+      <span class="eyebrow-light">Get In Touch</span>
+      <h1 class="page-title">Contact Our Facility Operations Team</h1>
+      <p class="page-subtitle">
+        Whether you require a dedicated housekeeping squad for an apartment complex, clinic, or office building, our operations managers are ready to assist.
+      </p>
+    </div>
+  </header>
+
+  <section class="section bg-white">
+    <div class="container">
+      <div class="contact-grid">
+        <!-- Contact Information Sidebar -->
+        <div class="contact-sidebar">
+          <span class="eyebrow">Direct Inquiries</span>
+          <h2>Operational Office</h2>
+          <p class="sidebar-lead">
+            Contact us directly for joint site inspections, tender inquiries, or current operational questions.
+          </p>
+
+          <div class="info-blocks">
+            <div class="info-item">
+              <div class="info-icon">📍</div>
+              <div class="info-text">
+                <strong>Office Address</strong>
+                <p>
+                  {siteConfig.legalName}<br />
+                  {siteConfig.address.streetAddress}, {siteConfig.address.addressLocality}<br />
+                  {siteConfig.address.addressRegion} — {siteConfig.address.postalCode}, {siteConfig.address.addressCountry}
+                </p>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">📞</div>
+              <div class="info-text">
+                <strong>Telephone</strong>
+                <p>
+                  <a href={`tel:${siteConfig.phone}`}>{siteConfig.phoneFormatted}</a>
+                </p>
+                <span class="subtext">Available {siteConfig.openingHours}</span>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">✉️</div>
+              <div class="info-text">
+                <strong>Email Desk</strong>
+                <p>
+                  <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
+                </p>
+                <span class="subtext">Responses typically within 1 business day</span>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">🗺️</div>
+              <div class="info-text">
+                <strong>Current Service Coverage</strong>
+                <p>
+                  Active deployment hubs across {siteConfig.serviceAreas.join(' and ')}.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-redirect-box">
+            <h4>Existing Client or Worker?</h4>
+            <p>
+              Staff and registered society committee members can access the operational dashboard:
+            </p>
+            <a href={siteConfig.appUrl} class="btn btn-secondary btn-sm" target="_blank" rel="noopener noreferrer">
+              Open Altsan App →
+            </a>
+          </div>
+        </div>
+
+        <!-- Form Column -->
+        <div class="contact-main">
+          <ContactForm />
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0 3.5rem;
+  }
+  .eyebrow-light {
+    display: inline-block;
+    color: var(--color-coral);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 1.1rem;
+    color: #CBD5E1;
+    max-width: 680px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .section {
+    padding: 4.5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.35fr;
+    gap: 3.5rem;
+    align-items: start;
+  }
+
+  .eyebrow {
+    color: var(--color-coral-dark);
+    font-size: 0.825rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+  }
+
+  .contact-sidebar h2 {
+    font-size: 1.85rem;
+    color: var(--color-navy);
+    margin-bottom: 0.75rem;
+  }
+
+  .sidebar-lead {
+    font-size: 0.975rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+
+  .info-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .info-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .info-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    margin-top: 0.15rem;
+  }
+
+  .info-text strong {
+    display: block;
+    font-size: 0.925rem;
+    color: var(--color-navy);
+    margin-bottom: 0.2rem;
+  }
+
+  .info-text p {
+    font-size: 0.9rem;
+    color: var(--color-text-main);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .info-text a {
+    color: var(--color-navy);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  .info-text a:hover {
+    color: var(--color-coral-dark);
+  }
+
+  .subtext {
+    display: block;
+    font-size: 0.775rem;
+    color: #64748B;
+    margin-top: 0.2rem;
+  }
+
+  .app-redirect-box {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .app-redirect-box h4 {
+    font-size: 0.95rem;
+    color: var(--color-navy);
+    margin-bottom: 0.35rem;
+  }
+  .app-redirect-box p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.45;
+    margin-bottom: 0.75rem;
+  }
+  .btn-sm {
+    padding: 0.45rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 900px) {
+    .contact-grid {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+    .page-title {
+      font-size: 2rem;
+    }
+  }
+</style>
+

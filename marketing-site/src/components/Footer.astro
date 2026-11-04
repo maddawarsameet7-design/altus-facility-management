@@ -1,0 +1,220 @@
+---
+import { siteConfig } from '../config/site';
+
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <!-- Column 1: Company Profile & Disclaimer -->
+    <div class="footer-col brand-col">
+      <div class="footer-brand">
+        <img
+          src="/logo64-transparent.png"
+          alt="Altsan Logo"
+          width="32"
+          height="32"
+          class="footer-brand-icon"
+        />
+        <span class="footer-brand-title">{siteConfig.name}</span>
+      </div>
+      <p class="footer-desc">
+        {siteConfig.description}
+      </p>
+      <div class="psara-disclaimer">
+        ℹ️ <strong>Scope Notice:</strong> {siteConfig.claims.psaraExclusionDisclaimer}
+      </div>
+    </div>
+
+    <!-- Column 2: Quick Links -->
+    <div class="footer-col">
+      <h3 class="footer-heading">Services & Operations</h3>
+      <ul class="footer-links">
+        <li><a href="/housekeeping">Housekeeping Services</a></li>
+        <li><a href="/how-it-works">How It Works</a></li>
+        <li><a href="/for-societies">For Housing Societies</a></li>
+        <li><a href="/about">About Us</a></li>
+        <li><a href="/faq">Frequently Asked Questions</a></li>
+        <li><a href="/contact">Inquiries & Contact</a></li>
+      </ul>
+    </div>
+
+    <!-- Column 3: Contact & Service Areas -->
+    <div class="footer-col">
+      <h3 class="footer-heading">Operational Contact</h3>
+      <address class="footer-contact">
+        <p><strong>{siteConfig.legalName}</strong></p>
+        <p>{siteConfig.address.streetAddress}, {siteConfig.address.addressLocality}</p>
+        <p>{siteConfig.address.addressRegion} — {siteConfig.address.postalCode}</p>
+        <p class="contact-line">
+          Email: <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
+        </p>
+        <p class="contact-line">
+          Phone: <a href={`tel:${siteConfig.phone}`}>{siteConfig.phoneFormatted}</a>
+        </p>
+        <p class="service-hours">Hours: {siteConfig.openingHours}</p>
+        <p class="service-areas">
+          Active Service Hubs: {siteConfig.serviceAreas.join(', ')}
+        </p>
+      </address>
+    </div>
+  </div>
+
+  <!-- Bottom Legal & Copyright Bar -->
+  <div class="footer-bottom">
+    <div class="container bottom-inner">
+      <p class="copyright">
+        © {currentYear} {siteConfig.legalName}. All rights reserved.
+      </p>
+      <div class="legal-links">
+        <a href="/privacy">Privacy Policy <span class="draft-tag">(Draft)</span></a>
+        <span class="sep" aria-hidden="true">•</span>
+        <a href="/terms">Terms of Service <span class="draft-tag">(Draft)</span></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background-color: var(--color-navy-dark);
+    color: #94A3B8;
+    padding-top: 4rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.9rem;
+  }
+
+  .footer-inner {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1.25fr;
+    gap: 3rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .footer-brand-title {
+    color: #ffffff;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .footer-desc {
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+    color: #94A3B8;
+  }
+
+  .psara-disclaimer {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #CBD5E1;
+    line-height: 1.45;
+  }
+
+  .footer-heading {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .footer-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .footer-links a {
+    color: #94A3B8;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .footer-links a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+  }
+
+  .footer-contact {
+    font-style: normal;
+    line-height: 1.65;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .footer-contact p strong {
+    color: #E2E8F0;
+  }
+
+  .footer-contact a {
+    color: #CBD5E1;
+  }
+  .footer-contact a:hover {
+    color: #ffffff;
+  }
+
+  .service-hours,
+  .service-areas {
+    font-size: 0.825rem;
+    color: #64748B;
+    margin-top: 0.25rem;
+  }
+
+  .footer-bottom {
+    background: rgba(0, 0, 0, 0.25);
+    padding: 1.25rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.825rem;
+  }
+
+  .bottom-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .legal-links {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .legal-links a {
+    color: #94A3B8;
+    text-decoration: none;
+  }
+  .legal-links a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+  }
+
+  .draft-tag {
+    font-size: 0.75rem;
+    color: #F59E0B;
+    font-weight: 600;
+  }
+
+  .sep {
+    color: #475569;
+  }
+
+  @media (max-width: 840px) {
+    .footer-inner {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+  }
+</style>
+

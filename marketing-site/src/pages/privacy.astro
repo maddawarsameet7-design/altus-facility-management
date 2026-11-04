@@ -1,0 +1,175 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `Privacy Policy (Draft) | ${siteConfig.name}`;
+const pageDesc =
+  'Preliminary draft of the Altsan privacy policy outlining handling of contact inquiries, workforce KYC verification, and geofenced operational coordinates.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDesc}
+  canonicalPath="/privacy"
+  isDraftLegal={true}
+>
+  <header class="page-header">
+    <div class="container text-center">
+      <span class="eyebrow-light">Preliminary Operational Document</span>
+      <h1 class="page-title">Privacy Policy (Draft)</h1>
+      <p class="page-subtitle">
+        Status: <strong>DRAFT — PENDING FORMAL LEGAL REVIEW</strong>. Not for contractual reliance.
+      </p>
+    </div>
+  </header>
+
+  <section class="section bg-white">
+    <div class="container narrow legal-content">
+      <div class="draft-callout">
+        <p>
+          <strong>Notice to Visitors:</strong> This document represents an internal operational draft of the privacy practices intended for {siteConfig.legalName}. It is currently under review by qualified legal counsel and has not been finalized. This page is excluded from public search engine indexes.
+        </p>
+      </div>
+
+      <h2>1. Information We Collect Through the Website</h2>
+      <p>
+        When you visit {siteConfig.url} or submit a staffing inquiry through our contact form, we collect only the information you voluntarily provide:
+      </p>
+      <ul>
+        <li>Full Name and contact email address</li>
+        <li>Telephone number and residential society or commercial entity name</li>
+        <li>Scope of requested housekeeping services</li>
+        <li>IP address and submission timestamp (utilized strictly for rate limiting and bot mitigation via Cloudflare Turnstile)</li>
+      </ul>
+
+      <h2>2. Ephemeral Form Processing & Retention</h2>
+      <p>
+        Staffing inquiries submitted via our public website are transmitted directly to our operations inbox to enable our team to formulate a deployment proposal. Website inquiries are not retained in a marketing database or shared with advertising brokers.
+      </p>
+
+      <h2>3. Workforce & Client Platform Data</h2>
+      <p>
+        Registered clients (Managing Committee members) and deployed workforce personnel access operational features through our dedicated platform at <code>{siteConfig.appUrl}</code>. Data collected under that operational portal is governed by separate client service agreements and worker onboarding documentation:
+      </p>
+      <ul>
+        <li><strong>Worker KYC Data:</strong> Government identification documents, address verification, and bank disbursement details collected under statutory employer compliance.</li>
+        <li><strong>Geofenced Attendance Data:</strong> Device location is sampled solely at the moment of clock-in and clock-out to verify physical presence within the client property geofence perimeter. Continuous tracking during off-shift hours is strictly prohibited.</li>
+        <li><strong>Task Evidence Photos:</strong> Photographic logs of common-area cleaning tasks are retained for monthly quality audits and dispute resolution.</li>
+      </ul>
+
+      <h2>4. Cookies & Analytics</h2>
+      <p>
+        Our public website uses strictly necessary session cookies. Optional privacy-friendly analytics are enabled exclusively if you provide explicit opt-in consent via the cookie banner. You may decline analytics tracking without impacting your access to any website content.
+      </p>
+
+      <h2>5. Security Practices</h2>
+      <p>
+        We employ industry-standard transport layer security (TLS 1.3), strict HTTP security headers (HSTS, CSP, X-Frame-Options), and access controls to safeguard data transmission.
+      </p>
+
+      <h2>6. Operational Privacy Contact</h2>
+      <p>
+        For questions or clarifications regarding this draft policy, reach our administrative team at:
+      </p>
+      <address class="contact-box">
+        <strong>{siteConfig.legalName}</strong><br />
+        Attention: Operational Compliance<br />
+        Email: <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a><br />
+        Phone: <a href={`tel:${siteConfig.phone}`}>{siteConfig.phoneFormatted}</a><br />
+        Address: {siteConfig.address.streetAddress}, {siteConfig.address.addressLocality}, {siteConfig.address.addressRegion} — {siteConfig.address.postalCode}
+      </address>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-header {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0 3.5rem;
+  }
+  .eyebrow-light {
+    display: inline-block;
+    color: #F59E0B;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 1.05rem;
+    color: #CBD5E1;
+  }
+
+  .section {
+    padding: 4.5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+  .narrow {
+    max-width: 780px;
+  }
+
+  .legal-content h2 {
+    font-size: 1.35rem;
+    color: var(--color-navy);
+    margin: 2rem 0 0.75rem;
+  }
+  .legal-content p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+    margin-bottom: 1rem;
+  }
+  .legal-content ul {
+    margin-left: 1.5rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .legal-content li {
+    font-size: 0.925rem;
+    color: var(--color-text-main);
+    line-height: 1.55;
+  }
+
+  .draft-callout {
+    background-color: #FEF3C7;
+    border-left: 4px solid #F59E0B;
+    padding: 1.25rem;
+    border-radius: 4px;
+    margin-bottom: 2rem;
+  }
+  .draft-callout p {
+    color: #92400E;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .contact-box {
+    font-style: normal;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 2rem;
+    }
+  }
+</style>
+

@@ -1,0 +1,430 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { siteConfig } from '../config/site';
+
+const pageTitle = `Managed Facility Staffing & Housekeeping Operations | ${siteConfig.name}`;
+const pageDesc =
+  'Altsan deploys verified, trained housekeeping personnel to housing societies, hospitals, and commercial properties with geofenced mobile attendance and photo-verified task checklists.';
+---
+
+<Layout title={pageTitle} description={pageDesc} canonicalPath="/">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container hero-inner">
+      <div class="hero-badge">Verified Housekeeping Staffing</div>
+      <h1 class="hero-title">Managed Housekeeping & Facility Staffing You Can Verify</h1>
+      <p class="hero-subtitle">
+        We deploy dedicated, KYC-onboarded cleaning personnel to residential societies, clinics, and commercial premises. Every shift is tracked with geofenced mobile check-ins and photo-documented checklists.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="/contact" class="btn btn-primary">Request Staffing Proposal</a>
+        <a href="/housekeeping" class="btn btn-outline-light">View Housekeeping Scope</a>
+      </div>
+
+      <!-- Feature Chips -->
+      <div class="hero-chips">
+        <div class="chip">📍 Geofenced Attendance</div>
+        <div class="chip">📸 Photo-Verified Tasks</div>
+        <div class="chip">🔄 Supervisor Reliever Workflow</div>
+        <div class="chip">📊 Monthly Quality Audits</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem & Solution Overview -->
+  <section class="section py-5 bg-white">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="eyebrow">The Operational Difference</span>
+        <h2 class="section-title">Accountable Facility Management, Not Unmonitored Labor</h2>
+        <p class="section-lead">
+          Traditional contractors frequently leave housing societies and commercial facilities with unannounced absenteeism, missed cleaning zones, and disputed billings. Altsan integrates supervisory oversight directly with real-time operational software.
+        </p>
+      </div>
+
+      <div class="grid grid-3">
+        <!-- Pillar 1 -->
+        <div class="card">
+          <div class="card-icon">📍</div>
+          <h3 class="card-title">Geofenced Shift Attendance</h3>
+          <p class="card-text">
+            Workers check in and out through our mobile application only within the physical geofence boundary of your property. Roster entries reflect real on-site hours, preventing phantom billing and unauthorized absences.
+          </p>
+          <a href="/how-it-works" class="card-link">Learn about roster tracking →</a>
+        </div>
+
+        <!-- Pillar 2 -->
+        <div class="card">
+          <div class="card-icon">📸</div>
+          <h3 class="card-title">Photo-Verified Task Execution</h3>
+          <p class="card-text">
+            Cleaning checklists for lobbies, stairwells, clubhouses, and waste disposal areas require timestamped photo evidence upon completion. Supervisors conduct scheduled spot audits to ensure hygiene standards are maintained.
+          </p>
+          <a href="/housekeeping" class="card-link">Review cleaning standards →</a>
+        </div>
+
+        <!-- Pillar 3 -->
+        <div class="card">
+          <div class="card-icon">🔄</div>
+          <h3 class="card-title">Structured Reliever Workflow</h3>
+          <p class="card-text">
+            When staff members take planned leave or report unexpected sick days, our supervisors trigger structured replacement requests to mobilize eligible backup personnel and maintain required headcounts.
+          </p>
+          <a href="/for-societies" class="card-link">Explore society workflows →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Who We Serve -->
+  <section class="section py-5 bg-light">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="eyebrow">Target Facilities</span>
+        <h2 class="section-title">Designed for Properties That Value Consistent Hygiene</h2>
+        <p class="section-lead">
+          We tailor staffing posts, shift schedules, and daily checklists to the exact operational needs of your property.
+        </p>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="sector-card">
+          <h3>Housing Societies & Gated Complexes</h3>
+          <p>
+            Daily common-area sweeping, podium washdowns, lift sanitization, garbage collection logistics, and clubhouse upkeep handled by disciplined teams.
+          </p>
+          <ul class="bullet-list">
+            <li>Dedicated block-wise cleaning posts</li>
+            <li>Resident complaint logging & resolution</li>
+            <li>Monthly performance reports for Managing Committees</li>
+          </ul>
+        </div>
+
+        <div class="sector-card">
+          <h3>Healthcare Centers & Clinics</h3>
+          <p>
+            High-frequency disinfection routines, waiting room sanitization, and specialized waste handling tailored for outpatient centers and diagnostic labs.
+          </p>
+          <ul class="bullet-list">
+            <li>Frequent surface touchpoint disinfection</li>
+            <li>Strict adherence to sanitation schedules</li>
+            <li>Supervisor inspection logs</li>
+          </ul>
+        </div>
+
+        <div class="sector-card">
+          <h3>Commercial Offices & Corporate Spaces</h3>
+          <p>
+            Punctual pre-shift cleaning, workstation dusting, cafeteria maintenance, and washroom sanitation designed for active workplace environments.
+          </p>
+          <ul class="bullet-list">
+            <li>Early morning and evening shift coverage</li>
+            <li>Uniformed, ID-verified cleaning crew</li>
+            <li>Transparent attendance transparency</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Clear Scope Boundary Notice -->
+  <section class="scope-notice-section">
+    <div class="container">
+      <div class="scope-box">
+        <div class="scope-icon">📋</div>
+        <div class="scope-content">
+          <h4>Clear Service Boundaries & Compliance</h4>
+          <p>
+            {siteConfig.claims.psaraExclusionDisclaimer} Our focus is 100% on hygiene, common-area sanitation, and professional facility upkeep.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final Call to Action -->
+  <section class="cta-banner">
+    <div class="container text-center">
+      <h2>Ready for Accountable Facility Staffing?</h2>
+      <p>
+        Discuss your property's housekeeping requirements with our operations team and receive a structured deployment proposal.
+      </p>
+      <div class="cta-btns">
+        <a href="/contact" class="btn btn-primary">Schedule a Site Assessment</a>
+        <a href="/faq" class="btn btn-secondary">Read Frequently Asked Questions</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero-section {
+    background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-dark) 100%);
+    color: #ffffff;
+    padding: 5.5rem 0 4.5rem;
+    position: relative;
+  }
+
+  .hero-inner {
+    max-width: 840px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid var(--color-coral);
+    color: var(--color-coral);
+    padding: 0.35rem 1rem;
+    border-radius: 20px;
+    font-size: 0.825rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-title {
+    font-size: 2.75rem;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: #CBD5E1;
+    margin-bottom: 2rem;
+  }
+
+  .hero-ctas {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-chips {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.825rem;
+    color: #E2E8F0;
+  }
+
+  .section {
+    padding: 4.5rem 0;
+  }
+  .bg-white {
+    background-color: #ffffff;
+  }
+  .bg-light {
+    background-color: var(--color-bg);
+  }
+
+  .section-header {
+    max-width: 720px;
+    margin: 0 auto 3.5rem;
+  }
+  .text-center {
+    text-align: center;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    color: var(--color-coral-dark);
+    font-size: 0.825rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-title {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 1rem;
+  }
+
+  .section-lead {
+    font-size: 1.05rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    gap: 2rem;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    margin-bottom: 0.75rem;
+  }
+
+  .card-text {
+    font-size: 0.925rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+    flex: 1;
+  }
+
+  .card-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-coral-dark);
+    text-decoration: none;
+  }
+  .card-link:hover {
+    text-decoration: underline;
+  }
+
+  .sector-card {
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+  .sector-card h3 {
+    font-size: 1.2rem;
+    color: var(--color-navy);
+    margin-bottom: 0.75rem;
+  }
+  .sector-card p {
+    font-size: 0.925rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.55;
+  }
+
+  .bullet-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .bullet-list li {
+    font-size: 0.85rem;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .bullet-list li::before {
+    content: '✓';
+    color: #10B981;
+    font-weight: 700;
+  }
+
+  .scope-notice-section {
+    padding: 2rem 0;
+    background-color: #F1F5F9;
+  }
+  .scope-box {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    background: #ffffff;
+    border: 1px solid #CBD5E1;
+    border-left: 4px solid var(--color-navy);
+    border-radius: 8px;
+    padding: 1.25rem 1.75rem;
+  }
+  .scope-icon {
+    font-size: 1.75rem;
+  }
+  .scope-content h4 {
+    font-size: 0.95rem;
+    color: var(--color-navy);
+    margin-bottom: 0.25rem;
+  }
+  .scope-content p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+  }
+
+  .cta-banner {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    padding: 4.5rem 0;
+  }
+  .cta-banner h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+  .cta-banner p {
+    font-size: 1.05rem;
+    color: #CBD5E1;
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cta-btns {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 860px) {
+    .hero-title {
+      font-size: 2.15rem;
+    }
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+    .scope-box {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+

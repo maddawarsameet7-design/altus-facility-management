@@ -1,0 +1,271 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CookieBanner from '../components/CookieBanner.astro';
+import { siteConfig, hasRealAddress, hasRealServiceArea } from '../config/site';
+
+export interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  ogType?: string;
+  ogImage?: string;
+  jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
+  isDraftLegal?: boolean;
+}
+
+const {
+  title,
+  description,
+  canonicalPath = Astro.url.pathname,
+  ogType = 'website',
+  ogImage = '/og-image.png',
+  jsonLd,
+  isDraftLegal = false,
+} = Astro.props;
+
+// Determine staging status: env STAGING=true sets noindex
+const isStaging = import.meta.env.STAGING === 'true' || process.env.STAGING === 'true';
+const robotsDirective = isStaging ? 'noindex, nofollow' : 'index, follow';
+
+// Construct clean canonical URL
+const siteUrl = siteConfig.url.replace(/\/+$/, '');
+const normalizedPath = canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`;
+const canonicalUrl = `${siteUrl}${normalizedPath === '/' ? '' : normalizedPath}`;
+const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
+
+// Base Organization Schema
+const orgSchema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: siteConfig.name,
+  legalName: siteConfig.legalName,
+  url: siteConfig.url,
+  logo: `${siteUrl}/logo512.png`,
+  email: siteConfig.email,
+  telephone: siteConfig.phone,
+  sameAs: siteConfig.socialLinks.sameAs,
+};
+
+// Conditional LocalBusiness Schema (only if real address & service areas exist)
+const localBusinessSchema =
+  hasRealAddress(siteConfig) && hasRealServiceArea(siteConfig)
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'ProfessionalService',
+        name: siteConfig.name,
+        legalName: siteConfig.legalName,
+        url: siteConfig.url,
+        image: absoluteOgImage,
+        telephone: siteConfig.phone,
+        email: siteConfig.email,
+        openingHours: siteConfig.openingHours,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: siteConfig.address.streetAddress,
+          addressLocality: siteConfig.address.addressLocality,
+          addressRegion: siteConfig.address.addressRegion,
+          postalCode: siteConfig.address.postalCode,
+          addressCountry: siteConfig.address.addressCountry,
+        },
+        areaServed: siteConfig.serviceAreas,
+      }
+    : null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content={robotsDirective} />
+    <meta name="theme-color" content="#1B1837" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo16.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/logo192.png" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={absoluteOgImage} />
+    <meta property="og:site_name" content={siteConfig.name} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={canonicalUrl} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={absoluteOgImage} />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json" set:html={JSON.stringify(orgSchema)} />
+    {localBusinessSchema && (
+      <script type="application/ld+json" set:html={JSON.stringify(localBusinessSchema)} />
+    )}
+    {jsonLd && (
+      <script
+        type="application/ld+json"
+        set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : [jsonLd])}
+      />
+    )}
+
+    <!-- Global CSS Variables & Reset -->
+    <style is:global>
+      :root {
+        --color-navy: #1B1837;
+        --color-navy-dark: #121024;
+        --color-navy-light: #282452;
+        --color-coral: #FF6B6B;
+        --color-coral-hover: #FA5252;
+        --color-coral-dark: #E03131;
+        --color-bg: #F8FAFC;
+        --color-card-bg: #FFFFFF;
+        --color-text-main: #0F172A;
+        --color-text-muted: #475569;
+        --color-border: #E2E8F0;
+        --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        font-family: var(--font-sans);
+        background-color: var(--color-bg);
+        color: var(--color-text-main);
+        line-height: 1.6;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1;
+      }
+
+      /* Skip link for accessibility */
+      .skip-link {
+        position: absolute;
+        top: -100px;
+        left: 1rem;
+        background: var(--color-coral);
+        color: #ffffff;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        z-index: 9999;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: top 0.2s ease;
+      }
+      .skip-link:focus {
+        top: 1rem;
+      }
+
+      /* Legal Draft Notice */
+      .draft-banner {
+        background-color: #FEF3C7;
+        border-bottom: 2px solid #F59E0B;
+        color: #92400E;
+        padding: 0.85rem 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+      }
+
+      a {
+        color: var(--color-coral-dark);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      a:hover {
+        color: var(--color-coral-hover);
+      }
+
+      /* Base Button Styles */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+      }
+
+      .btn-primary {
+        background-color: var(--color-coral);
+        color: #ffffff !important;
+      }
+      .btn-primary:hover {
+        background-color: var(--color-coral-hover);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--color-navy) !important;
+        border: 2px solid var(--color-navy);
+      }
+      .btn-secondary:hover {
+        background-color: var(--color-navy);
+        color: #ffffff !important;
+      }
+
+      .btn-outline-light {
+        background-color: transparent;
+        color: #ffffff !important;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+      }
+      .btn-outline-light:hover {
+        border-color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    {isDraftLegal && (
+      <div class="draft-banner" role="alert">
+        ⚠️ <strong>DRAFT — PENDING LEGAL REVIEW:</strong> This document is a preliminary operational draft and is not finalized. It is excluded from public search indexes. Consult legal counsel before reliance.
+      </div>
+    )}
+
+    <Header />
+
+    <main id="main-content">
+      <slot />
+    </main>
+
+    <Footer />
+    <CookieBanner />
+  </body>
+</html>
+
