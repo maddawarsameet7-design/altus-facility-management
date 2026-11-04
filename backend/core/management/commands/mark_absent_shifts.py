@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from core.models import DailyRoster, Alert, LeaveRecord
+from core.models import DailyRoster, Alert, LeaveRecord, ReplacementRequest
 
 
 class Command(BaseCommand):
@@ -50,6 +50,7 @@ class Command(BaseCommand):
                         alert_type='UNFILLED',
                         defaults={'notes': 'Worker has approved leave; shift left unfilled.'}
                     )
+                    req_reason = 'LEAVE'
                     unfilled_count += 1
                 else:
                     slot.status = 'ABSENT'
@@ -60,6 +61,7 @@ class Command(BaseCommand):
                         alert_type='ABSENT',
                         defaults={'notes': f"Worker {slot.worker.user.username} did not clock in within {grace_minutes}m grace."}
                     )
+                    req_reason = 'ABSENT'
                     absent_count += 1
             else:
                 # Empty slot remains UNFILLED with an alert
@@ -71,7 +73,17 @@ class Command(BaseCommand):
                     alert_type='UNFILLED',
                     defaults={'notes': f"Slot #{slot.slot_number} on {slot.shift.name} had no worker assigned."}
                 )
+                req_reason = 'UNFILLED'
                 unfilled_count += 1
+
+            # Auto-open ReplacementRequest (idempotent, Amendment 4)
+            if not ReplacementRequest.objects.filter(roster_entry=slot, status__in=['OPEN', 'OFFERING', 'ESCALATED']).exists():
+                ReplacementRequest.objects.create(
+                    society=slot.society,
+                    roster_entry=slot,
+                    reason=req_reason,
+                    status='OPEN'
+                )
 
         self.stdout.write(self.style.SUCCESS(
             f"Evaluated unattended slots: Marked {absent_count} ABSENT, {unfilled_count} UNFILLED."

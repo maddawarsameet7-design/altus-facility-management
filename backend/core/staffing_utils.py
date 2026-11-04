@@ -1,6 +1,6 @@
 import math
 from datetime import datetime, time, timedelta
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -69,7 +69,6 @@ def get_shift_weekly_intervals(shift) -> List[Tuple[int, int]]:
         duration += 1440  # Crosses midnight into next day
 
     intervals = []
-    # Replicate across 2 consecutive weeks to catch Sunday -> Monday overnight wrap
     for week_offset in (0, 10080):
         for d in days:
             interval_start = week_offset + (d * 1440) + start_min
@@ -88,7 +87,6 @@ def shifts_overlap(shift1, shift2) -> bool:
 
     for s1, e1 in intervals1:
         for s2, e2 in intervals2:
-            # Check overlap in time
             if max(s1, s2) < min(e1, e2):
                 return True
     return False
@@ -115,7 +113,6 @@ def calculate_schedule_warnings(worker, new_assignment=None) -> List[str]:
     from .models import RosterAssignment
     warnings = []
 
-    # Gather all active assignments for worker across ALL societies
     assignments = list(RosterAssignment.objects.filter(
         worker=worker,
         status='ACTIVE'
@@ -124,7 +121,6 @@ def calculate_schedule_warnings(worker, new_assignment=None) -> List[str]:
     if new_assignment and new_assignment not in assignments:
         assignments.append(new_assignment)
 
-    # 1. Check daily minutes per weekday (0 to 6)
     daily_minutes = {d: 0 for d in range(7)}
     for asgn in assignments:
         shift = asgn.shift
@@ -142,10 +138,199 @@ def calculate_schedule_warnings(worker, new_assignment=None) -> List[str]:
         if mins > 720:  # 12 hours = 720 minutes
             warnings.append(f"Scheduled hours exceed 12h on {day_names[d]} ({round(mins/60, 1)}h).")
 
-    # 2. Check if all 7 days have scheduled shifts (no weekly off)
     active_days = {d for d, mins in daily_minutes.items() if mins > 0}
     if len(active_days) == 7:
         warnings.append("Worker has shifts scheduled on all 7 days of the week with no weekly off.")
 
     return warnings
 
+
+# ─── REPLACEMENT WORKFLOW ENGINE ─────────────────────────────────────────────
+
+def check_worker_hard_blocks(worker, slot, min_rest_gap_hours: int = 8) -> Tuple[bool, Optional[str], List[str]]:
+    """
+    Checks if worker is strictly ineligible to cover the given DailyRoster slot.
+    Returns: (is_blocked: bool, block_reason: Optional[str], warnings: List[str])
+
+    Hard blocks (cannot be bypassed by normal supervisor):
+      1. Not verified or suspended
+      2. Approved leave on slot.date
+      3. Overlapping shift datetime interval across ANY society
+      4. Rest gap between consecutive shifts < min_rest_gap_hours
+    """
+    from .models import LeaveRecord, DailyRoster
+
+    # 1. Verification status
+    if getattr(worker, 'verification_status', '') != 'VERIFIED':
+        return True, "Worker account is not verified.", []
+    if getattr(worker, 'status', '') == 'SUSPENDED':
+        return True, "Worker account is suspended.", []
+
+    # 2. Approved leave on slot.date
+    on_leave = LeaveRecord.objects.filter(
+        worker=worker,
+        start_date__lte=slot.date,
+        end_date__gte=slot.date,
+        status='APPROVED'
+    ).exists()
+    if on_leave:
+        return True, f"Worker is on approved leave on {slot.date.isoformat()}.", []
+
+    target_start = slot.shift_start_at
+    target_end = slot.shift_end_at
+
+    # 3. Cross-society shift interval overlap and rest gap
+    # Search all slots where worker is scheduled or covered in window [target_start - 24h, target_end + 24h]
+    window_start = target_start - timedelta(hours=24)
+    window_end = target_end + timedelta(hours=24)
+
+    nearby_slots = DailyRoster.objects.filter(
+        shift_start_at__lt=window_end,
+        shift_end_at__gt=window_start
+    ).filter(
+        # Worker is scheduled or covering
+        models_q_worker_in_slot(worker)
+    ).exclude(id=slot.id).select_related('shift', 'post')
+
+    daily_minutes_on_date = (target_end - target_start).total_seconds() / 60
+
+    for existing in nearby_slots:
+        # Check overlap
+        if max(target_start, existing.shift_start_at) < min(target_end, existing.shift_end_at):
+            return True, f"Shift overlaps with worker's existing shift '{existing.shift.name}'.", []
+
+        # Check rest gap (both before and after)
+        if existing.shift_end_at <= target_start:
+            gap_hours = (target_start - existing.shift_end_at).total_seconds() / 3600.0
+            if gap_hours < min_rest_gap_hours:
+                return True, f"Rest gap before shift is {round(gap_hours, 1)}h (minimum {min_rest_gap_hours}h required).", []
+
+        if target_end <= existing.shift_start_at:
+            gap_hours = (existing.shift_start_at - target_end).total_seconds() / 3600.0
+            if gap_hours < min_rest_gap_hours:
+                return True, f"Rest gap after shift is {round(gap_hours, 1)}h (minimum {min_rest_gap_hours}h required).", []
+
+        if existing.date == slot.date:
+            dur = (existing.shift_end_at - existing.shift_start_at).total_seconds() / 60
+            daily_minutes_on_date += dur
+
+    warnings = []
+    if daily_minutes_on_date > 720:  # > 12 hours
+        warnings.append(f"Total scheduled hours on {slot.date.isoformat()} would reach {round(daily_minutes_on_date/60, 1)}h (> 12h/day).")
+
+    return False, None, warnings
+
+
+def models_q_worker_in_slot(worker):
+    from django.db.models import Q
+    return Q(worker=worker, status__in=['SCHEDULED', 'PRESENT', 'COMPLETED']) | Q(covered_by=worker, status__in=['COVERED', 'COMPLETED'])
+
+
+def rank_replacement_candidates(replacement_request) -> List[Dict[str, Any]]:
+    """
+    Ranks all eligible reliever workers for a given ReplacementRequest.
+    Uses home pincode/area for proximity (NEVER live GPS of off-duty workers).
+    Returns list of dicts ordered by highest score.
+    """
+    from .models import WorkerProfile, DailyRoster, AttendanceEvent, Alert
+
+    slot = replacement_request.roster_entry
+    site = slot.post.site
+    post = slot.post
+    settings_obj = getattr(replacement_request.society, 'settings', None)
+    min_rest = getattr(settings_obj, 'min_rest_gap_hours', 8) if settings_obj else 8
+
+    # All verified workers across platform (workers are deployed across societies)
+    all_workers = WorkerProfile.objects.filter(
+        verification_status='VERIFIED'
+    ).select_related('user')
+
+    candidates = []
+
+    # Get Monday of slot's week
+    week_start = slot.date - timedelta(days=slot.date.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    for w in all_workers:
+        is_blocked, block_reason, warnings = check_worker_hard_blocks(w, slot, min_rest_gap_hours=min_rest)
+        if is_blocked:
+            continue
+
+        score = 0
+        reasons = []
+
+        # 1. Bench Availability on slot.date (+40 pts)
+        has_shift_today = DailyRoster.objects.filter(
+            date=slot.date
+        ).filter(
+            models_q_worker_in_slot(w)
+        ).exclude(id=slot.id).exists()
+
+        if not has_shift_today:
+            score += 40
+            reasons.append("Available on bench today (+40 pts)")
+        else:
+            reasons.append("Working another non-overlapping shift today (+0 pts)")
+
+        # 2. Category Match (+15 pts)
+        w_category = getattr(w, 'category', 'HOUSEKEEPING') or 'HOUSEKEEPING'
+        if w_category.upper() == post.category.upper():
+            score += 15
+            reasons.append(f"Category match ({post.category}) (+15 pts)")
+
+        # 3. Proximity via Home Area/Pincode (+15 pts max) — NEVER off-duty live GPS
+        w_pincode = getattr(w, 'home_pincode', '') or ''
+        site_pincode = getattr(site, 'pincode', '') or ''
+        w_area = getattr(w, 'home_area', '') or ''
+        site_area = getattr(site, 'area_name', '') or ''
+
+        if w_pincode and site_pincode and w_pincode.strip() == site_pincode.strip():
+            score += 15
+            reasons.append(f"Home pincode match ({w_pincode}) (+15 pts)")
+        elif w_area and site_area and (w_area.lower() in site_area.lower() or site_area.lower() in w_area.lower()):
+            score += 10
+            reasons.append(f"Home area proximity ({w_area}) (+10 pts)")
+
+        # 4. Reliability Score (Attendance vs No-Shows/Absent) (+20 pts max)
+        total_slots = DailyRoster.objects.filter(worker=w, date__lt=slot.date).count()
+        absent_count = Alert.objects.filter(roster_entry__worker=w, alert_type='ABSENT').count()
+        if total_slots > 0:
+            completed_ratio = max(0.0, float(total_slots - absent_count) / float(total_slots))
+            rel_score = int(completed_ratio * 20)
+            score += rel_score
+            reasons.append(f"Reliability history ({int(completed_ratio*100)}% attendance) (+{rel_score} pts)")
+        else:
+            score += 15  # Neutral starting score for newly verified worker
+            reasons.append("Reliability baseline (+15 pts)")
+
+        # 5. Fewer hours worked this week (+10 pts max)
+        weekly_slots = DailyRoster.objects.filter(
+            date__gte=week_start,
+            date__lte=week_end
+        ).filter(models_q_worker_in_slot(w))
+
+        weekly_hours = 0.0
+        for s in weekly_slots:
+            weekly_hours += (s.shift_end_at - s.shift_start_at).total_seconds() / 3600.0
+
+        if weekly_hours < 20:
+            score += 10
+            reasons.append(f"Low weekly workload ({round(weekly_hours, 1)}h worked) (+10 pts)")
+        elif weekly_hours < 35:
+            score += 5
+            reasons.append(f"Moderate weekly workload ({round(weekly_hours, 1)}h worked) (+5 pts)")
+
+        candidates.append({
+            "worker_id": str(w.id),
+            "name": f"{w.user.first_name} {w.user.last_name}".strip() or w.user.username,
+            "score": score,
+            "reasons": reasons,
+            "warnings": warnings,
+            "hours_this_week": round(weekly_hours, 1),
+            "home_pincode": w_pincode,
+            "home_area": w_area
+        })
+
+    # Sort descending by score
+    candidates.sort(key=lambda c: c['score'], reverse=True)
+    return candidates

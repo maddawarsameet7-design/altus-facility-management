@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from django.http import Http404, FileResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime, parse_date
 
@@ -21,15 +22,16 @@ from rest_framework.throttling import ScopedRateThrottle
 from .models import (
     Post, Shift, RosterAssignment, DailyRoster, LeaveRecord,
     AttendanceEvent, Alert, AuditLog, WorkerProfile, Site, Society,
-    Membership
+    Membership, ReplacementRequest, ReplacementOffer, Notification
 )
 from .mixins import SocietyScopedMixin, get_user_society_ids
 from .permissions import IsWorker, IsOpsUser, IsDirectorOnly
-from .staffing_utils import is_within_geofence
+from .staffing_utils import is_within_geofence, rank_replacement_candidates, check_worker_hard_blocks
 from .serializers_staffing import (
     PostSerializer, ShiftSerializer, RosterAssignmentSerializer,
     DailyRosterSerializer, LeaveRecordSerializer, AttendanceEventSerializer,
-    AlertSerializer, AuditLogSerializer
+    AlertSerializer, AuditLogSerializer, ReplacementRequestSerializer,
+    ReplacementOfferSerializer, NotificationSerializer
 )
 
 
@@ -79,14 +81,26 @@ class RosterClockInView(APIView):
             except DailyRoster.DoesNotExist:
                 return Response({"error": "Roster slot not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Ensure slot is assigned to this worker or covering
-            if slot.worker_id != worker.id and slot.covered_by_id != worker.id:
-                return Response({"error": "You are not assigned to this roster slot."}, status=status.HTTP_403_FORBIDDEN)
+            # Amendment 1: Once a slot is COVERED, the original worker's clock-in returns 409
+            if slot.status == 'COVERED':
+                if slot.covered_by_id == worker.id:
+                    pass  # Replacement worker is allowed
+                elif slot.worker_id == worker.id:
+                    return Response(
+                        {"error": "This slot has been reassigned to a replacement worker."},
+                        status=status.HTTP_409_CONFLICT
+                    )
+                else:
+                    return Response({"error": "You are not assigned to this roster slot."}, status=status.HTTP_403_FORBIDDEN)
+            else:
+                if slot.worker_id != worker.id and slot.covered_by_id != worker.id:
+                    return Response({"error": "You are not assigned to this roster slot."}, status=status.HTTP_403_FORBIDDEN)
         else:
             # Deterministic slot resolution for the current time window
             # Window: [shift_start_at - early_window, shift_end_at]
+            from django.db.models import Q
             eligible_slots = DailyRoster.objects.filter(
-                worker=worker,
+                (Q(worker=worker) & ~Q(status='COVERED')) | Q(covered_by=worker),
                 date__gte=now.date() - timedelta(days=1),
                 date__lte=now.date() + timedelta(days=1)
             ).select_related('post__site', 'society__settings', 'shift')
@@ -127,9 +141,9 @@ class RosterClockInView(APIView):
         settings_obj = getattr(slot.society, 'settings', None)
 
         # ── GPS Geofence & Accuracy Validation ──
-        lat = request.data.get('lat')
-        lng = request.data.get('lng')
-        accuracy = request.data.get('accuracy')
+        lat = request.data.get('lat') if request.data.get('lat') is not None else request.data.get('latitude')
+        lng = request.data.get('lng') if request.data.get('lng') is not None else request.data.get('longitude')
+        accuracy = request.data.get('accuracy') if request.data.get('accuracy') is not None else request.data.get('gps_accuracy_m')
         is_mock = request.data.get('is_mock', False)
         if isinstance(is_mock, str):
             is_mock = is_mock.lower() in ('true', '1', 't')
@@ -573,6 +587,14 @@ class LeaveRecordViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
                 alert_type='UNFILLED',
                 defaults={'notes': f"Worker {leave.worker.user.username} approved for {leave.leave_type}; slot marked unfilled."}
             )
+            if not ReplacementRequest.objects.filter(roster_entry=slot, status__in=['OPEN', 'OFFERING', 'ESCALATED']).exists():
+                ReplacementRequest.objects.create(
+                    society=slot.society,
+                    roster_entry=slot,
+                    reason='LEAVE',
+                    status='OPEN',
+                    created_by=request.user
+                )
 
         return Response(LeaveRecordSerializer(leave).data, status=status.HTTP_200_OK)
 
@@ -756,6 +778,7 @@ class MarkSlotAbsentView(APIView):
                     alert_type='UNFILLED',
                     defaults={'notes': 'Worker on approved leave; slot kept unfilled.'}
                 )
+                req_reason = 'LEAVE'
             else:
                 slot.status = 'ABSENT'
                 slot.save(update_fields=['status', 'updated_at'])
@@ -765,6 +788,7 @@ class MarkSlotAbsentView(APIView):
                     alert_type='ABSENT',
                     defaults={'notes': notes}
                 )
+                req_reason = 'ABSENT'
         else:
             # Empty slot stays UNFILLED
             slot.status = 'UNFILLED'
@@ -774,6 +798,16 @@ class MarkSlotAbsentView(APIView):
                 roster_entry=slot,
                 alert_type='UNFILLED',
                 defaults={'notes': 'Slot unassigned and unfilled.'}
+            )
+            req_reason = 'UNFILLED'
+
+        if not ReplacementRequest.objects.filter(roster_entry=slot, status__in=['OPEN', 'OFFERING', 'ESCALATED']).exists():
+            ReplacementRequest.objects.create(
+                society=slot.society,
+                roster_entry=slot,
+                reason=req_reason,
+                status='OPEN',
+                created_by=request.user
             )
 
         return Response(DailyRosterSerializer(slot).data, status=status.HTTP_200_OK)
@@ -801,4 +835,501 @@ class UnfilledRosterView(APIView):
                 qs = qs.filter(date=target_date)
 
         return Response(DailyRosterSerializer(qs.order_by('date', 'shift_start_at')[:100], many=True).data)
+
+
+# ─── REPLACEMENT WORKFLOW VIEWSETS & ENDPOINTS ───────────────────────────────
+
+class ReplacementRequestViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
+    """
+    CRUD and operational actions on ReplacementRequest.
+    Scoped by society; Ops users (Supervisor/Director) only.
+    """
+    queryset = ReplacementRequest.objects.select_related(
+        'society', 'roster_entry__post__site', 'roster_entry__shift', 'filled_by_worker__user'
+    ).prefetch_related('offers__worker__user').all()
+    serializer_class = ReplacementRequestSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOpsUser]
+    society_field = 'society'
+
+    @action(detail=True, methods=['get'])
+    def candidates(self, request, pk=None):
+        """
+        GET /api/roster/replacements/{id}/candidates/
+        Returns ranked eligible reliever workers based on bench availability,
+        category match, home proximity (never live GPS), reliability history,
+        and weekly workload.
+        """
+        req = self.get_object()
+        ranked = rank_replacement_candidates(req)
+        return Response(ranked)
+
+    @action(detail=True, methods=['post'], url_path='dispatch-offers')
+    def dispatch_offers(self, request, pk=None):
+        """
+        POST /api/roster/replacements/{id}/dispatch-offers/
+        Body: {"worker_ids": ["uuid", ...]}
+        Dispatches offers with expiry timer and in-app notifications.
+        Audited in AuditLog.
+        """
+        req = self.get_object()
+        if req.status not in ['OPEN', 'OFFERING', 'ESCALATED']:
+            return Response(
+                {"error": f"Cannot dispatch offers for replacement in status '{req.status}'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        worker_ids = request.data.get('worker_ids', [])
+        if not worker_ids or not isinstance(worker_ids, list):
+            return Response({"error": "worker_ids must be a non-empty list of UUIDs."}, status=status.HTTP_400_BAD_REQUEST)
+
+        settings_obj = getattr(req.society, 'settings', None)
+        expiry_min = getattr(settings_obj, 'replacement_offer_expiry_minutes', 15) if settings_obj else 15
+        now = timezone.now()
+        expires_at = now + timedelta(minutes=expiry_min)
+
+        dispatched = []
+        for wid in worker_ids:
+            try:
+                worker = WorkerProfile.objects.select_related('user').get(id=wid)
+            except (WorkerProfile.DoesNotExist, ValueError):
+                continue
+
+            is_blocked, reason, _ = check_worker_hard_blocks(worker, req.roster_entry)
+            if is_blocked:
+                continue
+
+            offer, created = ReplacementOffer.objects.get_or_create(
+                request=req,
+                worker=worker,
+                defaults={
+                    'society': req.society,
+                    'expires_at': expires_at,
+                    'status': 'OFFERED'
+                }
+            )
+            if created:
+                Notification.objects.create(
+                    society=req.society,
+                    recipient=worker.user,
+                    notification_type='REPLACEMENT_OFFER',
+                    title='Shift Replacement Offer',
+                    body=f"Replacement available at {req.roster_entry.post.name} ({req.roster_entry.shift.name}) on {req.roster_entry.date}.",
+                    related_model='ReplacementOffer',
+                    related_id=offer.id
+                )
+                dispatched.append(str(worker.id))
+
+        if not dispatched and not req.offers.filter(status='OFFERED').exists():
+            return Response(
+                {"error": "No eligible offers could be dispatched. Workers may have hard blocks or invalid IDs."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if req.status == 'OPEN':
+            req.status = 'OFFERING'
+            req.save(update_fields=['status', 'updated_at'])
+
+        AuditLog.objects.create(
+            society=req.society,
+            actor=request.user,
+            action='DISPATCH_REPLACEMENT_OFFERS',
+            target_model='ReplacementRequest',
+            target_id=req.id,
+            changes={'dispatched_workers': dispatched, 'expires_at': expires_at.isoformat()},
+            reason='Dispatched replacement offers'
+        )
+
+        return Response(ReplacementRequestSerializer(req).data)
+
+    @action(detail=True, methods=['post'], url_path='direct-assign')
+    def direct_assign(self, request, pk=None):
+        """
+        POST /api/roster/replacements/{id}/direct-assign/
+        Body: {"worker_id": "uuid", "acknowledge_warnings": bool, "director_override_reason": str}
+        Hard blocks cannot be bypassed. Warnings require acknowledgment.
+        Director override requires a reason.
+        """
+        req = self.get_object()
+        if req.status in ['FILLED', 'CANCELLED']:
+            return Response(
+                {"error": f"Cannot direct-assign replacement in status '{req.status}'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        worker_id = request.data.get('worker_id')
+        if not worker_id:
+            return Response({"error": "worker_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        worker = get_object_or_404(WorkerProfile, id=worker_id)
+        ack_warnings = request.data.get('acknowledge_warnings', False)
+        director_override = request.data.get('director_override_reason', '').strip()
+
+        is_blocked, block_reason, warnings = check_worker_hard_blocks(worker, req.roster_entry)
+        if is_blocked:
+            return Response({"error": f"Hard block: {block_reason}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if warnings:
+            if request.user.role == 'DIRECTOR':
+                if not director_override and not ack_warnings:
+                    return Response({
+                        "error": "Director override reason or warning acknowledgment required.",
+                        "warnings": warnings
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                if not ack_warnings:
+                    return Response({
+                        "error": "Warnings must be acknowledged to proceed with assignment.",
+                        "warnings": warnings
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            slot = req.roster_entry
+            slot.covered_by = worker
+            slot.status = 'COVERED'
+            slot.save(update_fields=['covered_by', 'status', 'updated_at'])
+
+            req.status = 'FILLED'
+            req.filled_by_worker = worker
+            req.filled_at = timezone.now()
+            req.save(update_fields=['status', 'filled_by_worker', 'filled_at', 'updated_at'])
+
+            # Withdraw any pending offers
+            req.offers.filter(status='OFFERED').update(status='WITHDRAWN')
+
+            AuditLog.objects.create(
+                society=req.society,
+                actor=request.user,
+                action='DIRECT_ASSIGN_REPLACEMENT',
+                target_model='ReplacementRequest',
+                target_id=req.id,
+                changes={'worker_id': str(worker.id), 'slot_id': str(slot.id), 'warnings': warnings},
+                reason=director_override or f"Direct assigned by {request.user.role} with warnings acknowledged."
+            )
+
+        return Response(ReplacementRequestSerializer(req).data)
+
+    @action(detail=True, methods=['post'], url_path='confirm-by-phone')
+    def confirm_by_phone(self, request, pk=None):
+        """
+        POST /api/roster/replacements/{id}/confirm-by-phone/
+        Body: {"worker_id": "uuid", "notes": str}
+        Supervisor confirms replacement verbally over phone.
+        Audited action. Hard blocks strictly enforced.
+        """
+        req = self.get_object()
+        if req.status in ['FILLED', 'CANCELLED']:
+            return Response(
+                {"error": f"Cannot confirm replacement in status '{req.status}'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        notes = request.data.get('notes', '').strip()
+        if not notes:
+            return Response({"error": "Phone confirmation notes are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        worker_id = request.data.get('worker_id')
+        if not worker_id:
+            return Response({"error": "worker_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        worker = get_object_or_404(WorkerProfile, id=worker_id)
+        is_blocked, block_reason, warnings = check_worker_hard_blocks(worker, req.roster_entry)
+        if is_blocked:
+            return Response({"error": f"Hard block: {block_reason}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            slot = req.roster_entry
+            slot.covered_by = worker
+            slot.status = 'COVERED'
+            slot.save(update_fields=['covered_by', 'status', 'updated_at'])
+
+            req.status = 'FILLED'
+            req.filled_by_worker = worker
+            req.filled_at = timezone.now()
+            req.save(update_fields=['status', 'filled_by_worker', 'filled_at', 'updated_at'])
+
+            req.offers.filter(status='OFFERED').update(status='WITHDRAWN')
+
+            AuditLog.objects.create(
+                society=req.society,
+                actor=request.user,
+                action='CONFIRM_BY_PHONE',
+                target_model='ReplacementRequest',
+                target_id=req.id,
+                changes={'worker_id': str(worker.id), 'slot_id': str(slot.id)},
+                reason=notes
+            )
+
+        return Response(ReplacementRequestSerializer(req).data)
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """
+        POST /api/roster/replacements/{id}/cancel/
+        Body: {"reason": str}
+        Cancels replacement request. If slot was COVERED, restores it to SCHEDULED/UNFILLED
+        and re-enables original worker clock-in.
+        """
+        req = self.get_object()
+        reason = request.data.get('reason', 'Cancelled by supervisor')
+
+        with transaction.atomic():
+            slot = req.roster_entry
+            if slot.status == 'COVERED':
+                slot.covered_by = None
+                slot.status = 'SCHEDULED' if slot.worker else 'UNFILLED'
+                slot.save(update_fields=['covered_by', 'status', 'updated_at'])
+
+            req.status = 'CANCELLED'
+            req.save(update_fields=['status', 'updated_at'])
+
+            req.offers.filter(status='OFFERED').update(status='WITHDRAWN')
+
+            AuditLog.objects.create(
+                society=req.society,
+                actor=request.user,
+                action='CANCEL_REPLACEMENT',
+                target_model='ReplacementRequest',
+                target_id=req.id,
+                changes={'slot_id': str(slot.id), 'restored_status': slot.status},
+                reason=reason
+            )
+
+        return Response(ReplacementRequestSerializer(req).data)
+
+
+class MyOffersView(APIView):
+    """
+    GET /api/roster/my-offers/
+    Returns active, unexpired replacement offers dispatched to the authenticated worker.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsWorker]
+
+    def get(self, request):
+        worker = getattr(request.user, 'worker_profile', None)
+        if not worker:
+            return Response({"error": "Worker profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        now = timezone.now()
+        offers = ReplacementOffer.objects.filter(
+            worker=worker,
+            status='OFFERED',
+            expires_at__gt=now
+        ).select_related(
+            'request__roster_entry__post__site',
+            'request__roster_entry__shift',
+            'society'
+        )
+        return Response(ReplacementOfferSerializer(offers, many=True).data)
+
+
+class AcceptOfferView(APIView):
+    """
+    POST /api/roster/offers/{id}/accept/
+    Worker accepts an active replacement offer.
+    Amendment 3: Enforces DB-level concurrency via atomic conditional update checking rows affected.
+    If another worker accepted first, returns HTTP 409 Conflict immediately.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsWorker]
+
+    def post(self, request, pk):
+        worker = getattr(request.user, 'worker_profile', None)
+        if not worker:
+            return Response({"error": "Worker profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            offer = ReplacementOffer.objects.select_related('request__roster_entry', 'society').get(pk=pk, worker=worker)
+        except ReplacementOffer.DoesNotExist:
+            raise Http404
+
+        now = timezone.now()
+        if offer.expires_at <= now:
+            return Response({"error": "Offer has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            # Conditional atomic update: first accept wins, rows == 0 returns 409
+            rows = ReplacementOffer.objects.filter(
+                id=offer.id,
+                status='OFFERED',
+                expires_at__gt=now,
+                request__status__in=['OPEN', 'OFFERING', 'ESCALATED']
+            ).update(status='ACCEPTED', responded_at=now)
+
+            if rows == 0:
+                return Response(
+                    {"error": "Offer is no longer available or another worker has already accepted."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
+            offer.refresh_from_db()
+            req = offer.request
+            slot = req.roster_entry
+
+            # Set slot to COVERED by this worker
+            slot.covered_by = worker
+            slot.status = 'COVERED'
+            slot.save(update_fields=['covered_by', 'status', 'updated_at'])
+
+            # Set request to FILLED
+            req.status = 'FILLED'
+            req.filled_by_worker = worker
+            req.filled_at = now
+            req.save(update_fields=['status', 'filled_by_worker', 'filled_at', 'updated_at'])
+
+            # Withdraw all other pending offers for this request
+            ReplacementOffer.objects.filter(request=req, status='OFFERED').exclude(id=offer.id).update(status='WITHDRAWN')
+
+            # Audit acceptance
+            AuditLog.objects.create(
+                society=req.society,
+                actor=request.user,
+                action='ACCEPT_OFFER',
+                target_model='ReplacementOffer',
+                target_id=offer.id,
+                changes={'worker': worker.user.username, 'slot_id': str(slot.id)},
+                reason='Replacement offer accepted by worker'
+            )
+
+        return Response(ReplacementOfferSerializer(offer).data, status=status.HTTP_200_OK)
+
+
+class DeclineOfferView(APIView):
+    """
+    POST /api/roster/offers/{id}/decline/
+    Worker declines a replacement offer. Audited action.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsWorker]
+
+    def post(self, request, pk):
+        worker = getattr(request.user, 'worker_profile', None)
+        if not worker:
+            return Response({"error": "Worker profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            offer = ReplacementOffer.objects.select_related('society').get(pk=pk, worker=worker)
+        except ReplacementOffer.DoesNotExist:
+            raise Http404
+
+        reason = request.data.get('reason', '').strip()
+        offer.status = 'DECLINED'
+        offer.decline_reason = reason
+        offer.responded_at = timezone.now()
+        offer.save(update_fields=['status', 'decline_reason', 'responded_at', 'updated_at'])
+
+        AuditLog.objects.create(
+            society=offer.society,
+            actor=request.user,
+            action='DECLINE_OFFER',
+            target_model='ReplacementOffer',
+            target_id=offer.id,
+            changes={'decline_reason': reason},
+            reason=reason or 'Worker declined replacement offer'
+        )
+
+        return Response(ReplacementOfferSerializer(offer).data, status=status.HTTP_200_OK)
+
+
+class ReplacementMetricsView(APIView):
+    """
+    GET /api/roster/replacements/metrics/?month=YYYY-MM&society=UUID
+    Amendment 10: Computes non-cancelled requests denominator, fill rate %,
+    fill-before-shift-start rate %, and P90 time-to-fill using nearest-rank method.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsOpsUser]
+
+    def get(self, request):
+        import math
+        from calendar import monthrange
+        from datetime import date
+
+        month_str = request.query_params.get('month')
+        now = timezone.now()
+        if not month_str:
+            month_str = now.strftime('%Y-%m')
+
+        try:
+            year, month = map(int, month_str.split('-'))
+            _, last_day = monthrange(year, month)
+            start_d = date(year, month, 1)
+            end_d = date(year, month, last_day)
+        except Exception:
+            return Response({"error": "Invalid month format. Expected YYYY-MM."}, status=status.HTTP_400_BAD_REQUEST)
+
+        qs = ReplacementRequest.objects.filter(
+            opened_at__date__gte=start_d,
+            opened_at__date__lte=end_d
+        )
+
+        if request.user.role == 'SUPERVISOR':
+            user_soc_ids = get_user_society_ids(request.user)
+            qs = qs.filter(society__in=user_soc_ids)
+        elif request.query_params.get('society'):
+            qs = qs.filter(society_id=request.query_params.get('society'))
+
+        non_cancelled = qs.exclude(status='CANCELLED')
+        total = non_cancelled.count()
+        filled_requests = list(non_cancelled.filter(status='FILLED').select_related('roster_entry'))
+        filled_count = len(filled_requests)
+
+        fill_rate_pct = round((filled_count / total * 100), 1) if total > 0 else 0.0
+
+        fill_before_start = sum(
+            1 for r in filled_requests
+            if r.filled_at and r.roster_entry.shift_start_at and r.filled_at <= r.roster_entry.shift_start_at
+        )
+        fill_before_start_pct = round((fill_before_start / total * 100), 1) if total > 0 else 0.0
+
+        time_deltas = [
+            (r.filled_at - r.opened_at).total_seconds() / 60.0
+            for r in filled_requests
+            if r.filled_at and r.opened_at
+        ]
+
+        if time_deltas:
+            avg_time = round(sum(time_deltas) / len(time_deltas), 1)
+            sorted_deltas = sorted(time_deltas)
+            # P90 Nearest-Rank method: index = ceil(0.90 * N) - 1 (0-indexed)
+            p90_idx = max(0, min(len(sorted_deltas) - 1, math.ceil(0.90 * len(sorted_deltas)) - 1))
+            p90_time = round(sorted_deltas[p90_idx], 1)
+        else:
+            avg_time = None
+            p90_time = None
+
+        return Response({
+            "month": month_str,
+            "total_non_cancelled": total,
+            "filled_count": filled_count,
+            "fill_rate_pct": fill_rate_pct,
+            "fill_before_shift_start_count": fill_before_start,
+            "fill_before_shift_start_pct": fill_before_start_pct,
+            "avg_time_to_fill_minutes": avg_time,
+            "p90_time_to_fill_minutes": p90_time,
+            "p90_method": "nearest_rank (sorted_deltas[ceil(0.90 * N) - 1])"
+        })
+
+
+class NotificationViewSet(SocietyScopedMixin, viewsets.ReadOnlyModelViewSet):
+    """
+    List and manage in-app notifications for the authenticated user.
+    """
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    society_field = 'society'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(recipient=self.request.user).order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def read(self, request, pk=None):
+        notif = self.get_object()
+        notif.read_at = timezone.now()
+        notif.save(update_fields=['read_at'])
+        return Response(NotificationSerializer(notif).data)
+
+    @action(detail=False, methods=['post'], url_path='mark-all-read')
+    def mark_all_read(self, request):
+        Notification.objects.filter(recipient=request.user, read_at__isnull=True).update(read_at=timezone.now())
+        return Response({"status": "All notifications marked as read."})
+
 

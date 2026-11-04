@@ -39,7 +39,9 @@ from core.views_staffing import (
     LeaveRecordViewSet, AlertViewSet, AuditLogViewSet,
     RosterClockInView, RosterClockOutView, RosterBoardTodayView,
     MyScheduleView, MarkSlotAbsentView, UnfilledRosterView,
-    AttendanceCorrectionView, SelfieDownloadView
+    AttendanceCorrectionView, SelfieDownloadView,
+    ReplacementRequestViewSet, MyOffersView, AcceptOfferView,
+    DeclineOfferView, ReplacementMetricsView, NotificationViewSet
 )
 
 router = DefaultRouter()
@@ -61,6 +63,8 @@ router.register(r'roster/daily', DailyRosterViewSet, basename='roster-daily')
 router.register(r'roster/leaves', LeaveRecordViewSet, basename='roster-leave')
 router.register(r'roster/alerts', AlertViewSet, basename='roster-alert')
 router.register(r'roster/audit-logs', AuditLogViewSet, basename='roster-audit-log')
+router.register(r'roster/replacements', ReplacementRequestViewSet, basename='roster-replacement')
+router.register(r'notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -94,6 +98,12 @@ urlpatterns = [
     path('api/roster/<uuid:pk>/mark-absent/', MarkSlotAbsentView.as_view(), name='roster_mark_absent'),
     path('api/roster/attendance/<uuid:pk>/correct/', AttendanceCorrectionView.as_view(), name='roster_attendance_correct'),
     path('api/roster/attendance/<uuid:pk>/selfie/', SelfieDownloadView.as_view(), name='roster_attendance_selfie'),
+
+    # Replacement workflow endpoints
+    path('api/roster/my-offers/', MyOffersView.as_view(), name='roster_my_offers'),
+    path('api/roster/offers/<uuid:pk>/accept/', AcceptOfferView.as_view(), name='roster_offer_accept'),
+    path('api/roster/offers/<uuid:pk>/decline/', DeclineOfferView.as_view(), name='roster_offer_decline'),
+    path('api/roster/replacements/metrics/', ReplacementMetricsView.as_view(), name='roster_replacements_metrics'),
 
     # Worker location update (REST fallback)
     path('api/workers/location/', WorkerLocationUpdateView.as_view(), name='worker_location_update'),

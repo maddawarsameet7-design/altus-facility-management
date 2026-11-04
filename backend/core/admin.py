@@ -7,6 +7,7 @@ from .models import (
     Society, Site, Membership, SocietySettings, InviteCode,
     Post, Shift, RosterAssignment, DailyRoster, LeaveRecord,
     AttendanceEvent, Alert, AuditLog,
+    ReplacementRequest, ReplacementOffer, Notification,
 )
 
 
@@ -149,3 +150,6 @@ admin.site.register(LeaveRecord)
 admin.site.register(AttendanceEvent)
 admin.site.register(Alert)
 admin.site.register(AuditLog)
+admin.site.register(ReplacementRequest)
+admin.site.register(ReplacementOffer)
+admin.site.register(Notification)

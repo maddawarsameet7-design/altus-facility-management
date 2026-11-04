@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from core.models import Shift, RosterAssignment, DailyRoster, LeaveRecord
+from core.models import Shift, RosterAssignment, DailyRoster, LeaveRecord, ReplacementRequest
 from core.staffing_utils import parse_days_of_week
 
 
@@ -108,6 +108,16 @@ class Command(BaseCommand):
                                 slot.shift_end_at = end_dt
                                 slot.save(update_fields=['worker', 'status', 'shift_start_at', 'shift_end_at', 'updated_at'])
                                 updated_count += 1
+
+                    # Amendment 4: Auto-open ReplacementRequest for unfilled slots close to start (<= 24h)
+                    if slot.status == 'UNFILLED' and now < slot.shift_start_at <= (now + timedelta(hours=24)):
+                        if not ReplacementRequest.objects.filter(roster_entry=slot, status__in=['OPEN', 'OFFERING', 'ESCALATED']).exists():
+                            ReplacementRequest.objects.create(
+                                society=shift.society,
+                                roster_entry=slot,
+                                reason='UNFILLED',
+                                status='OPEN'
+                            )
 
         self.stdout.write(self.style.SUCCESS(
             f"Roster generation complete for {days} days from {start_date}. "

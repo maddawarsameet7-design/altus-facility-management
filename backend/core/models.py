@@ -70,6 +70,8 @@ class Site(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     geofence_radius_m = models.IntegerField(default=100)
     max_gps_accuracy_m = models.FloatField(default=50.0)
+    pincode = models.CharField(max_length=10, blank=True, null=True)
+    area_name = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -145,6 +147,9 @@ class SocietySettings(models.Model):
     early_leave_minutes = models.IntegerField(default=15)
     overtime_threshold_minutes = models.IntegerField(default=30)
     complaint_escalation_hours = models.IntegerField(default=24)
+    replacement_offer_expiry_minutes = models.IntegerField(default=15)
+    replacement_escalation_minutes = models.IntegerField(default=60)
+    min_rest_gap_hours = models.IntegerField(default=8)
 
     class Meta:
         verbose_name_plural = 'Society Settings'
@@ -263,6 +268,13 @@ class WorkerProfile(models.Model):
     current_lat = models.FloatField(null=True, blank=True)
     current_lng = models.FloatField(null=True, blank=True)
     last_location_update = models.DateTimeField(null=True, blank=True)
+    home_pincode = models.CharField(max_length=10, blank=True, null=True)
+    home_area = models.CharField(max_length=100, blank=True, null=True)
+    category = models.CharField(max_length=30, default='HOUSEKEEPING')
+    device_id = models.CharField(max_length=100, blank=True, null=True)
+    last_login_at = models.DateTimeField(null=True, blank=True)
+    sessions_revoked_at = models.DateTimeField(null=True, blank=True)
+    new_device_approved = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
@@ -838,3 +850,146 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.actor.username} {self.action} on {self.target_model}:{self.target_id}"
+
+
+# ─── REPLACEMENT WORKFLOW MODELS ─────────────────────────────────────────────
+
+class ReplacementRequest(models.Model):
+    """
+    Staffing replacement request opened when a scheduled worker is absent,
+    on leave, or when a slot is unfilled.
+    Enforces that only one active replacement request exists per DailyRoster slot at DB level.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='replacement_requests')
+    roster_entry = models.ForeignKey(DailyRoster, on_delete=models.CASCADE, related_name='replacement_requests')
+    REASON_CHOICES = [
+        ('ABSENT', 'Worker Absent'),
+        ('LEAVE', 'Approved Leave'),
+        ('UNFILLED', 'Unfilled Slot'),
+        ('MANUAL', 'Manual Request'),
+    ]
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES, default='UNFILLED')
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('OFFERING', 'Offers Dispatched'),
+        ('FILLED', 'Filled'),
+        ('ESCALATED', 'Escalated'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    opened_at = models.DateTimeField(auto_now_add=True)
+    filled_at = models.DateTimeField(null=True, blank=True)
+    filled_by_worker = models.ForeignKey(WorkerProfile, null=True, blank=True, on_delete=models.SET_NULL, related_name='filled_replacements')
+    escalated_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_replacements')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['roster_entry'],
+                condition=models.Q(status__in=['OPEN', 'OFFERING', 'ESCALATED']),
+                name='unique_active_replacement_per_slot'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['society', 'status']),
+            models.Index(fields=['roster_entry', 'status']),
+        ]
+        ordering = ['-opened_at']
+
+    def clean(self):
+        super().clean()
+        if self.roster_entry_id and self.society_id:
+            if self.roster_entry.society_id != self.society_id:
+                raise ValidationError({'roster_entry': 'Roster entry must belong to the same society as ReplacementRequest.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Replacement for {self.roster_entry} [{self.status}]"
+
+
+class ReplacementOffer(models.Model):
+    """
+    An offer dispatched to a reliever worker for an open replacement request.
+    DB constraint enforces only one ACCEPTED offer per request.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='replacement_offers')
+    request = models.ForeignKey(ReplacementRequest, on_delete=models.CASCADE, related_name='offers')
+    worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='replacement_offers')
+    STATUS_CHOICES = [
+        ('OFFERED', 'Offered'),
+        ('ACCEPTED', 'Accepted'),
+        ('DECLINED', 'Declined'),
+        ('EXPIRED', 'Expired'),
+        ('WITHDRAWN', 'Withdrawn'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OFFERED')
+    offered_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    decline_reason = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['request'],
+                condition=models.Q(status='ACCEPTED'),
+                name='unique_accepted_offer_per_request'
+            ),
+            models.UniqueConstraint(
+                fields=['request', 'worker'],
+                name='unique_offer_per_request_worker'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['society', 'status']),
+            models.Index(fields=['worker', 'status']),
+        ]
+        ordering = ['-offered_at']
+
+    def clean(self):
+        super().clean()
+        if self.request_id and self.society_id:
+            if self.request.society_id != self.society_id:
+                raise ValidationError({'request': 'Request must belong to the same society as ReplacementOffer.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Offer to {self.worker.user.username} for Request {self.request_id} [{self.status}]"
+
+
+class Notification(models.Model):
+    """
+    In-app notifications for workers and supervisors.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='notifications')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=50)
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    related_model = models.CharField(max_length=50, blank=True)
+    related_id = models.UUIDField(null=True, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['recipient', 'read_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.recipient.username}: {self.title}"

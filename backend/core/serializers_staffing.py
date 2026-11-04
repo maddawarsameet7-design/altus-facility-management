@@ -2,7 +2,8 @@ import os
 from rest_framework import serializers
 from .models import (
     Post, Shift, RosterAssignment, DailyRoster, LeaveRecord,
-    AttendanceEvent, Alert, AuditLog, WorkerProfile, Site, Society
+    AttendanceEvent, Alert, AuditLog, WorkerProfile, Site, Society,
+    ReplacementRequest, ReplacementOffer, Notification
 )
 from .staffing_utils import calculate_schedule_warnings
 
@@ -174,4 +175,72 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'target_model', 'target_id', 'changes', 'reason', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
+
+class ReplacementOfferSerializer(serializers.ModelSerializer):
+    worker_name = serializers.SerializerMethodField()
+    post_name = serializers.CharField(source='request.roster_entry.post.name', read_only=True)
+    shift_name = serializers.CharField(source='request.roster_entry.shift.name', read_only=True)
+    shift_date = serializers.DateField(source='request.roster_entry.date', read_only=True)
+    shift_start_at = serializers.DateTimeField(source='request.roster_entry.shift_start_at', read_only=True)
+    shift_end_at = serializers.DateTimeField(source='request.roster_entry.shift_end_at', read_only=True)
+    site_name = serializers.CharField(source='request.roster_entry.post.site.name', read_only=True)
+
+    class Meta:
+        model = ReplacementOffer
+        fields = [
+            'id', 'society', 'request', 'worker', 'worker_name',
+            'site_name', 'post_name', 'shift_name', 'shift_date',
+            'shift_start_at', 'shift_end_at', 'status', 'offered_at',
+            'responded_at', 'expires_at', 'decline_reason', 'created_at'
+        ]
+        read_only_fields = ['id', 'society', 'status', 'offered_at', 'responded_at', 'created_at']
+
+    def get_worker_name(self, obj):
+        return f"{obj.worker.user.first_name} {obj.worker.user.last_name}".strip() or obj.worker.user.username
+
+
+class ReplacementRequestSerializer(serializers.ModelSerializer):
+    post_name = serializers.CharField(source='roster_entry.post.name', read_only=True)
+    shift_name = serializers.CharField(source='roster_entry.shift.name', read_only=True)
+    shift_date = serializers.DateField(source='roster_entry.date', read_only=True)
+    shift_start_at = serializers.DateTimeField(source='roster_entry.shift_start_at', read_only=True)
+    shift_end_at = serializers.DateTimeField(source='roster_entry.shift_end_at', read_only=True)
+    site_name = serializers.CharField(source='roster_entry.post.site.name', read_only=True)
+    filled_by_worker_name = serializers.SerializerMethodField()
+    active_offers_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReplacementRequest
+        fields = [
+            'id', 'society', 'roster_entry', 'site_name', 'post_name',
+            'shift_name', 'shift_date', 'shift_start_at', 'shift_end_at',
+            'reason', 'status', 'opened_at', 'filled_at', 'filled_by_worker',
+            'filled_by_worker_name', 'escalated_at', 'active_offers_count',
+            'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'opened_at', 'filled_at', 'filled_by_worker',
+            'escalated_at', 'created_by', 'created_at', 'updated_at'
+        ]
+
+    def get_filled_by_worker_name(self, obj):
+        if not obj.filled_by_worker:
+            return None
+        w = obj.filled_by_worker
+        return f"{w.user.first_name} {w.user.last_name}".strip() or w.user.username
+
+    def get_active_offers_count(self, obj):
+        return obj.offers.filter(status='OFFERED').count()
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'society', 'recipient', 'notification_type',
+            'title', 'body', 'related_model', 'related_id',
+            'read_at', 'created_at'
+        ]
+        read_only_fields = ['id', 'society', 'recipient', 'created_at']
 
