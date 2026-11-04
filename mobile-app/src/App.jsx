@@ -240,6 +240,8 @@ function App() {
     );
   }
 
+  const isStagingEnv = import.meta.env.VITE_APP_ENV === 'staging' || import.meta.env.MODE === 'staging';
+
   // ── Login Screen ───────────────────────────────────────────────
   if (!token) {
     return (
@@ -254,8 +256,30 @@ function App() {
           padding: '24px',
           backgroundColor: '#070a13',
           color: '#ffffff',
+          position: 'relative',
         }}
       >
+        {/* Staging Environment Banner (Amendment 6 & 7) */}
+        {isStagingEnv && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              background: '#f59e0b',
+              color: '#000000',
+              padding: '6px 12px',
+              fontSize: '11px',
+              fontWeight: 900,
+              letterSpacing: '0.5px',
+              textAlign: 'center',
+              zIndex: 9999,
+            }}
+          >
+            🟡 STAGING ENVIRONMENT — DO NOT USE REAL DATA
+          </div>
+        )}
         <div
           style={{
             width: '100%',
@@ -456,6 +480,24 @@ function App() {
   // ── Authenticated App Shell ────────────────────────────────────
   return (
     <div className="mobile-app-wrapper" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Staging Environment Banner (Amendment 6 & 7) */}
+      {isStagingEnv && (
+        <div
+          style={{
+            background: '#f59e0b',
+            color: '#000000',
+            padding: '6px 12px',
+            fontSize: '11px',
+            fontWeight: 900,
+            letterSpacing: '0.5px',
+            textAlign: 'center',
+            zIndex: 9999,
+          }}
+        >
+          🟡 STAGING ENVIRONMENT — DO NOT USE REAL DATA
+        </div>
+      )}
+
       {/* Clock Drift Alert Banner */}
       {clockDriftAlert && (
         <div
