@@ -1,6 +1,7 @@
 """
 core/security_checks.py — Validates critical production security settings on startup.
 """
+import os
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -52,10 +53,53 @@ def validate_production_settings():
         )
 
     sms_backend = getattr(settings, 'SMS_BACKEND', '') or ''
-    sms_provider = getattr(settings, 'SMS_PROVIDER', '') or ''
+    sms_provider = (getattr(settings, 'SMS_PROVIDER', '') or os.environ.get('SMS_PROVIDER', '')).upper()
     if not sms_provider and (not sms_backend or 'console' in sms_backend.lower()):
         raise ImproperlyConfigured(
             "SECURITY CRITICAL: Production startup aborted! No SMS provider configured. "
             "Set SMS_PROVIDER (e.g. 'TWILIO', 'AWS_SNS') or a production SMS_BACKEND when DEBUG=False."
         )
+
+    # DATABASE_URL check: missing or not PostgreSQL
+    db_url = os.environ.get('DATABASE_URL') or getattr(settings, 'DATABASE_URL', None)
+    db_engine = settings.DATABASES.get('default', {}).get('ENGINE', '')
+    if not db_url or 'postgresql' not in db_engine.lower():
+        raise ImproperlyConfigured(
+            "SECURITY CRITICAL: Production startup aborted! DATABASE_URL is missing or "
+            "database engine is not PostgreSQL when DEBUG=False."
+        )
+
+    # OTP_HMAC_SECRET check: missing or fallback to SECRET_KEY
+    otp_hmac_secret = getattr(settings, 'OTP_HMAC_SECRET', None) or os.environ.get('OTP_HMAC_SECRET', None)
+    if not otp_hmac_secret or otp_hmac_secret == getattr(settings, 'SECRET_KEY', None) or len(otp_hmac_secret) < 16:
+        raise ImproperlyConfigured(
+            "SECURITY CRITICAL: Production startup aborted! OTP_HMAC_SECRET is missing or using SECRET_KEY. "
+            "Dedicated secret key required when DEBUG=False."
+        )
+
+    # REDIS_URL check: missing
+    redis_url = getattr(settings, 'REDIS_URL', None) or os.environ.get('REDIS_URL', None)
+    if not redis_url:
+        raise ImproperlyConfigured(
+            "SECURITY CRITICAL: Production startup aborted! REDIS_URL is missing when DEBUG=False."
+        )
+
+    # SMS provider credentials check
+    if sms_provider == 'TWILIO':
+        twilio_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', None) or os.environ.get('TWILIO_ACCOUNT_SID', None)
+        twilio_token = getattr(settings, 'TWILIO_AUTH_TOKEN', None) or os.environ.get('TWILIO_AUTH_TOKEN', None)
+        twilio_phone = getattr(settings, 'TWILIO_PHONE_NUMBER', None) or os.environ.get('TWILIO_PHONE_NUMBER', None)
+        if not (twilio_sid and twilio_token and twilio_phone):
+            raise ImproperlyConfigured(
+                "SECURITY CRITICAL: Production startup aborted! SMS provider credentials missing: "
+                "TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER must be configured when DEBUG=False."
+            )
+    elif sms_provider in ('AWS_SNS', 'SNS'):
+        aws_key = getattr(settings, 'AWS_ACCESS_KEY_ID', None) or os.environ.get('AWS_ACCESS_KEY_ID', None)
+        aws_secret = getattr(settings, 'AWS_SECRET_ACCESS_KEY', None) or os.environ.get('AWS_SECRET_ACCESS_KEY', None)
+        if not (aws_key and aws_secret):
+            raise ImproperlyConfigured(
+                "SECURITY CRITICAL: Production startup aborted! SMS provider credentials missing: "
+                "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be configured when DEBUG=False."
+            )
 

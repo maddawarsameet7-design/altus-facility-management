@@ -3,6 +3,7 @@ import hmac
 import re
 import secrets
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 
 def normalize_phone(phone: str) -> str:
@@ -33,10 +34,16 @@ def generate_otp_code(digits: int = 6) -> str:
 
 def hash_otp_code(phone: str, code: str) -> str:
     """
-    Computes an HMAC-SHA256 digest of phone + code using OTP_HMAC_SECRET or SECRET_KEY.
+    Computes an HMAC-SHA256 digest of phone + code using OTP_HMAC_SECRET.
     Amendment 12: HMAC-SHA256 with a secret key from an env var.
+    When DEBUG=False, fallback to SECRET_KEY is strictly forbidden.
     """
-    secret = getattr(settings, 'OTP_HMAC_SECRET', None) or settings.SECRET_KEY
+    secret = getattr(settings, 'OTP_HMAC_SECRET', None)
+    if not secret:
+        if getattr(settings, 'DEBUG', False):
+            secret = settings.SECRET_KEY
+        else:
+            raise ImproperlyConfigured("OTP_HMAC_SECRET must be configured when DEBUG=False (no fallback to SECRET_KEY).")
     normalized = normalize_phone(phone)
     msg = f"{normalized}:{code}".encode('utf-8')
     return hmac.new(secret.encode('utf-8'), msg, hashlib.sha256).hexdigest()

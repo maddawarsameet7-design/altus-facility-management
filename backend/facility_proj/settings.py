@@ -161,6 +161,8 @@ if database_url:
     except Exception as e:
         import logging
         logging.warning(f"DATABASE_URL connection/authentication test failed ({e}). Gracefully falling back to SQLite.")
+        if not DEBUG:
+            raise
         DATABASES['default'] = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
@@ -315,7 +317,10 @@ if 'pytest' in sys.modules or any('test' in arg for arg in sys.argv):
     ]
 
 # ── OTP & SMS Configuration ─────────────────────────────────────────────────
-OTP_HMAC_SECRET = os.environ.get('OTP_HMAC_SECRET') or SECRET_KEY
+OTP_HMAC_SECRET = os.environ.get('OTP_HMAC_SECRET')
+if not OTP_HMAC_SECRET and DEBUG:
+    OTP_HMAC_SECRET = SECRET_KEY
+REDIS_URL = os.environ.get('REDIS_URL')
 SMS_BACKEND = os.environ.get('SMS_BACKEND', 'core.sms.ConsoleSMSBackend')
 SMS_PROVIDER = os.environ.get('SMS_PROVIDER', '')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')

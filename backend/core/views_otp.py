@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User, WorkerProfile, OTPChallenge, AuditLog, Society
+from .models import User, WorkerProfile, OTPChallenge, AuditLog, Society, Membership, DailyRoster, RosterAssignment
 from .permissions import IsDirectorOnly, IsOpsUser
 from .otp_utils import normalize_phone, generate_otp_code, hash_otp_code, verify_otp_code
 from .sms import send_otp_async
@@ -208,13 +208,15 @@ class WorkerOTPVerifyView(APIView):
             )
 
         # Amendment 15: Device ID change tracking
+        # Worker's first device is auto-approved; only later device change sets new_device_approved=False
         new_device_detected = False
         if device_id:
-            if worker.device_id and worker.device_id != device_id:
+            if not worker.device_id:
+                worker.device_id = device_id
+                worker.new_device_approved = True
+            elif worker.device_id != device_id:
                 new_device_detected = True
                 worker.new_device_approved = False
-                worker.device_id = device_id
-            elif not worker.device_id:
                 worker.device_id = device_id
 
         worker.last_login_at = now
@@ -302,11 +304,45 @@ class IssueFallbackLoginCodeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # 1. Scoping Check: Supervisors only for workers on rosters of their own societies
+        user = request.user
+        if user.role == 'SUPERVISOR':
+            sup_societies = Membership.objects.filter(
+                user=user,
+                role__in=['SUPERVISOR', 'DIRECTOR'],
+                is_active=True
+            ).values_list('society_id', flat=True)
+
+            on_roster = (
+                DailyRoster.objects.filter(society_id__in=sup_societies, worker=worker).exists() or
+                DailyRoster.objects.filter(society_id__in=sup_societies, covered_by=worker).exists() or
+                RosterAssignment.objects.filter(society_id__in=sup_societies, worker=worker, status='ACTIVE').exists()
+            )
+            if not on_roster:
+                return Response(
+                    {"error": "Supervisors can only issue fallback login codes for workers on rosters within their assigned societies."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         reason = request.data.get('reason', '').strip()
         if not reason:
-            reason = f"Fallback login code issued by {request.user.role} ({request.user.username})"
+            return Response({"error": "reason is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # 2. Daily Cap: Max 3 per worker per day
+        daily_code_count = OTPChallenge.objects.filter(
+            phone=worker.phone,
+            device_id='FALLBACK_LOGIN',
+            created_at__gte=today_start
+        ).count()
+        if daily_code_count >= 3:
+            return Response(
+                {"error": "Maximum daily limit of 3 fallback login codes reached for this worker."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
         expires_at = now + timedelta(minutes=10)
         code = generate_otp_code(6)
         code_hash = hash_otp_code(worker.phone, code)
@@ -331,28 +367,36 @@ class IssueFallbackLoginCodeView(APIView):
             expires_at=expires_at
         )
 
+        # 3. Send SMS to worker asynchronously
+        send_otp_async(worker.phone, code)
+
         # Target society for AuditLog
-        target_society = None
-        asgn = worker.roster_assignments.first()
-        if asgn:
-            target_society = asgn.society
-        else:
+        target_society = (
+            DailyRoster.objects.filter(worker=worker).values_list('society', flat=True).first() or
+            RosterAssignment.objects.filter(worker=worker).values_list('society', flat=True).first()
+        )
+        if target_society:
+            target_society = Society.objects.filter(id=target_society).first()
+        if not target_society:
+            target_society = Membership.objects.filter(user=request.user, is_active=True).values_list('society', flat=True).first()
+            if target_society:
+                target_society = Society.objects.filter(id=target_society).first()
+        if not target_society:
             target_society = Society.objects.first()
 
-        if target_society:
-            AuditLog.objects.create(
-                society=target_society,
-                actor=request.user,
-                action='ISSUE_FALLBACK_LOGIN_CODE',
-                target_model='WorkerProfile',
-                target_id=worker.id,
-                changes={
-                    'expires_at': expires_at.isoformat(),
-                    'phone': worker.phone,
-                    'issued_by': request.user.username
-                },
-                reason=reason
-            )
+        AuditLog.objects.create(
+            society=target_society,
+            actor=request.user,
+            action='ISSUE_FALLBACK_LOGIN_CODE',
+            target_model='WorkerProfile',
+            target_id=worker.id,
+            changes={
+                'expires_at': expires_at.isoformat(),
+                'phone': worker.phone,
+                'issued_by': request.user.username
+            },
+            reason=reason
+        )
 
         # Returned once to the authorized supervisor in the HTTPS response payload.
         # NEVER recorded in logger or stored in database.

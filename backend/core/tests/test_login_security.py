@@ -9,6 +9,7 @@ Hardening and security regression tests for authentication:
 5. Seed script refuses to execute when DEBUG=False (raises CommandError).
 6. CORS header is absent for untrusted origins when DEBUG=False.
 """
+import os
 import pytest
 from django.urls import reverse
 from django.core.cache import cache
@@ -319,16 +320,24 @@ class TestLoginSecurity:
 
     def test_startup_check_passes_with_valid_production_settings(self):
         """With DEBUG=False and proper production secrets configured, startup check passes cleanly."""
-        with override_settings(
-            DEBUG=False,
-            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
-            ALLOWED_HOSTS=['api.altsan.com', 'altsan.com'],
-            CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com'],
-            PRIVATE_STORAGE_BUCKET='altsan-private-storage-bucket',
-            SMS_PROVIDER='TWILIO'
-        ):
-            # Should not raise any exception
-            validate_production_settings()
+        from unittest import mock
+        with mock.patch.dict(os.environ, {'DATABASE_URL': 'postgres://postgres:1234@localhost:5432/altus'}):
+            with override_settings(
+                DEBUG=False,
+                SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+                ALLOWED_HOSTS=['api.altsan.com', 'altsan.com'],
+                CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com'],
+                PRIVATE_STORAGE_BUCKET='altsan-private-storage-bucket',
+                SMS_PROVIDER='TWILIO',
+                TWILIO_ACCOUNT_SID='AC1234567890abcdef1234567890abcdef',
+                TWILIO_AUTH_TOKEN='authtoken1234567890abcdef123456',
+                TWILIO_PHONE_NUMBER='+15551234567',
+                OTP_HMAC_SECRET='dedicated-otp-hmac-secret-at-least-16-chars',
+                REDIS_URL='redis://localhost:6379/0',
+                DATABASES={'default': {'ENGINE': 'django.db.backends.postgresql', 'NAME': 'prod_db'}}
+            ):
+                # Should not raise any exception
+                validate_production_settings()
 
     def test_startup_check_refuses_when_private_storage_missing(self):
         """With DEBUG=False, refuses to boot if PRIVATE_STORAGE_BUCKET is missing."""
