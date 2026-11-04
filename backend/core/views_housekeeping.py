@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework import permissions, status, viewsets
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -34,7 +35,7 @@ from core.permissions import (
 )
 from core.serializers_housekeeping import (
     AreaSerializer, TaskTemplateSerializer, TaskInstanceSerializer,
-    TaskPhotoSerializer, InspectionSerializer, ComplaintSerializer,
+    TaskPhotoSerializer, InspectionSerializer, InspectionPhotoSerializer, ComplaintSerializer,
     SupplyItemSerializer, SupplyRequestSerializer, QualityScoreSnapshotSerializer
 )
 from core.housekeeping_utils import (
@@ -338,7 +339,7 @@ class TaskInstanceViewSet(SocietyScopedMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"error": "Only supervisors can reassign tasks."}, status=status.HTTP_403_FORBIDDEN)
 
         task = self.get_object()
-        worker_id = request.data.get('worker_id')
+        worker_id = request.data.get('worker_id') or request.data.get('worker')
         if not worker_id:
             return Response({"error": "worker_id is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -853,6 +854,23 @@ class InspectionViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             reason=f"Inspection completed with score {inspection.score}/5"
         )
 
+    @action(detail=True, methods=['post'], url_path='photos')
+    def upload_photo(self, request, pk=None):
+        """Upload inspection photo processed via the standardized private image pipeline."""
+        inspection = self.get_object()
+        raw_file = request.FILES.get('file')
+        caption = request.data.get('caption', '')
+        if not raw_file:
+            return Response({"error": "file is required."}, status=status.HTTP_400_BAD_REQUEST)
+        sanitized_file, _ = process_and_sanitize_image(raw_file)
+        photo = InspectionPhoto.objects.create(
+            society=inspection.society,
+            inspection=inspection,
+            file=sanitized_file,
+            caption=caption
+        )
+        return Response(InspectionPhotoSerializer(photo).data, status=status.HTTP_201_CREATED)
+
 
 # ── 6. Complaint ViewSet ─────────────────────────────────────────────────────
 
@@ -875,7 +893,7 @@ class ComplaintViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
         if self.request.user.role != 'DIRECTOR':
             has_mem = Membership.objects.filter(user=self.request.user, society=society, is_active=True).exists()
             if not has_mem:
-                raise ValidationError({"raised_by": "You must have an active membership in this society to raise a complaint."})
+                raise DRFValidationError({"raised_by": "You must have an active membership in this society to raise a complaint."})
 
         raw_photo = self.request.FILES.get('photo')
         sanitized_photo = None
@@ -921,6 +939,13 @@ class ComplaintViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
 
         return Response(ComplaintSerializer(complaint).data)
 
+    @action(detail=True, methods=['get'], url_path='photo')
+    def photo_file(self, request, pk=None):
+        complaint = self.get_object()
+        if not complaint.photo:
+            raise Http404
+        return HttpResponseRedirect(complaint.photo.url)
+
 
 # ── 7. Supply Item & Request ViewSets ────────────────────────────────────────
 
@@ -953,16 +978,9 @@ class SupplyRequestViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         worker = getattr(self.request.user, 'worker_profile', None)
         if not worker:
-            raise ValidationError({"requested_by": "Only registered workers can submit supply requests."})
+            raise DRFValidationError({"requested_by": "Only registered workers can submit supply requests."})
         item = serializer.validated_data.get('item')
         society = (item.society if item else None) or self.resolve_create_society(self.request)
-        serializer.save(society=society, requested_by=worker)
-
-    def perform_create(self, serializer):
-        worker = getattr(self.request.user, 'worker_profile', None)
-        if not worker:
-            raise ValidationError({"requested_by": "Only registered workers can submit supply requests."})
-        society = self.resolve_create_society(self.request)
         serializer.save(society=society, requested_by=worker)
 
     @action(detail=True, methods=['post'], url_path='approve')

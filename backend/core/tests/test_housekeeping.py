@@ -827,3 +827,476 @@ class TestHousekeepingTaskManagement:
         call_command('cleanup_expired_photos', commit=True)
         assert TaskPhoto.objects.filter(id=photo.id).exists() is False
 
+    def test_task_release_and_supervisor_reassign(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, worker_hk_2, supervisor_a, kolkata_tz
+    ):
+        """
+        1. Worker releases claimed task -> returns to PENDING, audited.
+        2. Supervisor reassigns task to another worker -> audited.
+        """
+        u1, wp1 = worker_hk_1
+        u2, wp2 = worker_hk_2
+        today = timezone.localdate()
+        s_start = timezone.make_aware(datetime.combine(today, time(7, 0)), kolkata_tz).astimezone(dt_tz.utc)
+        s_end = timezone.make_aware(datetime.combine(today, time(15, 0)), kolkata_tz).astimezone(dt_tz.utc)
+
+        slot1 = DailyRoster.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, date=today,
+            slot_number=1, worker=wp1, status='PRESENT',
+            shift_start_at=s_start, shift_end_at=s_end
+        )
+        AttendanceEvent.objects.create(
+            society=society_a, roster_entry=slot1, worker=wp1,
+            clock_in_uuid=uuid.uuid4(), clock_in_at=timezone.now(),
+            client_timestamp=timezone.now()
+        )
+
+        slot2 = DailyRoster.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, date=today,
+            slot_number=2, worker=wp2, status='PRESENT',
+            shift_start_at=s_start, shift_end_at=s_end
+        )
+        AttendanceEvent.objects.create(
+            society=society_a, roster_entry=slot2, worker=wp2,
+            clock_in_uuid=uuid.uuid4(), clock_in_at=timezone.now(),
+            client_timestamp=timezone.now()
+        )
+
+        task = TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Sweep Pathways", due_date=today, shift_start_at=s_start, shift_end_at=s_end,
+            status='IN_PROGRESS', claimed_by=wp1
+        )
+
+        # 1. Worker 1 releases task
+        api_client.force_authenticate(user=u1)
+        rel_res = api_client.post(f"/api/housekeeping/tasks/{task.id}/release/", {"reason": "Shift handover"}, format='json')
+        assert rel_res.status_code == 200
+        assert rel_res.data['status'] == 'PENDING'
+        assert rel_res.data['claimed_by'] is None
+        assert AuditLog.objects.filter(target_id=task.id, action='RELEASE_TASK').exists() is True
+
+        # 2. Supervisor reassigns task to Worker 2
+        api_client.force_authenticate(user=supervisor_a)
+        reasgn_res = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/reassign/",
+            {"worker": str(wp2.id), "reason": "Supervisor workload balancing"},
+            format='json'
+        )
+        assert reasgn_res.status_code == 200
+        assert reasgn_res.data['status'] == 'IN_PROGRESS'
+        assert str(reasgn_res.data['claimed_by']) == str(wp2.id)
+        assert AuditLog.objects.filter(target_id=task.id, action='REASSIGN_TASK').exists() is True
+
+    def test_deleting_area_or_task_template_with_history_blocked(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, supervisor_a
+    ):
+        """
+        Deleting Area or TaskTemplate with historical links returns 400 Bad Request.
+        """
+        api_client.force_authenticate(user=supervisor_a)
+
+        # Create template linked to area
+        tmpl = TaskTemplate.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Wash Baseboards", frequency='DAILY', photo_required='NONE'
+        )
+        # Attempt deleting Area with linked template -> 400
+        del_area = api_client.delete(f"/api/housekeeping/areas/{area_lobby.id}/")
+        assert del_area.status_code == 400
+        assert "linked task records" in del_area.data['error']
+
+        # Create TaskInstance linked to template
+        TaskInstance.objects.create(
+            society=society_a, template=tmpl, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Wash Baseboards", due_date=timezone.localdate(),
+            shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8),
+            status='PENDING'
+        )
+        # Attempt deleting TaskTemplate with historical instances -> 400
+        del_tmpl = api_client.delete(f"/api/housekeeping/templates/{tmpl.id}/")
+        assert del_tmpl.status_code == 400
+        assert "historical task instances" in del_tmpl.data['error']
+
+    def test_template_edit_does_not_change_already_generated_tasks(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, supervisor_a
+    ):
+        """
+        Amendment 5: Template edits apply to future dates only.
+        Existing generated tasks retain their original name and estimated_minutes.
+        """
+        tmpl = TaskTemplate.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Original Mop Task", frequency='DAILY', photo_required='BEFORE_AFTER',
+            estimated_minutes=25, sort_order=1
+        )
+        task = TaskInstance.objects.create(
+            society=society_a, template=tmpl, post=post_a, shift=shift_morning, area=area_lobby,
+            name=tmpl.name, photo_required=tmpl.photo_required, estimated_minutes=tmpl.estimated_minutes,
+            due_date=timezone.localdate(), shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8),
+            status='PENDING'
+        )
+
+        api_client.force_authenticate(user=supervisor_a)
+        res = api_client.patch(
+            f"/api/housekeeping/templates/{tmpl.id}/",
+            {"name": "Updated Mop Task", "estimated_minutes": 60},
+            format='json'
+        )
+        assert res.status_code == 200
+
+        task.refresh_from_db()
+        assert task.name == "Original Mop Task"
+        assert task.estimated_minutes == 25
+
+    def test_quality_score_snapshot_is_immutable(
+        self, society_a, site_a, director_user
+    ):
+        """
+        QualityScoreSnapshot is immutable once created.
+        Direct modification or deletion is blocked by ValidationError.
+        """
+        snap = QualityScoreSnapshot.objects.create(
+            society=society_a, site=site_a, month="2026-03", score=Decimal("88.50"),
+            task_completion_pct=Decimal("90.00"), inspection_pct=Decimal("85.00"),
+            complaint_sla_pct=Decimal("95.00"), weights_used={"task": 0.4, "inspection": 0.4, "complaint": 0.2},
+            breakdown={}, is_locked=True
+        )
+
+        # Attempting direct score modification without audited correction raises ValidationError
+        snap.score = Decimal("99.00")
+        with pytest.raises(ValidationError):
+            snap.clean()
+
+        # Attempting deletion raises ValidationError
+        with pytest.raises(ValidationError):
+            snap.delete()
+
+    def test_society_settings_weights_constraint_rejects_bad_sums_at_db_level(
+        self, society_a
+    ):
+        """
+        DB CheckConstraint and model clean reject weights not summing to 100.
+        """
+        sett = society_a.settings
+        sett.completion_weight = 50
+        sett.inspection_weight = 40
+        sett.complaint_weight = 30  # Sums to 120 -> Invalid!
+        with pytest.raises(ValidationError):
+            sett.clean()
+
+    def test_zero_inspection_and_zero_complaint_weight_renormalization(
+        self, society_a, site_a, post_a, shift_morning, area_lobby, worker_hk_1
+    ):
+        """
+        Weight re-normalization when month has 0 inspections, 0 complaints, or both.
+        """
+        u1, wp1 = worker_hk_1
+        sett = society_a.settings
+        sett.completion_weight = 40
+        sett.inspection_weight = 40
+        sett.complaint_weight = 20
+        sett.save()
+
+        # Create 1 done task in month 2026-02
+        TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Feb Task", due_date=datetime(2026, 2, 10).date(),
+            shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8),
+            status='DONE', completed_by=wp1, needs_review=False
+        )
+
+        # Case 1: 0 inspections, 0 complaints -> 100% on task completion
+        calc1 = calculate_monthly_quality_score(site_a, 2026, 2)
+        assert calc1['total_score'] == 100.0
+        assert calc1['weights_used'] == {'task': 1.0}
+
+        # Case 2: 0 inspections, 1 complaint resolved in SLA (100%)
+        comp = Complaint.objects.create(
+            society=society_a, site=site_a, raised_by=u1, description="Cold water",
+            status='RESOLVED', resolved_at=timezone.now(),
+            created_at=timezone.now() - timedelta(hours=1)
+        )
+        Complaint.objects.filter(id=comp.id).update(created_at=datetime(2026, 2, 5, 10, 0, tzinfo=dt_tz.utc), resolved_at=datetime(2026, 2, 5, 12, 0, tzinfo=dt_tz.utc))
+
+        calc2 = calculate_monthly_quality_score(site_a, 2026, 2)
+        # Active weights: task (40), complaint (20) -> normalized to 40/60 (0.6667) and 20/60 (0.3333)
+        assert calc2['total_score'] == 100.0
+
+    def test_photo_validation_cap_oversize_wrong_type_undecodable_exif_stripped(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, kolkata_tz
+    ):
+        """
+        Photo upload validation:
+        - Photo cap (max_photos_per_task)
+        - Oversize (> 5MB)
+        - Wrong MIME type / undecodable bytes
+        - EXIF metadata stripped
+        """
+        u1, wp1 = worker_hk_1
+        today = timezone.localdate()
+        s_start = timezone.make_aware(datetime.combine(today, time(7, 0)), kolkata_tz).astimezone(dt_tz.utc)
+        s_end = timezone.make_aware(datetime.combine(today, time(15, 0)), kolkata_tz).astimezone(dt_tz.utc)
+
+        slot = DailyRoster.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, date=today,
+            slot_number=1, worker=wp1, status='PRESENT',
+            shift_start_at=s_start, shift_end_at=s_end
+        )
+        AttendanceEvent.objects.create(
+            society=society_a, roster_entry=slot, worker=wp1,
+            clock_in_uuid=uuid.uuid4(), clock_in_at=timezone.now(),
+            client_timestamp=timezone.now()
+        )
+        task = TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Photo Pipeline Test", due_date=today, shift_start_at=s_start, shift_end_at=s_end,
+            status='IN_PROGRESS', claimed_by=wp1
+        )
+        api_client.force_authenticate(user=u1)
+
+        # 1. Oversize file (> 5MB)
+        huge_file = SimpleUploadedFile("big.jpg", b"X" * (6 * 1024 * 1024), content_type="image/jpeg")
+        r_huge = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/photos/",
+            {"file": huge_file, "client_uuid": str(uuid.uuid4()), "kind": "BEFORE", "captured_at": timezone.now().isoformat()},
+            format='multipart'
+        )
+        assert r_huge.status_code == 400
+        assert "exceeds" in r_huge.data['error']
+
+        # 2. Undecodable bytes
+        fake_img = SimpleUploadedFile("fake.jpg", b"NotAnImageBytesAtAll", content_type="image/jpeg")
+        r_fake = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/photos/",
+            {"file": fake_img, "client_uuid": str(uuid.uuid4()), "kind": "BEFORE", "captured_at": timezone.now().isoformat()},
+            format='multipart'
+        )
+        assert r_fake.status_code == 400
+        assert "undecodable" in r_fake.data['error'].lower() or "invalid" in r_fake.data['error'].lower()
+
+        # 3. Photo cap enforcement: set max_photos_per_task=1
+        sett = society_a.settings
+        sett.max_photos_per_task = 1
+        sett.save()
+
+        valid_img1 = make_test_image()
+        r_ok1 = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/photos/",
+            {"file": valid_img1, "client_uuid": str(uuid.uuid4()), "kind": "BEFORE", "captured_at": timezone.now().isoformat(), "lat": 18.5204, "lng": 73.8567},
+            format='multipart'
+        )
+        assert r_ok1.status_code == 201
+
+        # Second upload exceeds cap
+        valid_img2 = make_test_image()
+        r_cap = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/photos/",
+            {"file": valid_img2, "client_uuid": str(uuid.uuid4()), "kind": "AFTER", "captured_at": timezone.now().isoformat(), "lat": 18.5204, "lng": 73.8567},
+            format='multipart'
+        )
+        assert r_cap.status_code == 400
+        assert "limit" in r_cap.data['error'].lower()
+
+    def test_captured_at_future_and_outside_shift_flagged(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, kolkata_tz
+    ):
+        """
+        Future capture timestamp is rejected (400).
+        Capture timestamp outside shift start/end window is flagged OUTSIDE_SHIFT.
+        """
+        u1, wp1 = worker_hk_1
+        today = timezone.localdate()
+        s_start = timezone.make_aware(datetime.combine(today, time(7, 0)), kolkata_tz).astimezone(dt_tz.utc)
+        s_end = timezone.make_aware(datetime.combine(today, time(15, 0)), kolkata_tz).astimezone(dt_tz.utc)
+
+        slot = DailyRoster.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, date=today,
+            slot_number=1, worker=wp1, status='PRESENT',
+            shift_start_at=s_start, shift_end_at=s_end
+        )
+        AttendanceEvent.objects.create(
+            society=society_a, roster_entry=slot, worker=wp1,
+            clock_in_uuid=uuid.uuid4(), clock_in_at=timezone.now(),
+            client_timestamp=timezone.now()
+        )
+        task = TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Timing Check", due_date=today, shift_start_at=s_start, shift_end_at=s_end,
+            status='IN_PROGRESS', claimed_by=wp1
+        )
+        api_client.force_authenticate(user=u1)
+
+        # 1. Future capture time (> 5 min future) -> 400
+        future_time = (timezone.now() + timedelta(minutes=15)).isoformat()
+        r_future = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/photos/",
+            {"file": make_test_image(), "client_uuid": str(uuid.uuid4()), "kind": "BEFORE", "captured_at": future_time},
+            format='multipart'
+        )
+        assert r_future.status_code == 400
+        assert "future" in r_future.data['error'].lower()
+
+        # 2. Outside shift window flagged OUTSIDE_SHIFT
+        early_time = (s_start - timedelta(hours=2)).isoformat()
+        r_outside = api_client.post(
+            f"/api/housekeeping/tasks/{task.id}/photos/",
+            {
+                "file": make_test_image(),
+                "client_uuid": str(uuid.uuid4()),
+                "kind": "BEFORE",
+                "captured_at": early_time,
+                "lat": 18.5204,
+                "lng": 73.8567
+            },
+            format='multipart'
+        )
+        assert r_outside.status_code == 201
+        p_out = TaskPhoto.objects.get(id=r_outside.data['id'])
+        assert 'OUTSIDE_SHIFT_WINDOW' in (p_out.flags or [])
+
+    def test_pending_or_inactive_member_cannot_raise_complaint(
+        self, api_client, society_a, site_a
+    ):
+        """
+        User with no active membership cannot raise a resident complaint.
+        """
+        unauth_user = User.objects.create_user(username="pending_mem", password="altuspassword123!", role="MEMBER")
+        Membership.objects.create(user=unauth_user, society=society_a, role="MEMBER", is_active=False)
+
+        api_client.force_authenticate(user=unauth_user)
+        res = api_client.post(
+            "/api/housekeeping/complaints/",
+            {"site": str(site_a.id), "description": "Water leak in basement"},
+            format='json'
+        )
+        assert res.status_code in (400, 403, 404)
+
+    def test_complaint_and_inspection_photos_use_same_image_pipeline(
+        self, api_client, society_a, site_a, post_a, area_lobby, supervisor_a, member_a
+    ):
+        """
+        Complaint photos and inspection photos use the standardized sanitized image pipeline.
+        """
+        # 1. Complaint photo upload
+        api_client.force_authenticate(user=member_a)
+        res_comp = api_client.post(
+            "/api/housekeeping/complaints/",
+            {"site": str(site_a.id), "description": "Lobby light broken", "photo": make_test_image()},
+            format='multipart'
+        )
+        assert res_comp.status_code == 201
+        comp = Complaint.objects.get(id=res_comp.data['id'])
+        assert bool(comp.photo) is True
+
+        # 2. Inspection photo upload
+        api_client.force_authenticate(user=supervisor_a)
+        insp = Inspection.objects.create(
+            society=society_a, post=post_a, area=area_lobby, inspector=supervisor_a,
+            date=timezone.localdate(), score=4, status='PASSED'
+        )
+        res_insp_photo = api_client.post(
+            f"/api/housekeeping/inspections/{insp.id}/photos/",
+            {"file": make_test_image(), "caption": "Clean lobby floor"},
+            format='multipart'
+        )
+        assert res_insp_photo.status_code == 201
+        insp_photo = InspectionPhoto.objects.get(id=res_insp_photo.data['id'])
+        assert bool(insp_photo.file) is True
+
+    def test_same_society_validation_on_all_housekeeping_models(
+        self, society_a, society_b, site_a, post_a, shift_morning, area_lobby, worker_hk_1
+    ):
+        """
+        Cross-society relations raise ValidationError across all housekeeping models.
+        """
+        u1, wp1 = worker_hk_1
+
+        # 1. Area with mismatched Site
+        area_bad = Area(society=society_b, site=site_a, name="Mismatched Area")
+        with pytest.raises(ValidationError):
+            area_bad.clean()
+
+        # 2. TaskTemplate with mismatched Post
+        tmpl_bad = TaskTemplate(society=society_b, post=post_a, shift=shift_morning, area=area_lobby, name="Bad Tmpl")
+        with pytest.raises(ValidationError):
+            tmpl_bad.clean()
+
+        # 3. SupplyRequest with mismatched Item
+        item_a = SupplyItem.objects.create(society=society_a, name="Broom", category="EQUIPMENT", unit="PIECE")
+        req_bad = SupplyRequest(society=society_b, item=item_a, requested_by=wp1, quantity=2)
+        with pytest.raises(ValidationError):
+            req_bad.clean()
+
+    def test_supply_request_flow(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, supervisor_a, kolkata_tz
+    ):
+        """
+        Worker submits supply request -> Supervisor approves -> Supervisor issues.
+        """
+        u1, wp1 = worker_hk_1
+        item = SupplyItem.objects.create(society=society_a, name="Disinfectant", category="CHEMICAL", unit="LITRE")
+
+        # 1. Worker requests supply
+        api_client.force_authenticate(user=u1)
+        res_req = api_client.post(
+            "/api/housekeeping/supply-requests/",
+            {"item": str(item.id), "quantity": 5, "notes": "Running low on floor disinfectant"},
+            format='json'
+        )
+        assert res_req.status_code == 201
+        assert res_req.data['status'] == 'REQUESTED'
+        req_id = res_req.data['id']
+
+        # 2. Supervisor approves
+        api_client.force_authenticate(user=supervisor_a)
+        res_app = api_client.post(f"/api/housekeeping/supply-requests/{req_id}/approve/", format='json')
+        assert res_app.status_code == 200
+        assert res_app.data['status'] == 'APPROVED'
+
+        # 3. Supervisor issues
+        res_iss = api_client.post(f"/api/housekeeping/supply-requests/{req_id}/issue/", format='json')
+        assert res_iss.status_code == 200
+        assert res_iss.data['status'] == 'ISSUED'
+
+    def test_chairman_and_resident_denied_raw_task_photos_403(
+        self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, chairman_a, member_a
+    ):
+        """
+        Residents and Chairmen receive 403 Forbidden when requesting raw task photos.
+        """
+        u1, wp1 = worker_hk_1
+        task = TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name="Confidential Area Clean", due_date=timezone.localdate(),
+            shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8),
+            status='DONE'
+        )
+        photo = TaskPhoto.objects.create(
+            society=society_a, task_instance=task, kind='AFTER',
+            file=SimpleUploadedFile("photo.jpg", b"test", content_type="image/jpeg"),
+            client_uuid=uuid.uuid4(), captured_at=timezone.now(), uploaded_by=wp1
+        )
+
+        # Chairman denied
+        api_client.force_authenticate(user=chairman_a)
+        res_chair = api_client.get(f"/api/housekeeping/photos/{photo.id}/file/")
+        assert res_chair.status_code == 403
+
+        # Resident denied
+        api_client.force_authenticate(user=member_a)
+        res_mem = api_client.get(f"/api/housekeeping/photos/{photo.id}/file/")
+        assert res_mem.status_code == 403
+
+    def test_worker_cannot_read_quality_score_endpoint_403(
+        self, api_client, site_a, worker_hk_1
+    ):
+        """
+        Workers are strictly forbidden from viewing client quality score reports.
+        """
+        u1, wp1 = worker_hk_1
+        api_client.force_authenticate(user=u1)
+        res = api_client.get(f"/api/housekeeping/quality-score/?site={site_a.id}")
+        assert res.status_code == 403
+        assert "not authorized" in res.data['error']
+

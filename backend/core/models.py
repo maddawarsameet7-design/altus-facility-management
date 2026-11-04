@@ -1527,6 +1527,15 @@ class QualityScoreSnapshot(models.Model):
         super().clean()
         if self.site_id and self.society_id and self.site.society_id != self.society_id:
             raise ValidationError({'site': 'Site must belong to the same society.'})
+        if self.pk:
+            orig = QualityScoreSnapshot.objects.filter(pk=self.pk).first()
+            if orig and orig.is_locked and not self.corrected_at and (orig.score != self.score or orig.breakdown != self.breakdown):
+                raise ValidationError("Locked QualityScoreSnapshot cannot be modified directly without an audited correction.")
+
+    def delete(self, *args, **kwargs):
+        if self.is_locked:
+            raise ValidationError("Locked QualityScoreSnapshot cannot be deleted.")
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"QualityScore {self.score}% for {self.site.name} ({self.month})"

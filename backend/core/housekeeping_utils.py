@@ -300,6 +300,7 @@ def calculate_monthly_quality_score(site: Site, year: int, month: int) -> Dict[s
         "site_name": site.name,
         "month": f"{year:04d}-{month:02d}",
         "total_score": total_score_rounded,
+        "weights_used": {k: round(v, 4) for k, v in normalized_weights.items()},
         "task_completion": {
             "score_pct": round(t_score, 2),
             "total_scheduled": total_tasks_count,
