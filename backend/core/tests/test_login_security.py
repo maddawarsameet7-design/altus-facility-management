@@ -368,17 +368,49 @@ class TestLoginSecurity:
                 validate_production_settings()
             assert "No SMS provider configured" in str(exc_info.value)
 
-    def test_check_default_passwords_fails_when_user_has_password123(self, db):
-        """check_default_passwords command must fail and exit non-zero (raise CommandError) if password123 is found."""
+    def test_check_default_passwords_fails_when_user_has_password123_or_altus123(self, db):
+        """check_default_passwords command must fail and exit non-zero (raise CommandError) if password123 or altus123 is found."""
         User.objects.create_user(
-            username='vulnerable_user',
+            username='vuln_user_1',
             password='password123',
-            email='vuln@test.com'
+            email='vuln1@test.com'
         )
-        with pytest.raises(CommandError) as exc_info:
+        with pytest.raises(CommandError) as exc_info1:
             call_command('check_default_passwords')
-        assert "Found 1 account(s) using the insecure default password 'password123'" in str(exc_info.value)
-        assert "vulnerable_user" in str(exc_info.value)
+        assert "vuln_user_1" in str(exc_info1.value)
+        assert "password123" in str(exc_info1.value)
+
+        User.objects.create_user(
+            username='vuln_user_2',
+            password='altus123',
+            email='vuln2@test.com'
+        )
+        with pytest.raises(CommandError) as exc_info2:
+            call_command('check_default_passwords')
+        assert "vuln_user_2" in str(exc_info2.value)
+        assert "altus123" in str(exc_info2.value)
+
+    def test_check_default_passwords_configurable_list(self, db):
+        """check_default_passwords supports custom configurable banned password list via CLI and settings."""
+        User.objects.create_user(
+            username='custom_vuln_user',
+            password='customsecret123',
+            email='custom@test.com'
+        )
+        # Passes with default banned list
+        call_command('check_default_passwords')
+
+        # Fails when custom password is added to banned list via CLI
+        with pytest.raises(CommandError) as exc_info:
+            call_command('check_default_passwords', banned_passwords='customsecret123,badpass')
+        assert "custom_vuln_user" in str(exc_info.value)
+        assert "customsecret123" in str(exc_info.value)
+
+        # Fails when custom password is configured in settings
+        with override_settings(BANNED_DEFAULT_PASSWORDS=['customsecret123']):
+            with pytest.raises(CommandError) as exc_info_sett:
+                call_command('check_default_passwords')
+            assert "custom_vuln_user" in str(exc_info_sett.value)
 
     def test_check_default_passwords_succeeds_when_all_passwords_secure(self, db):
         """check_default_passwords command passes cleanly when all users have secure passwords."""
