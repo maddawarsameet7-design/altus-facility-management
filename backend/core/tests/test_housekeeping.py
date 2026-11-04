@@ -827,6 +827,57 @@ class TestHousekeepingTaskManagement:
         call_command('cleanup_expired_photos', commit=True)
         assert TaskPhoto.objects.filter(id=photo.id).exists() is False
 
+    @pytest.mark.parametrize("status_val,disputed,should_protect", [
+        ('OPEN', False, True),
+        ('ACKNOWLEDGED', False, True),
+        ('IN_PROGRESS', False, True),
+        ('RESOLVED', False, False),
+        ('REJECTED', False, False),
+        ('RESOLVED', True, True),
+        ('REJECTED', True, True),
+    ])
+    def test_cleanup_expired_photos_complaint_status_protection(
+        self, society_a, post_a, shift_morning, area_lobby, worker_hk_1, status_val, disputed, should_protect
+    ):
+        """
+        cleanup_expired_photos protects photos of ACKNOWLEDGED complaints and any complaint
+        not RESOLVED/REJECTED, as well as disputed resolved/rejected complaints.
+        """
+        u1, wp1 = worker_hk_1
+        task = TaskInstance.objects.create(
+            society=society_a, post=post_a, shift=shift_morning, area=area_lobby,
+            name=f"Status Test {status_val} {disputed}", due_date=timezone.localdate(),
+            shift_start_at=timezone.now(), shift_end_at=timezone.now() + timedelta(hours=8),
+            status='DONE'
+        )
+
+        photo = TaskPhoto.objects.create(
+            society=society_a, task_instance=task, kind='AFTER',
+            file=SimpleUploadedFile("old_complaint.jpg", b"fake", content_type="image/jpeg"),
+            client_uuid=uuid.uuid4(), captured_at=timezone.now() - timedelta(days=120),
+            uploaded_by=wp1
+        )
+        TaskPhoto.objects.filter(id=photo.id).update(created_at=timezone.now() - timedelta(days=120))
+
+        # Create Complaint on this area
+        Complaint.objects.create(
+            society=society_a,
+            site=post_a.site,
+            area=area_lobby,
+            post=post_a,
+            raised_by=u1,
+            description=f"Complaint with status {status_val}",
+            status=status_val,
+            disputed_by_client=disputed
+        )
+
+        call_command('cleanup_expired_photos', commit=True)
+
+        if should_protect:
+            assert TaskPhoto.objects.filter(id=photo.id).exists() is True
+        else:
+            assert TaskPhoto.objects.filter(id=photo.id).exists() is False
+
     def test_task_release_and_supervisor_reassign(
         self, api_client, society_a, post_a, shift_morning, area_lobby, worker_hk_1, worker_hk_2, supervisor_a, kolkata_tz
     ):

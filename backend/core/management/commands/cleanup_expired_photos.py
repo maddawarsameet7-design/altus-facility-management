@@ -52,12 +52,13 @@ class Command(BaseCommand):
             ).select_related('task_instance__post__site', 'task_instance__area')
 
             # ── 1. Protection Guards (Never Delete) ───────────────────────────
-            # a) Photos tied to open or disputed complaints
-            open_or_disputed_complaints = Complaint.objects.filter(society=society).filter(
-                Q(status__in=['OPEN', 'IN_PROGRESS']) | Q(disputed_by_client=True)
+            # a) Photos tied to ACKNOWLEDGED complaints, any complaint not RESOLVED/REJECTED,
+            # or any complaint disputed by client (even if marked resolved/rejected)
+            unclosed_or_disputed_complaints = Complaint.objects.filter(society=society).filter(
+                ~Q(status__in=['RESOLVED', 'REJECTED']) | Q(disputed_by_client=True)
             )
-            protected_areas = set(open_or_disputed_complaints.exclude(area__isnull=True).values_list('area_id', flat=True))
-            protected_posts = set(open_or_disputed_complaints.exclude(post__isnull=True).values_list('post_id', flat=True))
+            protected_areas = set(unclosed_or_disputed_complaints.exclude(area__isnull=True).values_list('area_id', flat=True))
+            protected_posts = set(unclosed_or_disputed_complaints.exclude(post__isnull=True).values_list('post_id', flat=True))
 
             # b) Photos tied to shared inspections
             shared_inspections = Inspection.objects.filter(society=society, shared_with_client=True)
