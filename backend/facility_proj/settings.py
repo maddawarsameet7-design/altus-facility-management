@@ -189,7 +189,7 @@ REGISTER_THROTTLE_RATE = os.environ.get('REGISTER_THROTTLE_RATE', '60/min' if DE
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'core.authentication.WorkerAwareJWTAuthentication',
     ),
     'NUM_PROXIES': NUM_PROXIES,
     # ── RBAC: deny by default, each view overrides as needed ──
@@ -215,6 +215,8 @@ REST_FRAMEWORK = {
         'clock_in': '60/min' if DEBUG else '10/min',
         'clock_out': '60/min' if DEBUG else '10/min',
         'selfie': '60/min' if DEBUG else '30/min',
+        'otp_request': '60/min' if DEBUG else '10/min',
+        'otp_verify': '60/min' if DEBUG else '15/min',
     },
     # ── Pagination ─────────────────────────────────────────────
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -309,4 +311,12 @@ if 'pytest' in sys.modules or any('test' in arg for arg in sys.argv):
     PASSWORD_HASHERS = [
         'django.contrib.auth.hashers.MD5PasswordHasher',
     ]
+
+# ── OTP & SMS Configuration ─────────────────────────────────────────────────
+OTP_HMAC_SECRET = os.environ.get('OTP_HMAC_SECRET') or SECRET_KEY
+SMS_BACKEND = os.environ.get('SMS_BACKEND', 'core.sms.ConsoleSMSBackend')
+SMS_PROVIDER = os.environ.get('SMS_PROVIDER', '')
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')
 

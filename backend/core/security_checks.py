@@ -51,3 +51,11 @@ def validate_production_settings():
             "(PRIVATE_STORAGE_BUCKET or AWS_STORAGE_BUCKET_NAME) must be configured when DEBUG=False."
         )
 
+    sms_backend = getattr(settings, 'SMS_BACKEND', '') or ''
+    sms_provider = getattr(settings, 'SMS_PROVIDER', '') or ''
+    if not sms_provider and (not sms_backend or 'console' in sms_backend.lower()):
+        raise ImproperlyConfigured(
+            "SECURITY CRITICAL: Production startup aborted! No SMS provider configured. "
+            "Set SMS_PROVIDER (e.g. 'TWILIO', 'AWS_SNS') or a production SMS_BACKEND when DEBUG=False."
+        )
+

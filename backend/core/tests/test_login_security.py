@@ -324,7 +324,8 @@ class TestLoginSecurity:
             SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
             ALLOWED_HOSTS=['api.altsan.com', 'altsan.com'],
             CORS_ALLOWED_ORIGINS=['https://altsan.com', 'https://app.altsan.com'],
-            PRIVATE_STORAGE_BUCKET='altsan-private-storage-bucket'
+            PRIVATE_STORAGE_BUCKET='altsan-private-storage-bucket',
+            SMS_PROVIDER='TWILIO'
         ):
             # Should not raise any exception
             validate_production_settings()
@@ -336,11 +337,27 @@ class TestLoginSecurity:
             SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
             ALLOWED_HOSTS=['api.altsan.com'],
             CORS_ALLOWED_ORIGINS=['https://altsan.com'],
-            PRIVATE_STORAGE_BUCKET=''
+            PRIVATE_STORAGE_BUCKET='',
+            SMS_PROVIDER='TWILIO'
         ):
             with pytest.raises(ImproperlyConfigured) as exc_info:
                 validate_production_settings()
             assert "Private object storage settings" in str(exc_info.value)
+
+    def test_startup_check_refuses_when_sms_provider_missing(self):
+        """With DEBUG=False, refuses to boot if SMS_PROVIDER is missing or on console backend."""
+        with override_settings(
+            DEBUG=False,
+            SECRET_KEY='very-secure-production-key-at-least-32-characters-long!!',
+            ALLOWED_HOSTS=['api.altsan.com'],
+            CORS_ALLOWED_ORIGINS=['https://altsan.com'],
+            PRIVATE_STORAGE_BUCKET='altsan-private-storage-bucket',
+            SMS_PROVIDER='',
+            SMS_BACKEND='core.sms.ConsoleSMSBackend'
+        ):
+            with pytest.raises(ImproperlyConfigured) as exc_info:
+                validate_production_settings()
+            assert "No SMS provider configured" in str(exc_info.value)
 
     def test_check_default_passwords_fails_when_user_has_password123(self, db):
         """check_default_passwords command must fail and exit non-zero (raise CommandError) if password123 is found."""

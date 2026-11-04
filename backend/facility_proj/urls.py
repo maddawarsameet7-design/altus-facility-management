@@ -26,6 +26,9 @@ from core.views import (
     UserProfileView, RegisterView, DashboardStatsView, DeviceTokenView,
     HealthCheckView
 )
+from core.views_otp import (
+    WorkerOTPRequestView, WorkerOTPVerifyView, RevokeWorkerSessionsView
+)
 from core.views_attendance import (
     ClockInView, ClockOutView, MyAttendanceHistoryView,
     WorkerLocationUpdateView, AttendanceViewSet
@@ -73,6 +76,8 @@ urlpatterns = [
     path('api/auth/login/', ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', ThrottledTokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),
+    path('api/auth/otp/request/', WorkerOTPRequestView.as_view(), name='worker_otp_request'),
+    path('api/auth/otp/verify/', WorkerOTPVerifyView.as_view(), name='worker_otp_verify'),
     path('api/health/', HealthCheckView.as_view(), name='health_check'),
     
     # User profile & dashboard (must be before the router include)
@@ -107,6 +112,7 @@ urlpatterns = [
 
     # Worker location update (REST fallback)
     path('api/workers/location/', WorkerLocationUpdateView.as_view(), name='worker_location_update'),
+    path('api/workers/<uuid:pk>/revoke-sessions/', RevokeWorkerSessionsView.as_view(), name='worker_revoke_sessions'),
 
     # Society join (invite code)
     path('api/societies/join/', JoinSocietyView.as_view(), name='society_join'),

@@ -8,6 +8,7 @@ from .models import (
     Post, Shift, RosterAssignment, DailyRoster, LeaveRecord,
     AttendanceEvent, Alert, AuditLog,
     ReplacementRequest, ReplacementOffer, Notification,
+    OTPChallenge
 )
 
 
@@ -153,3 +154,4 @@ admin.site.register(AuditLog)
 admin.site.register(ReplacementRequest)
 admin.site.register(ReplacementOffer)
 admin.site.register(Notification)
+admin.site.register(OTPChallenge)

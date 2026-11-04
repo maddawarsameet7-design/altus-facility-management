@@ -993,3 +993,31 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.recipient.username}: {self.title}"
+
+
+# ─── WORKER OTP AUTHENTICATION MODELS ────────────────────────────────────────
+
+class OTPChallenge(models.Model):
+    """
+    Challenge record for worker OTP login.
+    Enforces HMAC code hashing, anti-enumeration, attempt lockout, and single atomic consumption.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone = models.CharField(max_length=20, db_index=True)
+    code_hash = models.CharField(max_length=128)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device_id = models.CharField(max_length=255, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['phone', 'created_at']),
+            models.Index(fields=['phone', 'consumed_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"OTPChallenge for {self.phone} [{self.created_at}]"
