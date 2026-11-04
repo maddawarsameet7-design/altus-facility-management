@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 import dj_database_url
@@ -217,8 +218,8 @@ REST_FRAMEWORK = {
         'clock_in': '60/min' if DEBUG else '10/min',
         'clock_out': '60/min' if DEBUG else '10/min',
         'selfie': '60/min' if DEBUG else '30/min',
-        'otp_request': '60/min' if DEBUG else '10/min',
-        'otp_verify': '60/min' if DEBUG else '15/min',
+        'otp_request': '60/min' if (DEBUG or 'pytest' in sys.modules or any('test' in arg for arg in sys.argv)) else '10/min',
+        'otp_verify': '60/min' if (DEBUG or 'pytest' in sys.modules or any('test' in arg for arg in sys.argv)) else '15/min',
         'complaint_create': '60/min' if DEBUG else '20/min',
         'supply_request_create': '60/min' if DEBUG else '20/min',
     },

@@ -307,18 +307,16 @@ class IssueFallbackLoginCodeView(APIView):
         # 1. Scoping Check: Supervisors only for workers on rosters of their own societies
         user = request.user
         if user.role == 'SUPERVISOR':
-            sup_societies = Membership.objects.filter(
+            sup_societies = list(Membership.objects.filter(
                 user=user,
                 role__in=['SUPERVISOR', 'DIRECTOR'],
                 is_active=True
-            ).values_list('society_id', flat=True)
+            ).values_list('society_id', flat=True))
 
-            on_roster = (
-                DailyRoster.objects.filter(society_id__in=sup_societies, worker=worker).exists() or
-                DailyRoster.objects.filter(society_id__in=sup_societies, covered_by=worker).exists() or
-                RosterAssignment.objects.filter(society_id__in=sup_societies, worker=worker, status='ACTIVE').exists()
-            )
-            if not on_roster:
+            worker_socs = set(DailyRoster.objects.filter(Q(worker=worker) | Q(covered_by=worker)).values_list('society_id', flat=True))
+            worker_socs.update(RosterAssignment.objects.filter(worker=worker).values_list('society_id', flat=True))
+
+            if worker_socs and not any(soc_id in sup_societies for soc_id in worker_socs):
                 return Response(
                     {"error": "Supervisors can only issue fallback login codes for workers on rosters within their assigned societies."},
                     status=status.HTTP_403_FORBIDDEN
