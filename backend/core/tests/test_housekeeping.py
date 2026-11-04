@@ -654,7 +654,7 @@ class TestHousekeepingTaskManagement:
         - Picks the next scheduled active evening shift.
         - Sets task due times from that shift.
         """
-        today = timezone.localdate()
+        today = timezone.now().astimezone(kolkata_tz).date()
         # Make morning shift inactive
         shift_morning.is_active = False
         shift_morning.save()

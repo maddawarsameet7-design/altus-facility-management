@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import altsanLogo from '../assets/altsan-logo.png';
+import ReplacementBanner from '../components/ReplacementBanner.jsx';
 import './JobsScreen.css';
 
 const resolveApiBase = () => {
@@ -26,22 +27,35 @@ const extractList = (data) => {
 };
 
 const JobsScreen = ({ onTabChange, onSelectJob }) => {
-  const [activeTab, setActiveTab] = useState('ongoing');
+  const [activeTab, setActiveTab] = useState('roster');
+  const [schedule, setSchedule] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchScheduleAndJobs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/requests/`, { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error(`Could not load jobs (HTTP ${res.status})`);
-      const data = await res.json();
-      setJobs(extractList(data));
+      // 1. Fetch Roster Schedule
+      const schedulePromise = fetch(`${API_BASE}/roster/my-schedule/`, { headers: getAuthHeaders() })
+        .then((r) => (r.ok ? r.json() : []))
+        .then(extractList)
+        .catch(() => []);
+
+      // 2. Fetch Service Requests / Tickets
+      const requestsPromise = fetch(`${API_BASE}/requests/`, { headers: getAuthHeaders() })
+        .then((r) => (r.ok ? r.json() : []))
+        .then(extractList)
+        .catch(() => []);
+
+      const [scheduleData, requestsData] = await Promise.all([schedulePromise, requestsPromise]);
+      setSchedule(scheduleData);
+      setJobs(requestsData);
     } catch (err) {
-      console.warn('Job fetch error:', err.message);
+      console.warn('Jobs & schedule fetch error:', err.message);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -49,8 +63,8 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
   }, []);
 
   useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+    fetchScheduleAndJobs();
+  }, [fetchScheduleAndJobs]);
 
   const handleUpdateStatus = async (jobId, newStatus) => {
     setActionLoading(jobId);
@@ -64,7 +78,9 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
         const errData = await res.json();
         throw new Error(errData.error || 'Status update failed');
       }
-      await fetchJobs();
+      setToastMsg(`Status updated to ${newStatus} ✅`);
+      setTimeout(() => setToastMsg(null), 3000);
+      await fetchScheduleAndJobs();
     } catch (err) {
       alert(`Action error: ${err.message}`);
     } finally {
@@ -72,59 +88,134 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
     }
   };
 
-  const ongoingJobs = jobs.filter(j => j.status === 'In Progress' || j.status === 'Investigating');
-  const availableJobs = jobs.filter(j => j.status === 'Requested');
-  const completedJobs = jobs.filter(j => j.status === 'Resolved');
+  const ongoingJobs = jobs.filter((j) => j.status === 'In Progress' || j.status === 'Investigating');
+  const availableJobs = jobs.filter((j) => j.status === 'Requested');
+  const completedJobs = jobs.filter((j) => j.status === 'Resolved');
 
   return (
     <div className="mobile-app-container">
       <header className="mobile-header">
         <img src={altsanLogo} alt="Altsan" className="header-mini-logo" />
-        <h1>My Tasks & Jobs</h1>
-        <button className="filter-icon" onClick={fetchJobs} title="Refresh">🔄</button>
+        <h1>Work & Assignments</h1>
+        <button className="filter-icon" onClick={fetchScheduleAndJobs} title="Refresh">
+          🔄
+        </button>
       </header>
 
+      {/* Replacement Offer Banner (Instant Reliever Dispatch) */}
+      <ReplacementBanner
+        apiBase={API_BASE}
+        authHeaders={getAuthHeaders}
+        onNotice={(msg, type) => {
+          if (type === 'error') alert(`⚠️ ${msg}`);
+          else {
+            setToastMsg(msg);
+            setTimeout(() => setToastMsg(null), 3500);
+          }
+        }}
+        onScheduleUpdated={fetchScheduleAndJobs}
+      />
+
+      {toastMsg && (
+        <div
+          style={{
+            background: 'rgba(16, 185, 129, 0.2)',
+            border: '1px solid #10b981',
+            color: '#86efac',
+            padding: '10px 16px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: 600,
+            marginBottom: '16px',
+          }}
+        >
+          {toastMsg}
+        </div>
+      )}
+
+      {/* Tab Switcher */}
       <div className="tab-switcher">
-        <button 
-          className={activeTab === 'ongoing' ? 'active' : ''} 
+        <button
+          className={activeTab === 'roster' ? 'active' : ''}
+          onClick={() => setActiveTab('roster')}
+        >
+          Shifts ({schedule.length})
+        </button>
+        <button
+          className={activeTab === 'ongoing' ? 'active' : ''}
           onClick={() => setActiveTab('ongoing')}
         >
-          Active ({ongoingJobs.length})
+          Tickets ({ongoingJobs.length})
         </button>
-        <button 
-          className={activeTab === 'available' ? 'active' : ''} 
+        <button
+          className={activeTab === 'available' ? 'active' : ''}
           onClick={() => setActiveTab('available')}
         >
           Queue ({availableJobs.length})
         </button>
-        <button 
-          className={activeTab === 'completed' ? 'active' : ''} 
+        <button
+          className={activeTab === 'completed' ? 'active' : ''}
           onClick={() => setActiveTab('completed')}
         >
-          Completed ({completedJobs.length})
+          Done ({completedJobs.length})
         </button>
       </div>
 
       <main className="jobs-main">
         {loading && (
           <div className="jobs-loading">
-            <p>Syncing task board…</p>
+            <p>Syncing task board & schedule…</p>
           </div>
         )}
 
         {error && (
           <div className="jobs-error">
             <p>⚠️ {error}</p>
-            <button onClick={fetchJobs}>Retry</button>
+            <button onClick={fetchScheduleAndJobs}>Retry</button>
           </div>
         )}
 
+        {/* ── Tab: Roster Shifts ──────────────────────────────── */}
+        {!loading && activeTab === 'roster' && (
+          <div className="jobs-list animate-fade-in">
+            {schedule.length === 0 ? (
+              <p className="empty-state">No scheduled shifts on your roster calendar.</p>
+            ) : (
+              schedule.map((slot) => (
+                <div key={slot.roster_entry_id} className="job-card ongoing">
+                  <div className="job-card-header">
+                    <span className="status-tag pulse">
+                      {slot.status === 'PRESENT' ? '🟢 Live on Shift' : slot.status}
+                    </span>
+                    <span className="priority-tag">{slot.date}</span>
+                  </div>
+                  <h3>{slot.post_name}</h3>
+                  <p className="facility-name">🏢 {slot.site_name} • {slot.society_name}</p>
+                  <p className="job-location">
+                    🕒 {slot.shift_name} ({new Date(slot.shift_start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(slot.shift_end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                  </p>
+
+                  <div className="job-actions">
+                    <button
+                      className="btn-full"
+                      onClick={() => onTabChange?.('attendance')}
+                    >
+                      🕒 Clock In & Shift Checklist
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ── Tab: Ongoing Service Tickets ───────────────────── */}
         {!loading && activeTab === 'ongoing' && (
           <div className="jobs-list animate-fade-in">
             {ongoingJobs.length === 0 ? (
-              <p className="empty-state">No jobs currently in progress.</p>
+              <p className="empty-state">No service tickets currently in progress.</p>
             ) : (
-              ongoingJobs.map(job => (
+              ongoingJobs.map((job) => (
                 <div key={job.id} className="job-card ongoing">
                   <div className="job-card-header">
                     <span className="status-tag pulse">Active: {job.status}</span>
@@ -134,16 +225,16 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
                   <p className="facility-name">🏢 {job.society_name || 'Altus Society'}</p>
                   <p className="job-location">📍 {job.location}</p>
                   {job.issue && <p className="job-issue">"{job.issue}"</p>}
-                  
+
                   <div className="job-actions">
-                    <button 
+                    <button
                       className="btn-full"
                       onClick={() => onTabChange?.('attendance', job.assignments?.[0]?.id)}
                     >
-                      🕒 Clock & Attendance
+                      🕒 Attendance & Logs
                     </button>
                     {job.status !== 'Resolved' && (
-                      <button 
+                      <button
                         className="btn-resolve"
                         disabled={actionLoading === job.id}
                         onClick={() => handleUpdateStatus(job.id, 'Resolved')}
@@ -158,12 +249,13 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
           </div>
         )}
 
+        {/* ── Tab: Available Ticket Queue ────────────────────── */}
         {!loading && activeTab === 'available' && (
           <div className="jobs-list animate-fade-in">
             {availableJobs.length === 0 ? (
-              <p className="empty-state">No new jobs awaiting dispatch.</p>
+              <p className="empty-state">No new service tickets awaiting dispatch.</p>
             ) : (
-              availableJobs.map(job => (
+              availableJobs.map((job) => (
                 <div key={job.id} className="job-card available">
                   <div className="job-card-header">
                     <span className="pay-badge">{job.priority || 'Normal'} Priority</span>
@@ -174,7 +266,7 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
                   <p className="job-location">📍 {job.location}</p>
                   {job.issue && <p className="job-issue">"{job.issue}"</p>}
                   <div className="job-actions">
-                    <button 
+                    <button
                       className="btn-accept"
                       disabled={actionLoading === job.id}
                       onClick={() => handleUpdateStatus(job.id, 'In Progress')}
@@ -188,12 +280,13 @@ const JobsScreen = ({ onTabChange, onSelectJob }) => {
           </div>
         )}
 
+        {/* ── Tab: Completed Tickets ─────────────────────────── */}
         {!loading && activeTab === 'completed' && (
           <div className="jobs-list animate-fade-in">
             {completedJobs.length === 0 ? (
               <p className="empty-state">No completed jobs logged yet.</p>
             ) : (
-              completedJobs.map(job => (
+              completedJobs.map((job) => (
                 <div key={job.id} className="job-card completed">
                   <div className="job-card-header">
                     <span className="status-tag success">Resolved</span>
