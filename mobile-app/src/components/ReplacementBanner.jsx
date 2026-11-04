@@ -180,3 +180,4 @@ const ReplacementBanner = ({ apiBase, authHeaders, onNotice, onScheduleUpdated }
 };
 
 export default ReplacementBanner;
+

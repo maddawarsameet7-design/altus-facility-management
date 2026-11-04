@@ -525,3 +525,4 @@ const TaskChecklist = ({ apiBase, authHeaders, isClockedIn, gpsCoords, onNotice 
 };
 
 export default TaskChecklist;
+

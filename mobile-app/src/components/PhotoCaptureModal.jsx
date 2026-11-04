@@ -316,3 +316,4 @@ const PhotoCaptureModal = ({ task, apiBase, authHeaders, gpsCoords, onClose, onP
 };
 
 export default PhotoCaptureModal;
+
