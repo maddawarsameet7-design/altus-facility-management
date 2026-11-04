@@ -22,6 +22,8 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     """
     Computes great-circle distance between two GPS points in meters.
     """
+    lat1, lon1 = float(lat1), float(lon1)
+    lat2, lon2 = float(lat2), float(lon2)
     R = 6371000.0  # Earth radius in meters
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
@@ -85,7 +87,7 @@ def process_and_sanitize_image(
     img_io = io.BytesIO()
     img.save(img_io, format='JPEG', quality=85, optimize=True)
     img_io.seek(0)
-    sanitized_file = ContentFile(img_io.getvalue())
+    sanitized_file = ContentFile(img_io.getvalue(), name="photo.jpg")
 
     # 6. Generate thumbnail
     thumb_img = img.copy()
@@ -93,7 +95,7 @@ def process_and_sanitize_image(
     thumb_io = io.BytesIO()
     thumb_img.save(thumb_io, format='JPEG', quality=75, optimize=True)
     thumb_io.seek(0)
-    thumbnail_file = ContentFile(thumb_io.getvalue())
+    thumbnail_file = ContentFile(thumb_io.getvalue(), name="thumb.jpg")
 
     return sanitized_file, thumbnail_file
 
@@ -348,3 +350,4 @@ def create_or_get_quality_score_snapshot(
         locked_at=timezone.now()
     )
     return snapshot
+

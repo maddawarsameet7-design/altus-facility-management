@@ -37,15 +37,25 @@ def is_within_geofence(worker_lat: float, worker_lng: float,
     return is_inside, dist
 
 
-def parse_days_of_week(days_str: str) -> List[int]:
+def parse_days_of_week(days_str: Any) -> List[int]:
     """
-    Parse comma-separated days string e.g. '0,1,2,3,4,5,6' into a list of ints.
+    Parse comma-separated days string e.g. '0,1,2,3,4,5,6' or list of ints into a list of ints.
     0 = Monday, 6 = Sunday.
     """
     if not days_str:
         return []
+    if isinstance(days_str, list):
+        res = []
+        for x in days_str:
+            try:
+                val = int(x)
+                if 0 <= val <= 6 and val not in res:
+                    res.append(val)
+            except (ValueError, TypeError):
+                continue
+        return res
     res = []
-    for part in days_str.split(','):
+    for part in str(days_str).split(','):
         part = part.strip()
         if part.isdigit():
             val = int(part)

@@ -46,6 +46,15 @@ The application will be available at:
    npm run dev
    ```
 
+## ⏱️ Scheduled Automations & Management Commands
+- **Staffing Roster Generation**: `python manage.py generate_roster [--date YYYY-MM-DD] [--days N]` (Runs daily before shift start)
+- **Attendance Absent Shifts**: `python manage.py mark_absent_shifts` (Runs periodically after grace window to mark unclocked slots ABSENT and trigger replacements)
+- **Replacement Auto-Offering**: `python manage.py process_replacements` (Auto-offers unfilled/absent/leave slots and escalates nearing shifts)
+- **Housekeeping Daily Tasks**: `python manage.py generate_daily_tasks [--date YYYY-MM-DD] [--days N]` (Generates daily/weekly/monthly task instances from active templates)
+- **Mark Missed Tasks**: `python manage.py mark_missed_tasks` (Marks overdue PENDING, IN_PROGRESS, or AWAITING_EVIDENCE tasks as MISSED with alerts)
+- **Private Photo Retention Cleanup**: `python manage.py cleanup_expired_photos [--dry-run]` (Prunes sanitized photos older than `photo_retention_days`)
+- **Worker Password Decommission**: `python manage.py decommission_worker_passwords` (Decommissions legacy passwords to enforce passwordless OTP authentication)
+
 ## 📈 Scalability Guide
 For a larger production rollout:
 - Use **AWS RDS** for PostgreSQL with **PostGIS** for location matching.

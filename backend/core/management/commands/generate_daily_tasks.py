@@ -127,3 +127,4 @@ class Command(BaseCommand):
 def models_q_effective_to(target_date):
     from django.db.models import Q
     return Q(effective_to__isnull=True) | Q(effective_to__gte=target_date)
+

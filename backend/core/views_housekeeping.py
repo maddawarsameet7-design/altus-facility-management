@@ -1,11 +1,14 @@
 import calendar
+import json
 import os
 import uuid
 import zoneinfo
 from datetime import datetime, time, timedelta, timezone as dt_tz
 from decimal import Decimal
+from typing import Optional
 
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Q, Prefetch
 from django.http import Http404, HttpResponse, HttpResponseRedirect
@@ -40,6 +43,13 @@ from core.housekeeping_utils import (
 )
 
 
+def _to_json_safe(data):
+    """Recursively serializes data containing UUIDs, Decimals, dates to standard JSON."""
+    if data is None:
+        return {}
+    return json.loads(json.dumps(data, cls=DjangoJSONEncoder))
+
+
 def _parse_client_timestamp(ts_str: Optional[str]) -> datetime:
     """Parses ISO timestamp or defaults to timezone.now()."""
     if ts_str:
@@ -66,6 +76,11 @@ class AreaViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), IsOpsUser()]
         return [permissions.IsAuthenticated()]
 
+    def perform_create(self, serializer):
+        site = serializer.validated_data.get('site')
+        society = (site.society if site else None) or self.resolve_create_society(self.request)
+        serializer.save(society=society)
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if TaskTemplate.objects.filter(area=instance).exists() or TaskInstance.objects.filter(area=instance).exists():
@@ -91,7 +106,8 @@ class TaskTemplateViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsOpsUser()]
 
     def perform_create(self, serializer):
-        society = self.resolve_create_society(self.request)
+        post = serializer.validated_data.get('post')
+        society = (post.society if post else None) or self.resolve_create_society(self.request)
         template = serializer.save(society=society)
         AuditLog.objects.create(
             society=society,
@@ -99,7 +115,7 @@ class TaskTemplateViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             action='CREATE_TASK_TEMPLATE',
             target_model='TaskTemplate',
             target_id=template.id,
-            changes=serializer.data,
+            changes=_to_json_safe(serializer.data),
             reason='Template created by supervisor'
         )
 
@@ -112,7 +128,7 @@ class TaskTemplateViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             action='UPDATE_TASK_TEMPLATE',
             target_model='TaskTemplate',
             target_id=template.id,
-            changes={'before': old_data, 'after': serializer.data},
+            changes=_to_json_safe({'before': old_data, 'after': serializer.data}),
             reason='Template updated (applies to future dates)'
         )
 
@@ -139,8 +155,25 @@ class TaskInstanceViewSet(SocietyScopedMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = TaskInstanceSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
         user = self.request.user
+        role = getattr(user, 'role', '')
+        if role == 'WORKER':
+            worker = getattr(user, 'worker_profile', None)
+            if not worker:
+                return TaskInstance.objects.none()
+            worker_shift_ids = DailyRoster.objects.filter(
+                Q(worker=worker) | Q(covered_by=worker)
+            ).values_list('shift_id', flat=True)
+            qs = TaskInstance.objects.filter(
+                Q(shift_id__in=worker_shift_ids) |
+                Q(claimed_by=worker) |
+                Q(completed_by=worker)
+            ).select_related(
+                'society', 'template', 'post', 'shift', 'area',
+                'claimed_by__user', 'completed_by__user'
+            ).prefetch_related('photos')
+        else:
+            qs = super().get_queryset()
 
         # Optional query parameters
         site_id = self.request.query_params.get('site_id')
@@ -375,16 +408,16 @@ class TaskInstanceViewSet(SocietyScopedMixin, viewsets.ReadOnlyModelViewSet):
             expected_uuids = []
 
         # Check existing photos against requirements
-        existing_photos = task.photos.all()
+        existing_photos = list(task.photos.all())
         policy = getattr(task.society.settings, 'photo_geofence_policy', 'REJECT') if hasattr(task.society, 'settings') else 'REJECT'
 
         if policy == 'REJECT':
-            valid_photos = existing_photos.exclude(flags__contains='OUTSIDE_GEOFENCE')
+            valid_photos = [p for p in existing_photos if 'OUTSIDE_GEOFENCE' not in (p.flags or [])]
         else:
             valid_photos = existing_photos
 
-        has_before = valid_photos.filter(kind='BEFORE').exists()
-        has_after = valid_photos.filter(kind='AFTER').exists()
+        has_before = any(p.kind == 'BEFORE' for p in valid_photos)
+        has_after = any(p.kind == 'AFTER' for p in valid_photos)
 
         req = task.photo_required
         satisfied = True
@@ -412,9 +445,7 @@ class TaskInstanceViewSet(SocietyScopedMixin, viewsets.ReadOnlyModelViewSet):
 
         # Satisfied: mark DONE
         # Check if any photos have non-blocking flags needing review
-        needs_review = existing_photos.filter(
-            Q(flags__contains='OUTSIDE_GEOFENCE') | Q(flags__contains='MOCK_LOCATION') | Q(flags__contains='TIME_MISMATCH')
-        ).exists()
+        needs_review = any(any(f in (p.flags or []) for f in ('OUTSIDE_GEOFENCE', 'MOCK_LOCATION', 'TIME_MISMATCH')) for p in existing_photos)
 
         task.status = 'DONE'
         task.needs_review = needs_review
@@ -787,7 +818,8 @@ class InspectionViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
-        society = self.resolve_create_society(self.request)
+        post = serializer.validated_data.get('post')
+        society = (post.society if post else None) or self.resolve_create_society(self.request)
         inspection = serializer.save(society=society, inspector=self.request.user)
 
         # If FAILED or NEEDS_REWORK: generate rework task
@@ -817,7 +849,7 @@ class InspectionViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             action='CONDUCT_INSPECTION',
             target_model='Inspection',
             target_id=inspection.id,
-            changes=serializer.data,
+            changes=_to_json_safe(serializer.data),
             reason=f"Inspection completed with score {inspection.score}/5"
         )
 
@@ -835,7 +867,9 @@ class ComplaintViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     throttle_scope = 'complaint_create'
 
     def perform_create(self, serializer):
-        society = self.resolve_create_society(self.request)
+        site = serializer.validated_data.get('site')
+        post = serializer.validated_data.get('post')
+        society = (site.society if site else None) or (post.society if post else None) or self.resolve_create_society(self.request)
 
         # Amendment 8: raised_by needs active approved membership
         if self.request.user.role != 'DIRECTOR':
@@ -860,7 +894,7 @@ class ComplaintViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             action='RAISE_COMPLAINT',
             target_model='Complaint',
             target_id=complaint.id,
-            changes=serializer.data,
+            changes=_to_json_safe(serializer.data),
             reason='Complaint submitted by resident'
         )
 
@@ -899,12 +933,30 @@ class SupplyItemViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), IsOpsUser()]
         return [permissions.IsAuthenticated()]
 
+    def perform_create(self, serializer):
+        society = self.resolve_create_society(self.request)
+        serializer.save(society=society)
+
 
 class SupplyRequestViewSet(SocietyScopedMixin, viewsets.ModelViewSet):
     queryset = SupplyRequest.objects.select_related('society', 'item', 'requested_by__user', 'reviewed_by')
     serializer_class = SupplyRequestSerializer
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'supply_request_create'
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'role', '') == 'WORKER':
+            return SupplyRequest.objects.filter(requested_by__user=user)
+        return super().get_queryset()
+
+    def perform_create(self, serializer):
+        worker = getattr(self.request.user, 'worker_profile', None)
+        if not worker:
+            raise ValidationError({"requested_by": "Only registered workers can submit supply requests."})
+        item = serializer.validated_data.get('item')
+        society = (item.society if item else None) or self.resolve_create_society(self.request)
+        serializer.save(society=society, requested_by=worker)
 
     def perform_create(self, serializer):
         worker = getattr(self.request.user, 'worker_profile', None)
@@ -1032,3 +1084,4 @@ class PhotoFileDownloadView(APIView):
             return HttpResponse(target_file.read(), content_type="image/jpeg")
         except Exception:
             return HttpResponse(target_file.read(), content_type="image/jpeg")
+

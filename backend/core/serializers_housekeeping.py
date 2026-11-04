@@ -12,7 +12,7 @@ class AreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Area
         fields = ['id', 'society', 'site', 'name', 'floor_or_block', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'society', 'created_at', 'updated_at']
 
 
 class TaskTemplateSerializer(serializers.ModelSerializer):
@@ -29,7 +29,7 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
             'sort_order', 'is_active', 'effective_from', 'effective_to',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'society', 'created_at', 'updated_at']
 
 
 class TaskPhotoSerializer(serializers.ModelSerializer):
@@ -109,7 +109,7 @@ class InspectionSerializer(serializers.ModelSerializer):
             'inspector', 'inspector_name', 'date', 'score', 'notes',
             'status', 'shared_with_client', 'photos', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'inspector', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'society', 'inspector', 'created_at', 'updated_at']
 
 
 class ComplaintSerializer(serializers.ModelSerializer):
@@ -129,7 +129,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             'escalated_at', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'raised_by', 'reopened_count', 'escalated_at',
+            'id', 'society', 'raised_by', 'reopened_count', 'escalated_at',
             'created_at', 'updated_at'
         ]
 
@@ -143,7 +143,7 @@ class SupplyItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupplyItem
         fields = ['id', 'society', 'name', 'category', 'unit', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'society', 'created_at', 'updated_at']
 
 
 class SupplyRequestSerializer(serializers.ModelSerializer):
@@ -159,7 +159,7 @@ class SupplyRequestSerializer(serializers.ModelSerializer):
             'requested_by', 'requested_by_name', 'status', 'reviewed_by',
             'reviewed_by_name', 'reviewed_at', 'notes', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'requested_by', 'reviewed_by', 'reviewed_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'society', 'requested_by', 'reviewed_by', 'reviewed_at', 'created_at', 'updated_at']
 
 
 class QualityScoreSnapshotSerializer(serializers.ModelSerializer):
@@ -174,4 +174,5 @@ class QualityScoreSnapshotSerializer(serializers.ModelSerializer):
             'corrected_at', 'correction_notes', 'corrected_by',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'locked_at', 'is_locked', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'society', 'locked_at', 'is_locked', 'created_at', 'updated_at']
+

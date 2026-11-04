@@ -54,3 +54,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Missed task scan complete. Marked {missed_count} tasks as MISSED."
         ))
+

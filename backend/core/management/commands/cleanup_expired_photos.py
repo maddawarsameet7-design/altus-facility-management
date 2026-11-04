@@ -56,3 +56,4 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f"Photo cleanup complete. Deleted {total_deleted} expired photos."
             ))
+

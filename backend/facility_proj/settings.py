@@ -217,6 +217,8 @@ REST_FRAMEWORK = {
         'selfie': '60/min' if DEBUG else '30/min',
         'otp_request': '60/min' if DEBUG else '10/min',
         'otp_verify': '60/min' if DEBUG else '15/min',
+        'complaint_create': '60/min' if DEBUG else '20/min',
+        'supply_request_create': '60/min' if DEBUG else '20/min',
     },
     # ── Pagination ─────────────────────────────────────────────
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
