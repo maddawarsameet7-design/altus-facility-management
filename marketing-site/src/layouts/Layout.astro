@@ -121,25 +121,34 @@ const localBusinessSchema =
     <!-- Global CSS Variables & Reset -->
     <style is:global>
       :root {
-        --color-cream: #FAF9F6;
-        --color-cream-card: #FFFFFF;
-        --color-cream-subtle: #F4F0E8;
-        --color-indigo: #1B1837;
-        --color-indigo-dark: #121024;
-        --color-indigo-light: #2D2856;
-        --color-navy: #1B1837;
-        --color-navy-dark: #121024;
-        --color-coral: #FF6B6B;
-        --color-coral-hover: #FA5252;
-        --color-coral-dark: #E03131;
-        --color-mint: #10B981;
-        --color-mint-dark: #059669;
-        --color-bg: #FAF9F6;
+        --color-bg: #F8FAFC;
         --color-card-bg: #FFFFFF;
-        --color-text-main: #1B1837;
-        --color-text-muted: #53506D;
-        --color-border: #E6E2D8;
-        --color-border-subtle: #EFECE6;
+        --color-section-subtle: #F1F5F9;
+        --color-cream: #F8FAFC;
+        --color-cream-card: #FFFFFF;
+        --color-cream-subtle: #F1F5F9;
+
+        --color-text-main: #0F172A;
+        --color-text-body: #334155;
+        --color-text-muted: #475569;
+
+        --color-indigo: #0F172A;
+        --color-indigo-dark: #020617;
+        --color-indigo-light: #1E293B;
+        --color-navy: #0F172A;
+        --color-navy-dark: #020617;
+
+        --color-coral: #E03131;
+        --color-coral-hover: #C92A2A;
+        --color-coral-dark: #A61E4D;
+
+        --color-mint: #059669;
+        --color-mint-dark: #047857;
+
+        --color-border: #E2E8F0;
+        --color-border-subtle: #F1F5F9;
+        --color-border-strong: #CBD5E1;
+
         --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       }
 
@@ -161,6 +170,8 @@ const localBusinessSchema =
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        color: var(--color-text-main);
+        background-color: var(--color-bg);
       }
 
       main {
@@ -204,7 +215,7 @@ const localBusinessSchema =
       }
 
       a {
-        color: var(--color-coral-dark);
+        color: var(--color-coral);
         text-decoration: underline;
         text-underline-offset: 3px;
       }
@@ -219,7 +230,7 @@ const localBusinessSchema =
         justify-content: center;
         padding: 0.75rem 1.5rem;
         font-size: 0.95rem;
-        font-weight: 600;
+        font-weight: 700;
         border-radius: 8px;
         text-decoration: none;
         cursor: pointer;
@@ -230,20 +241,25 @@ const localBusinessSchema =
       .btn-primary {
         background-color: var(--color-coral);
         color: #ffffff !important;
+        box-shadow: 0 2px 8px rgba(224, 49, 49, 0.25);
       }
       .btn-primary:hover {
         background-color: var(--color-coral-hover);
         transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(224, 49, 49, 0.35);
       }
 
       .btn-secondary {
-        background-color: transparent;
-        color: var(--color-navy) !important;
-        border: 2px solid var(--color-navy);
+        background-color: #ffffff;
+        color: var(--color-text-main) !important;
+        border: 1.5px solid var(--color-border-strong);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       }
       .btn-secondary:hover {
-        background-color: var(--color-navy);
-        color: #ffffff !important;
+        background-color: #F8FAFC;
+        border-color: var(--color-text-main);
+        color: var(--color-text-main) !important;
+        transform: translateY(-1px);
       }
 
       .btn-outline-light {
