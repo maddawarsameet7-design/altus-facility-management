@@ -851,3 +851,73 @@
   gap: 10px;
   margin-top: 10px;
 }
+
+/* ==========================================================================
+   DIRECTOR PORTAL SPATIAL DARK THEME (VisionOS Obsidian Slate Glass)
+   ========================================================================== */
+body.dark-theme .executive-dashboard-light {
+  background: transparent;
+  color: #f8fafc;
+}
+
+body.dark-theme .ed-bg-mesh {
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(217,91%,20%,0.5) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(270,91%,20%,0.4) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(190,91%,18%,0.4) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(220,91%,18%,0.5) 0px, transparent 50%);
+  opacity: 0.6;
+}
+
+body.dark-theme .ed-icon-glass {
+  background: rgba(30, 41, 68, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .ed-header-left h1 {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+body.dark-theme .glass-card {
+  background: rgba(22, 28, 50, 0.7);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 45px -8px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+}
+
+body.dark-theme .glass-card:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.7), inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
+}
+
+body.dark-theme .glass-pill {
+  background: rgba(26, 34, 60, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .director-modal-card {
+  background: rgba(18, 23, 42, 0.92);
+  backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f8fafc;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+}
+
+body.dark-theme .director-form input,
+body.dark-theme .director-form select,
+body.dark-theme .director-form textarea {
+  background: rgba(11, 15, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+body.dark-theme .director-form label {
+  color: #cbd5e1;
+}

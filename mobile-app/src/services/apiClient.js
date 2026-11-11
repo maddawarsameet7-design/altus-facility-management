@@ -1,6 +1,9 @@
 import { SecureStorage } from './secureStorage.js';
 
 const resolveApiBase = () => {
+  if (typeof window !== 'undefined' && window.location && window.location.hostname.endsWith('vercel.app')) {
+    return '/api';
+  }
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
   }

@@ -209,3 +209,42 @@
   }
 }
 
+
+/* ==========================================================================
+   JOIN SOCIETY MODAL SPATIAL UI ENHANCEMENTS
+   ========================================================================== */
+.join-modal-backdrop {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.join-modal-card {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-floating);
+  border-radius: var(--radius-xl);
+}
+
+body.dark-theme .join-modal-card {
+  background: rgba(22, 28, 50, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f8fafc;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 1.5px rgba(255, 255, 255, 0.25);
+}
+
+body.dark-theme .join-modal-close {
+  color: #94a3b8;
+}
+
+body.dark-theme .join-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+body.dark-theme .code-input {
+  background: rgba(11, 15, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}

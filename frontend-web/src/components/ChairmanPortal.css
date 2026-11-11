@@ -482,3 +482,82 @@
   padding: 60px 20px;
 }
 
+
+/* ==========================================================================
+   CHAIRMAN PORTAL SPATIAL UI ENHANCEMENTS (VisionOS Materials)
+   ========================================================================== */
+
+.chairman-portal-container {
+  max-width: 1100px;
+}
+
+.chairman-header {
+  background: var(--spatial-glass-hero);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-floating);
+  border-radius: var(--radius-xl);
+}
+
+.chairman-tabs {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur-sm);
+  -webkit-backdrop-filter: var(--spatial-blur-sm);
+  border: 1px solid var(--spatial-border);
+  border-radius: var(--radius-pill);
+  padding: 8px;
+  box-shadow: var(--shadow-card);
+}
+
+.chairman-tab {
+  border-radius: var(--radius-pill);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chairman-tab.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.member-card {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.member-card:hover {
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: var(--shadow-floating);
+}
+
+/* Spatial Dark Mode */
+body.dark-theme .chairman-header {
+  background: linear-gradient(135deg, rgba(30, 38, 66, 0.95) 0%, rgba(15, 19, 36, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.65), inset 0 1px 1.5px rgba(255, 255, 255, 0.25);
+}
+
+body.dark-theme .chairman-tabs {
+  background: rgba(22, 28, 50, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+body.dark-theme .member-card {
+  background: rgba(26, 32, 56, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+}
+
+body.dark-theme .member-details {
+  background: rgba(15, 20, 36, 0.7);
+}
+
+body.dark-theme .member-avatar {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}

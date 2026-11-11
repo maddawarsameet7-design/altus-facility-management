@@ -326,3 +326,74 @@
   margin-bottom: 16px;
   opacity: 0.5;
 }
+
+/* ==========================================================================
+   SUPERVISOR CONSOLE SPATIAL UI ENHANCEMENTS (VisionOS Materials)
+   ========================================================================== */
+
+.console-header, .kpi-box, .console-main, .query-card {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kpi-box:hover, .query-card:hover {
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: var(--shadow-floating);
+}
+
+.search-bar {
+  background: var(--spatial-glass-bg);
+  backdrop-filter: var(--spatial-blur-sm);
+  border: 1px solid var(--spatial-border);
+  border-radius: var(--radius-pill);
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Spatial Dark Theme for Supervisor Console */
+body.dark-theme .console-header,
+body.dark-theme .kpi-box,
+body.dark-theme .console-main,
+body.dark-theme .query-card {
+  background: rgba(22, 28, 50, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+}
+
+body.dark-theme .tabs-row {
+  background: rgba(15, 20, 36, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .tabs-row .tab.active {
+  background: rgba(30, 41, 68, 0.8);
+  color: #60a5fa;
+  border-bottom-color: #3b82f6;
+}
+
+body.dark-theme .content-pane {
+  background: transparent;
+}
+
+body.dark-theme .q-id {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+body.dark-theme .q-footer {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .btn-secondary {
+  background: rgba(30, 41, 68, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+}

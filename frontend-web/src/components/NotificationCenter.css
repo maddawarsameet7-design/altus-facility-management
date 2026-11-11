@@ -201,3 +201,45 @@
 .view-all-btn:hover {
   background: #e2e8f0;
 }
+
+/* ==========================================================================
+   NOTIFICATION CENTER SPATIAL UI ENHANCEMENTS
+   ========================================================================== */
+.nc-overlay {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.nc-panel {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border-left: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-floating);
+}
+
+body.dark-theme .nc-panel {
+  background: rgba(22, 28, 50, 0.94);
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+  box-shadow: -15px 0 60px rgba(0, 0, 0, 0.7);
+}
+
+body.dark-theme .nc-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .nc-header h2 {
+  color: #f8fafc;
+}
+
+body.dark-theme .nc-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+body.dark-theme .nc-item {
+  background: rgba(30, 41, 68, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}

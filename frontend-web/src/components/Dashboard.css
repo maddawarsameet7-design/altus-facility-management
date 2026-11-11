@@ -379,3 +379,59 @@
   justify-content: center;
   gap: 12px;
 }
+
+/* ==========================================================================
+   DASHBOARD SPATIAL UI ENHANCEMENTS (VisionOS Materials)
+   ========================================================================== */
+
+.amenity-card {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-lg);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.amenity-card:hover {
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: var(--shadow-floating);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.hero-btn-icon {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: var(--spatial-blur-sm);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.hero-action-btn:hover .hero-btn-icon {
+  transform: translateY(-2px) scale(1.1);
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.25), inset 0 1px 1.5px rgba(255, 255, 255, 0.6);
+}
+
+/* Spatial Dark Mode for Dashboard */
+body.dark-theme .amenity-card {
+  background: rgba(26, 32, 56, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+}
+
+body.dark-theme .progress-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .worker-assignment-pane {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .worker-call-btn {
+  background: rgba(30, 41, 68, 0.8);
+  color: #60a5fa;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}

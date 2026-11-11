@@ -198,3 +198,42 @@
   50% { opacity: 0.6; transform: scale(0.95); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ==========================================================================
+   MEMBER TICKETS SPATIAL UI ENHANCEMENTS (VisionOS Materials)
+   ========================================================================== */
+
+.digital-ticket {
+  background: var(--spatial-glass-card);
+  backdrop-filter: var(--spatial-blur);
+  -webkit-backdrop-filter: var(--spatial-blur);
+  border: 1px solid var(--spatial-border);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-lg);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.digital-ticket:hover {
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: var(--shadow-floating);
+}
+
+/* Spatial Dark Mode for Tickets */
+body.dark-theme .digital-ticket {
+  background: rgba(26, 32, 56, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+}
+
+body.dark-theme .notch {
+  background: #090c15;
+}
+
+body.dark-theme .dash-line {
+  border-left-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-theme .dt-right {
+  background: rgba(0, 0, 0, 0.2);
+}

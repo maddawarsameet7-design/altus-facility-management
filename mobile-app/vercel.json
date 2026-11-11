@@ -1,4 +1,10 @@
 {
   "buildCommand": "npm run build:staging",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://api.altsan.com/api/$1"
+    }
+  ]
 }
