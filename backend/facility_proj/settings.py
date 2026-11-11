@@ -250,11 +250,18 @@ else:
     CORS_ALLOWED_ORIGINS = [
         'https://altsan.com',
         'https://www.altsan.com',
+        'https://app.altsan.com',
+        'https://worker.altsan.com',
     ]
+
+# Permit all Vercel deployment preview and production origins
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
 
 # Ensure critical production origins are always permitted
 if not DEBUG:
-    for origin in ['https://altsan.com', 'https://www.altsan.com']:
+    for origin in ['https://altsan.com', 'https://www.altsan.com', 'https://app.altsan.com', 'https://worker.altsan.com']:
         if origin not in CORS_ALLOWED_ORIGINS:
             CORS_ALLOWED_ORIGINS.append(origin)
 
