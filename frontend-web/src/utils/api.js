@@ -21,6 +21,9 @@ export function normalizeApiUrl(rawUrl) {
  * - In Production without env var, falls back safely to 'https://api.altsan.com/api/' so the application never crashes.
  */
 export function resolveApiBaseUrl() {
+  if (typeof window !== 'undefined' && window.location?.hostname && window.location.hostname.endsWith('vercel.app')) {
+    return '/api/';
+  }
   const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
   const envUrl = env.VITE_API_URL || (typeof process !== 'undefined' ? process.env?.VITE_API_URL : undefined);
 
