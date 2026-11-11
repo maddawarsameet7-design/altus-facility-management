@@ -36,6 +36,11 @@ function App() {
   const [otpSent, setOtpSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
+  // Password / Direct Login State
+  const [usePasswordLogin, setUsePasswordLogin] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('worker');
+  const [passwordInput, setPasswordInput] = useState('altus123');
+
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
@@ -210,6 +215,63 @@ function App() {
     }
   };
 
+  // ── Password / Direct Credentials Login ────────────────────────
+  const handlePasswordLogin = async (e) => {
+    e?.preventDefault();
+    setLoginLoading(true);
+    setLoginError('');
+    setLoginMessage('');
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: usernameInput.trim(),
+          password: passwordInput,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || 'Invalid credentials');
+      }
+
+      await SecureStorage.set('access_token', data.access);
+      if (data.refresh) {
+        await SecureStorage.set('refresh_token', data.refresh);
+      }
+
+      let profile = {
+        id: data.user_id || 'worker-1',
+        worker_id: data.user_id || 'worker-1',
+        username: usernameInput.trim(),
+        role: 'WORKER',
+        verification_status: 'VERIFIED',
+      };
+
+      try {
+        const meRes = await fetch(`${API_BASE}/user/me/`, {
+          headers: { Authorization: `Bearer ${data.access}` },
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          profile = { ...profile, ...meData, id: meData.id || profile.id };
+        }
+      } catch (err) {
+        console.warn('Profile fetch fallback:', err);
+      }
+
+      await SecureStorage.set('worker_profile', JSON.stringify(profile));
+      setUser(profile);
+      setToken(data.access);
+    } catch (err) {
+      setLoginError(getFriendlyError(err));
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
   // ── Safe Logout with Pending Items Warning (Amendment 3) ────────
   const handleLogout = async () => {
     if (user?.id) {
@@ -353,6 +415,115 @@ function App() {
             </div>
           )}
 
+          {/* Login Mode Toggle */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button
+              type="button"
+              onClick={() => { setUsePasswordLogin(false); setLoginError(''); }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '10px',
+                border: 'none',
+                background: !usePasswordLogin ? '#2563eb' : '#1e293b',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              📱 Phone + OTP
+            </button>
+            <button
+              type="button"
+              onClick={() => { setUsePasswordLogin(true); setLoginError(''); }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '10px',
+                border: 'none',
+                background: usePasswordLogin ? '#2563eb' : '#1e293b',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              🔑 Username
+            </button>
+          </div>
+
+          {usePasswordLogin ? (
+            <form
+              onSubmit={handlePasswordLogin}
+              style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}
+            >
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px' }}>
+                  Username / यूज़रनेम
+                </label>
+                <input
+                  type="text"
+                  placeholder="worker"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    background: '#17223b',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontSize: '16px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px' }}>
+                  Password / पासवर्ड
+                </label>
+                <input
+                  type="password"
+                  placeholder="altus123"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    background: '#17223b',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontSize: '16px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loginLoading}
+                style={{
+                  marginTop: '8px',
+                  padding: '16px',
+                  borderRadius: '14px',
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '16px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  minHeight: '52px',
+                }}
+              >
+                {loginLoading ? 'प्रतीक्षा करें…' : 'साइन इन करें / Sign In'}
+              </button>
+            </form>
+          ) : (
           <form
             onSubmit={otpSent ? handleVerifyOtp : handleRequestOtp}
             style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}
@@ -472,6 +643,7 @@ function App() {
               {loginLoading ? 'प्रतीक्षा करें…' : otpSent ? t('login_verify_button') : t('login_send_otp')}
             </button>
           </form>
+          )}
         </div>
       </div>
     );
