@@ -56,7 +56,7 @@ export const siteConfig: SiteConfig = {
   description:
     'Dedicated, verified housekeeping staff deployed to residential societies, hospitals, and commercial facilities with geofenced attendance, photo checklists, and supervisor inspections.',
   url: 'https://altsan.com',
-  appUrl: 'https://app.altsan.com',
+  appUrl: 'https://frontend-web-plum-ten.vercel.app',
   email: 'inquiries@altsan.com',
   phone: '+912067000000',
   phoneFormatted: '+91 (020) 6700-0000',
