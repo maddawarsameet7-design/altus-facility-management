@@ -14,3 +14,6 @@ staticfiles/
 media/
 private_media/
 *.pyc
+bin/
+*.apk
+local.properties
