@@ -10,24 +10,198 @@ const pageDesc =
 <Layout title={pageTitle} description={pageDesc} canonicalPath="/">
   <!-- Hero Section -->
   <section class="hero-section">
-    <div class="container hero-inner">
-      <div class="hero-badge">Verified Housekeeping Staffing</div>
-      <h1 class="hero-title">Managed Housekeeping & Facility Staffing You Can Verify</h1>
-      <p class="hero-subtitle">
-        We deploy dedicated, KYC-onboarded cleaning personnel to residential societies, clinics, and commercial premises. Every shift is tracked with geofenced mobile check-ins and photo-documented checklists.
-      </p>
+    <div class="container">
+      <div class="hero-grid">
+        <!-- Left: Value Proposition & CTAs -->
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="pulse-dot"></span>
+            <span>Pune & PCMC Verified Operations</span>
+          </div>
 
-      <div class="hero-ctas">
-        <a href="/contact" class="btn btn-primary">Request Staffing Proposal</a>
-        <a href="/housekeeping" class="btn btn-outline-light">View Housekeeping Scope</a>
+          <h1 class="hero-title">
+            Managed Housekeeping & Staffing <span class="gradient-text">You Can Verify</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            We deploy dedicated, KYC-onboarded cleaning personnel to housing societies, clinics, and commercial premises. Every shift is tracked with hardware geofencing, real-time selfie check-ins, and timestamped photo task checklists.
+          </p>
+
+          <div class="hero-ctas">
+            <a href="/contact" class="btn btn-primary btn-lg">
+              <span>Request Staffing Proposal</span>
+              <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="/housekeeping" class="btn btn-outline-light btn-lg">View Cleaning Scope</a>
+          </div>
+
+          <!-- Micro-Trust Indicators -->
+          <div class="hero-trust-row">
+            <div class="trust-item">
+              <svg class="trust-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>100% Police & Aadhaar Verified</span>
+            </div>
+            <div class="trust-item">
+              <svg class="trust-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Hardware Geofence Check-in</span>
+            </div>
+            <div class="trust-item">
+              <svg class="trust-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>Automated Reliever Backup</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Interactive Device & Live Operations Showcase -->
+        <div class="hero-visual">
+          <div class="phone-mockup-wrapper">
+            
+            <!-- Floating Badge: Top Right -->
+            <div class="floating-badge badge-top">
+              <div class="badge-icon-box bg-green">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <div class="badge-text">
+                <span class="badge-title">Zero Phantom Billing</span>
+                <span class="badge-sub">100% Geofenced Shift Fulfillment</span>
+              </div>
+            </div>
+
+            <!-- The Smartphone Mockup Frame -->
+            <div class="phone-frame">
+              <div class="phone-notch">
+                <div class="notch-speaker"></div>
+                <div class="notch-camera"></div>
+              </div>
+
+              <div class="phone-screen">
+                <!-- App Header -->
+                <div class="app-header">
+                  <div class="app-brand">
+                    <span class="app-logo-dot"></span>
+                    <span class="app-title">Altsan Worker</span>
+                  </div>
+                  <div class="app-society-pill">📍 Baner Meadows CHS</div>
+                </div>
+
+                <!-- Live Shift Card -->
+                <div class="app-shift-card">
+                  <div class="shift-card-header">
+                    <div class="worker-avatar-box">
+                      <span class="avatar-text">RS</span>
+                      <span class="avatar-status-dot"></span>
+                    </div>
+                    <div class="shift-worker-info">
+                      <div class="worker-name">Ramesh Shinde</div>
+                      <div class="worker-role">Housekeeping Lead • Morning</div>
+                    </div>
+                    <div class="shift-time-badge">07:00 - 15:30</div>
+                  </div>
+
+                  <div class="geofence-status-banner">
+                    <div class="geofence-indicator">
+                      <span class="gps-pulse"></span>
+                      <span class="geofence-text">Inside Property Boundary</span>
+                    </div>
+                    <span class="geofence-accuracy">GPS Accuracy: 6m</span>
+                  </div>
+                </div>
+
+                <!-- Daily Checklist Header -->
+                <div class="app-checklist-title">
+                  <span>Shift Task Checklist</span>
+                  <span class="checklist-progress">2 of 3 Done</span>
+                </div>
+
+                <!-- Checklist Items -->
+                <div class="app-checklist">
+                  <!-- Task 1 -->
+                  <div class="task-card task-done">
+                    <div class="task-check-icon">✓</div>
+                    <div class="task-details">
+                      <div class="task-name">Lobby & Lift Sanitization (Tower A)</div>
+                      <div class="task-meta">
+                        <span class="task-time">07:42 AM</span>
+                        <span class="photo-pill">📸 Photo Verified</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Task 2 -->
+                  <div class="task-card task-done">
+                    <div class="task-check-icon">✓</div>
+                    <div class="task-details">
+                      <div class="task-name">Clubhouse & Gym Floor Washdown</div>
+                      <div class="task-meta">
+                        <span class="task-time">08:35 AM</span>
+                        <span class="photo-pill">📸 Photo Verified</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Task 3 -->
+                  <div class="task-card task-active">
+                    <div class="task-spinner"></div>
+                    <div class="task-details">
+                      <div class="task-name">Refuse Room & Waste Bin Clearance</div>
+                      <div class="task-meta">
+                        <span class="task-in-progress">In Progress • Capturing Proof</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- App Action Button -->
+                <div class="app-action-footer">
+                  <div class="app-btn-mock">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <span>Tap to Capture Task Photo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Badge: Bottom Left -->
+            <div class="floating-badge badge-bottom">
+              <div class="badge-icon-box bg-coral">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="badge-text">
+                <span class="badge-title">Reliever Deployed in 12m</span>
+                <span class="badge-sub">Automated absence replacement</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Feature Chips -->
-      <div class="hero-chips">
-        <div class="chip">📍 Geofenced Attendance</div>
-        <div class="chip">📸 Photo-Verified Tasks</div>
-        <div class="chip">🔄 Supervisor Reliever Workflow</div>
-        <div class="chip">📊 Monthly Quality Audits</div>
+  <!-- Impact & Proof Metrics Strip -->
+  <section class="metrics-strip">
+    <div class="container">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val">99.4<span class="metric-unit">%</span></div>
+          <div class="metric-label">Shift Fulfillment Rate</div>
+          <div class="metric-sub">Automated reliever dispatch on sick days</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">0</div>
+          <div class="metric-label">Phantom Billing Disputes</div>
+          <div class="metric-sub">100% geofence-verified on-site hours</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">100<span class="metric-unit">%</span></div>
+          <div class="metric-label">Police & KYC Verified</div>
+          <div class="metric-sub">Full Aadhaar & address proof on file</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">&lt; 15<span class="metric-unit">m</span></div>
+          <div class="metric-label">Supervisor Response Time</div>
+          <div class="metric-sub">Dedicated on-field route supervisors</div>
+        </div>
       </div>
     </div>
   </section>
@@ -159,71 +333,658 @@ const pageDesc =
 </Layout>
 
 <style>
+  /* ==========================================================================
+     HERO SECTION
+     ========================================================================== */
   .hero-section {
-    background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-dark) 100%);
+    background: 
+      radial-gradient(ellipse at 85% 25%, rgba(255, 107, 107, 0.14), transparent 50%),
+      radial-gradient(ellipse at 15% 85%, rgba(56, 189, 248, 0.09), transparent 50%),
+      linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-dark) 100%);
     color: #ffffff;
-    padding: 5.5rem 0 4.5rem;
+    padding: 4.5rem 0 4rem;
     position: relative;
+    overflow: hidden;
   }
 
-  .hero-inner {
-    max-width: 840px;
-    margin: 0 auto;
-    text-align: center;
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3.5rem;
+    align-items: center;
+  }
+
+  @media (min-width: 992px) {
+    .hero-grid {
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 4rem;
+    }
+  }
+
+  .hero-content {
+    max-width: 620px;
   }
 
   .hero-badge {
-    display: inline-block;
-    background: #FF6B6B;
-    color: #121024;
-    padding: 0.35rem 1rem;
-    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #f1f5f9;
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
     font-size: 0.825rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.02em;
     margin-bottom: 1.5rem;
   }
 
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+    }
+  }
+
   .hero-title {
-    font-size: 2.75rem;
-    line-height: 1.15;
+    font-size: 2.5rem;
+    line-height: 1.18;
     font-weight: 800;
     letter-spacing: -0.03em;
     margin-bottom: 1.25rem;
+    color: #ffffff;
+  }
+
+  @media (min-width: 768px) {
+    .hero-title {
+      font-size: 3.1rem;
+    }
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #FF8787 0%, #FF6B6B 50%, #FFA8A8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline;
   }
 
   .hero-subtitle {
-    font-size: 1.15rem;
-    line-height: 1.6;
+    font-size: 1.125rem;
+    line-height: 1.65;
     color: #CBD5E1;
-    margin-bottom: 2rem;
+    margin-bottom: 2.25rem;
   }
 
   .hero-ctas {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 1rem;
     margin-bottom: 2.5rem;
     flex-wrap: wrap;
   }
 
-  .hero-chips {
+  .btn-lg {
+    padding: 0.9rem 1.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .btn-primary {
+    background: var(--color-coral);
+    color: #ffffff;
+    box-shadow: 0 8px 24px -4px rgba(255, 107, 107, 0.45);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-coral-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -4px rgba(255, 107, 107, 0.55);
+  }
+
+  .btn-icon {
+    margin-left: 0.5rem;
+    transition: transform 0.2s ease;
+  }
+
+  .btn-primary:hover .btn-icon {
+    transform: translateX(4px);
+  }
+
+  .btn-outline-light:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Micro-Trust Row */
+  .hero-trust-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  @media (min-width: 576px) {
+    .hero-trust-row {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+  }
+
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #94A3B8;
+  }
+
+  .trust-item span {
+    font-weight: 500;
+  }
+
+  /* ==========================================================================
+     HERO VISUAL / SMARTPHONE MOCKUP
+     ========================================================================== */
+  .hero-visual {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 0;
+  }
+
+  .phone-mockup-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .phone-frame {
+    background: #0f172a;
+    border-radius: 42px;
+    border: 10px solid #1e1b2e;
+    box-shadow: 
+      0 30px 60px -12px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(255, 255, 255, 0.12),
+      inset 0 0 0 2px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .phone-notch {
+    height: 24px;
+    background: #1e1b2e;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    width: 130px;
+    margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    gap: 8px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
   }
 
-  .chip {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 0.4rem 0.85rem;
-    border-radius: 20px;
+  .notch-speaker {
+    width: 40px;
+    height: 4px;
+    background: #334155;
+    border-radius: 3px;
+  }
+
+  .notch-camera {
+    width: 7px;
+    height: 7px;
+    background: #1e293b;
+    border-radius: 50%;
+    border: 1px solid #334155;
+  }
+
+  .phone-screen {
+    padding: 32px 14px 16px;
+    background: linear-gradient(180deg, #18152e 0%, #0d0b1a 100%);
+    color: #ffffff;
+    font-size: 0.85rem;
+    min-height: 470px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* App Screen Header */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 12px;
+  }
+
+  .app-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .app-logo-dot {
+    width: 10px;
+    height: 10px;
+    background: #FF6B6B;
+    border-radius: 3px;
+  }
+
+  .app-title {
+    font-weight: 700;
     font-size: 0.825rem;
-    color: #E2E8F0;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+  }
+
+  .app-society-pill {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    color: #CBD5E1;
+    font-weight: 500;
+  }
+
+  /* App Shift Card */
+  .app-shift-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .shift-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .worker-avatar-box {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, #FF6B6B 0%, #7950F2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .avatar-status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 9px;
+    height: 9px;
+    background: #22c55e;
+    border: 2px solid #18152e;
+    border-radius: 50%;
+  }
+
+  .shift-worker-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .worker-name {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .worker-role {
+    font-size: 0.675rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .shift-time-badge {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .geofence-status-banner {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .geofence-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .gps-pulse {
+    width: 6px;
+    height: 6px;
+    background: #4ade80;
+    border-radius: 50%;
+  }
+
+  .geofence-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #86efac;
+  }
+
+  .geofence-accuracy {
+    font-size: 0.625rem;
+    color: #94a3b8;
+  }
+
+  /* App Checklist */
+  .app-checklist-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.725rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .checklist-progress {
+    color: #86efac;
+    font-weight: 600;
+  }
+
+  .app-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 12px;
+    flex: 1;
+  }
+
+  .task-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .task-card.task-done {
+    border-left: 3px solid #22c55e;
+  }
+
+  .task-card.task-active {
+    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.06);
+  }
+
+  .task-check-icon {
+    width: 20px;
+    height: 20px;
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .task-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(245, 158, 11, 0.3);
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: spin 1.2s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .task-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .task-name {
+    font-size: 0.725rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  .task-time {
+    font-size: 0.65rem;
+    color: #64748b;
+  }
+
+  .photo-pill {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .task-in-progress {
+    font-size: 0.65rem;
+    color: #f59e0b;
+    font-weight: 600;
+  }
+
+  .app-action-footer {
+    padding-top: 6px;
+  }
+
+  .app-btn-mock {
+    background: var(--color-coral);
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.35);
+  }
+
+  /* Floating Badges */
+  .floating-badge {
+    position: absolute;
+    background: rgba(22, 19, 43, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    max-width: 260px;
+    animation: float 4s ease-in-out infinite alternate;
+  }
+
+  .badge-top {
+    top: -15px;
+    right: -25px;
+  }
+
+  .badge-bottom {
+    bottom: -15px;
+    left: -25px;
+    animation-delay: -2s;
+  }
+
+  @media (max-width: 767px) {
+    .floating-badge {
+      display: none;
+    }
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-8px); }
+  }
+
+  .badge-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .badge-icon-box.bg-green {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  .badge-icon-box.bg-coral {
+    background: rgba(255, 107, 107, 0.2);
+    color: #FF8787;
+  }
+
+  .badge-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .badge-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.2;
+  }
+
+  .badge-sub {
+    font-size: 0.675rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  /* ==========================================================================
+     METRICS STRIP
+     ========================================================================== */
+  .metrics-strip {
+    background: #110e22;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem 0;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .metrics-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  .metric-card {
+    text-align: center;
+    padding: 0.5rem;
+  }
+
+  .metric-val {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (min-width: 992px) {
+    .metric-val {
+      font-size: 2.85rem;
+    }
+  }
+
+  .metric-unit {
+    color: var(--color-coral);
+    font-size: 0.7em;
+    font-weight: 700;
+    margin-left: 2px;
+  }
+
+  .metric-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 0.35rem;
+  }
+
+  .metric-sub {
+    font-size: 0.775rem;
+    color: #94a3b8;
+    line-height: 1.4;
   }
 
   .section {
