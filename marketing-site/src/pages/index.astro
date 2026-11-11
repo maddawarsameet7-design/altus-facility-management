@@ -32,7 +32,7 @@ const pageDesc =
               <span>Request Staffing Proposal</span>
               <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
-            <a href="/housekeeping" class="btn btn-outline-light btn-lg">View Cleaning Scope</a>
+            <a href="/housekeeping" class="btn btn-secondary btn-lg">View Cleaning Scope</a>
           </div>
 
           <!-- Micro-Trust Indicators -->
@@ -185,22 +185,34 @@ const pageDesc =
         <div class="metric-card">
           <div class="metric-val">99.4<span class="metric-unit">%</span></div>
           <div class="metric-label">Shift Fulfillment Rate</div>
-          <div class="metric-sub">Automated reliever dispatch on sick days</div>
+          <div class="metric-sub">
+            <span class="trend-badge trend-up">▲ +14% vs Local Agencies</span>
+            <span>Automated reliever dispatch on sick days</span>
+          </div>
         </div>
         <div class="metric-card">
           <div class="metric-val">0</div>
           <div class="metric-label">Phantom Billing Disputes</div>
-          <div class="metric-sub">100% geofence-verified on-site hours</div>
+          <div class="metric-sub">
+            <span class="trend-badge trend-neutral">● 100% Audit Precision</span>
+            <span>Hardware geofenced on-site hours</span>
+          </div>
         </div>
         <div class="metric-card">
           <div class="metric-val">100<span class="metric-unit">%</span></div>
           <div class="metric-label">Police & KYC Verified</div>
-          <div class="metric-sub">Full Aadhaar & address proof on file</div>
+          <div class="metric-sub">
+            <span class="trend-badge trend-up">✓ Zero Safety Risk</span>
+            <span>Aadhaar & police clearance on file</span>
+          </div>
         </div>
         <div class="metric-card">
           <div class="metric-val">&lt; 15<span class="metric-unit">m</span></div>
           <div class="metric-label">Supervisor Response Time</div>
-          <div class="metric-sub">Dedicated on-field route supervisors</div>
+          <div class="metric-sub">
+            <span class="trend-badge trend-up">⚡ On-Ground Cluster</span>
+            <span>Dedicated Baner & PCMC supervisors</span>
+          </div>
         </div>
       </div>
     </div>
@@ -855,15 +867,16 @@ const pageDesc =
 
 <style>
   /* ==========================================================================
-     HERO SECTION
+     HERO SECTION (Warm Cream Canvas + Dark Indigo Typography)
      ========================================================================== */
   .hero-section {
-    background: 
-      radial-gradient(ellipse at 85% 25%, rgba(255, 107, 107, 0.14), transparent 50%),
-      radial-gradient(ellipse at 15% 85%, rgba(56, 189, 248, 0.09), transparent 50%),
-      linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-dark) 100%);
-    color: #ffffff;
-    padding: 4.5rem 0 4rem;
+    background-color: var(--color-cream);
+    background-image: 
+      radial-gradient(#E2DCD0 1.2px, transparent 1.2px),
+      linear-gradient(to bottom, rgba(250, 249, 246, 0.4), rgba(250, 249, 246, 1));
+    background-size: 28px 28px, 100% 100%;
+    color: var(--color-indigo);
+    padding: 4.5rem 0 3.5rem;
     position: relative;
     overflow: hidden;
   }
@@ -890,35 +903,36 @@ const pageDesc =
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #f1f5f9;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
+    color: var(--color-indigo);
     padding: 0.4rem 1rem;
     border-radius: 9999px;
     font-size: 0.825rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.02em;
     margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(27, 24, 55, 0.05);
   }
 
   .pulse-dot {
     width: 8px;
     height: 8px;
-    background-color: #4ade80;
+    background-color: var(--color-mint);
     border-radius: 50%;
-    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
     animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
   }
 
   @keyframes pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
     }
     70% {
-      box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
   }
 
@@ -928,7 +942,7 @@ const pageDesc =
     font-weight: 800;
     letter-spacing: -0.03em;
     margin-bottom: 1.25rem;
-    color: #ffffff;
+    color: var(--color-indigo);
   }
 
   @media (min-width: 768px) {
@@ -938,16 +952,15 @@ const pageDesc =
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, #FF8787 0%, #FF6B6B 50%, #FFA8A8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--color-coral);
     display: inline;
+    position: relative;
   }
 
   .hero-subtitle {
     font-size: 1.125rem;
     line-height: 1.65;
-    color: #CBD5E1;
+    color: var(--color-text-muted);
     margin-bottom: 2.25rem;
   }
 
@@ -962,19 +975,31 @@ const pageDesc =
   .btn-lg {
     padding: 0.9rem 1.75rem;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .btn-primary {
     background: var(--color-coral);
-    color: #ffffff;
-    box-shadow: 0 8px 24px -4px rgba(255, 107, 107, 0.45);
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(255, 107, 107, 0.35);
   }
 
   .btn-primary:hover {
     background: var(--color-coral-hover);
     transform: translateY(-2px);
-    box-shadow: 0 12px 28px -4px rgba(255, 107, 107, 0.55);
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.45);
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--color-indigo) !important;
+    border: 2px solid var(--color-indigo);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-indigo);
+    color: #ffffff !important;
+    transform: translateY(-2px);
   }
 
   .btn-icon {
@@ -986,24 +1011,20 @@ const pageDesc =
     transform: translateX(4px);
   }
 
-  .btn-outline-light:hover {
-    transform: translateY(-2px);
-  }
-
   /* Micro-Trust Row */
   .hero-trust-row {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
   }
 
   @media (min-width: 576px) {
     .hero-trust-row {
       flex-direction: row;
       flex-wrap: wrap;
-      gap: 1.25rem;
+      gap: 1.5rem;
     }
   }
 
@@ -1012,11 +1033,8 @@ const pageDesc =
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: #94A3B8;
-  }
-
-  .trust-item span {
-    font-weight: 500;
+    color: var(--color-text-muted);
+    font-weight: 600;
   }
 
   /* ==========================================================================
@@ -1038,18 +1056,17 @@ const pageDesc =
   .phone-frame {
     background: #0f172a;
     border-radius: 42px;
-    border: 10px solid #1e1b2e;
+    border: 10px solid var(--color-indigo);
     box-shadow: 
-      0 30px 60px -12px rgba(0, 0, 0, 0.65),
-      0 0 0 1px rgba(255, 255, 255, 0.12),
-      inset 0 0 0 2px rgba(0, 0, 0, 0.8);
+      0 24px 50px -12px rgba(27, 24, 55, 0.35),
+      0 0 0 1px rgba(27, 24, 55, 0.1);
     overflow: hidden;
     position: relative;
   }
 
   .phone-notch {
     height: 24px;
-    background: #1e1b2e;
+    background: var(--color-indigo);
     border-bottom-left-radius: 14px;
     border-bottom-right-radius: 14px;
     width: 130px;
@@ -1068,7 +1085,7 @@ const pageDesc =
   .notch-speaker {
     width: 40px;
     height: 4px;
-    background: #334155;
+    background: #475569;
     border-radius: 3px;
   }
 
@@ -1077,12 +1094,12 @@ const pageDesc =
     height: 7px;
     background: #1e293b;
     border-radius: 50%;
-    border: 1px solid #334155;
+    border: 1px solid #475569;
   }
 
   .phone-screen {
     padding: 32px 14px 16px;
-    background: linear-gradient(180deg, #18152e 0%, #0d0b1a 100%);
+    background: #0B0A17;
     color: #ffffff;
     font-size: 0.85rem;
     min-height: 470px;
@@ -1090,13 +1107,12 @@ const pageDesc =
     flex-direction: column;
   }
 
-  /* App Screen Header */
   .app-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     margin-bottom: 12px;
   }
 
@@ -1109,30 +1125,28 @@ const pageDesc =
   .app-logo-dot {
     width: 10px;
     height: 10px;
-    background: #FF6B6B;
+    background: var(--color-coral);
     border-radius: 3px;
   }
 
   .app-title {
     font-weight: 700;
     font-size: 0.825rem;
-    letter-spacing: -0.01em;
     color: #ffffff;
   }
 
   .app-society-pill {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
     padding: 3px 8px;
     border-radius: 12px;
     font-size: 0.7rem;
     color: #CBD5E1;
-    font-weight: 500;
+    font-weight: 600;
   }
 
-  /* App Shift Card */
   .app-shift-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
     padding: 12px;
     margin-bottom: 12px;
@@ -1148,7 +1162,7 @@ const pageDesc =
   .worker-avatar-box {
     width: 34px;
     height: 34px;
-    background: linear-gradient(135deg, #FF6B6B 0%, #7950F2 100%);
+    background: linear-gradient(135deg, var(--color-coral) 0%, var(--color-indigo-light) 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1165,8 +1179,8 @@ const pageDesc =
     right: -1px;
     width: 9px;
     height: 9px;
-    background: #22c55e;
-    border: 2px solid #18152e;
+    background: var(--color-mint);
+    border: 2px solid #0B0A17;
     border-radius: 50%;
   }
 
@@ -1193,8 +1207,8 @@ const pageDesc =
   }
 
   .shift-time-badge {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
     font-size: 0.65rem;
     font-weight: 700;
     padding: 2px 6px;
@@ -1203,8 +1217,8 @@ const pageDesc =
   }
 
   .geofence-status-banner {
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
     border-radius: 8px;
     padding: 6px 8px;
     display: flex;
@@ -1221,7 +1235,7 @@ const pageDesc =
   .gps-pulse {
     width: 6px;
     height: 6px;
-    background: #4ade80;
+    background: var(--color-mint);
     border-radius: 50%;
   }
 
@@ -1236,7 +1250,6 @@ const pageDesc =
     color: #94a3b8;
   }
 
-  /* App Checklist */
   .app-checklist-title {
     display: flex;
     align-items: center;
@@ -1263,7 +1276,7 @@ const pageDesc =
   }
 
   .task-card {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 8px 10px;
@@ -1273,19 +1286,19 @@ const pageDesc =
   }
 
   .task-card.task-done {
-    border-left: 3px solid #22c55e;
+    border-left: 3px solid var(--color-mint);
   }
 
   .task-card.task-active {
     border-left: 3px solid #f59e0b;
-    background: rgba(245, 158, 11, 0.06);
+    background: rgba(245, 158, 11, 0.08);
   }
 
   .task-check-icon {
     width: 20px;
     height: 20px;
-    background: rgba(34, 197, 94, 0.2);
-    color: #4ade80;
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1332,11 +1345,11 @@ const pageDesc =
 
   .task-time {
     font-size: 0.65rem;
-    color: #64748b;
+    color: #94a3b8;
   }
 
   .photo-pill {
-    background: rgba(56, 189, 248, 0.15);
+    background: rgba(56, 189, 248, 0.18);
     color: #38bdf8;
     font-size: 0.625rem;
     font-weight: 600;
@@ -1365,22 +1378,19 @@ const pageDesc =
     gap: 6px;
     font-size: 0.75rem;
     font-weight: 700;
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.35);
   }
 
   /* Floating Badges */
   .floating-badge {
     position: absolute;
-    background: rgba(22, 19, 43, 0.88);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
     border-radius: 14px;
     padding: 10px 14px;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 16px 32px -8px rgba(27, 24, 55, 0.15);
     z-index: 10;
     max-width: 260px;
     animation: float 4s ease-in-out infinite alternate;
@@ -1419,13 +1429,13 @@ const pageDesc =
   }
 
   .badge-icon-box.bg-green {
-    background: rgba(34, 197, 94, 0.2);
-    color: #4ade80;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-mint);
   }
 
   .badge-icon-box.bg-coral {
-    background: rgba(255, 107, 107, 0.2);
-    color: #FF8787;
+    background: rgba(255, 107, 107, 0.15);
+    color: var(--color-coral);
   }
 
   .badge-text {
@@ -1436,47 +1446,58 @@ const pageDesc =
   .badge-title {
     font-size: 0.8rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-indigo);
     line-height: 1.2;
   }
 
   .badge-sub {
     font-size: 0.675rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     margin-top: 2px;
   }
 
   /* ==========================================================================
-     METRICS STRIP
+     METRICS STRIP (Above the fold KPI Ribbon)
      ========================================================================== */
   .metrics-strip {
-    background: #110e22;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 2.5rem 0;
+    background: var(--color-cream-subtle);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    padding: 2.25rem 0;
   }
 
   .metrics-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 2rem 1.5rem;
+    gap: 1.5rem;
   }
 
   @media (min-width: 768px) {
     .metrics-grid {
       grid-template-columns: repeat(4, 1fr);
-      gap: 2rem;
+      gap: 1.5rem;
     }
   }
 
   .metric-card {
-    text-align: center;
-    padding: 0.5rem;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 1.5rem 1.25rem;
+    text-align: left;
+    box-shadow: 0 2px 8px rgba(27, 24, 55, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(27, 24, 55, 0.06);
   }
 
   .metric-val {
-    font-size: 2.5rem;
+    font-size: 2.3rem;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--color-indigo);
     line-height: 1;
     letter-spacing: -0.03em;
     margin-bottom: 0.5rem;
@@ -1484,30 +1505,55 @@ const pageDesc =
 
   @media (min-width: 992px) {
     .metric-val {
-      font-size: 2.85rem;
+      font-size: 2.65rem;
     }
   }
 
   .metric-unit {
     color: var(--color-coral);
-    font-size: 0.7em;
-    font-weight: 700;
+    font-size: 0.75em;
+    font-weight: 800;
     margin-left: 2px;
   }
 
   .metric-label {
-    font-size: 0.95rem;
+    font-size: 0.925rem;
     font-weight: 700;
-    color: #f1f5f9;
-    margin-bottom: 0.35rem;
+    color: var(--color-indigo);
+    margin-bottom: 0.4rem;
   }
 
   .metric-sub {
     font-size: 0.775rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
   }
 
+  .trend-badge {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .trend-badge.trend-up {
+    background: #ECFDF5;
+    color: #047857;
+  }
+
+  .trend-badge.trend-neutral {
+    background: #EFF6FF;
+    color: #1D4ED8;
+  }
+
+  /* ==========================================================================
+     COMMON SECTION STYLES
+     ========================================================================== */
   .section {
     padding: 4.5rem 0;
   }
@@ -1515,7 +1561,7 @@ const pageDesc =
     background-color: #ffffff;
   }
   .bg-light {
-    background-color: var(--color-bg);
+    background-color: var(--color-cream);
   }
 
   .section-header {
@@ -1538,8 +1584,8 @@ const pageDesc =
 
   .section-title {
     font-size: 2.1rem;
-    font-weight: 700;
-    color: var(--color-navy);
+    font-weight: 800;
+    color: var(--color-indigo);
     letter-spacing: -0.02em;
     line-height: 1.25;
     margin-bottom: 1rem;
@@ -1560,18 +1606,18 @@ const pageDesc =
   }
 
   .card {
-    background: var(--color-card-bg);
+    background: #FFFFFF;
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 2rem;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 12px rgba(27, 24, 55, 0.03);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 24px rgba(27, 24, 55, 0.06);
   }
 
   .card-icon {
@@ -1582,7 +1628,7 @@ const pageDesc =
   .card-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--color-navy);
+    color: var(--color-indigo);
     margin-bottom: 0.75rem;
   }
 
@@ -1596,7 +1642,7 @@ const pageDesc =
 
   .card-link {
     font-size: 0.875rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-coral-dark);
     text-decoration: none;
   }
@@ -1605,14 +1651,16 @@ const pageDesc =
   }
 
   .sector-card {
-    background: #ffffff;
+    background: #FFFFFF;
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 2rem;
+    box-shadow: 0 4px 12px rgba(27, 24, 55, 0.03);
   }
   .sector-card h3 {
     font-size: 1.2rem;
-    color: var(--color-navy);
+    font-weight: 700;
+    color: var(--color-indigo);
     margin-bottom: 0.75rem;
   }
   .sector-card p {
@@ -1630,29 +1678,29 @@ const pageDesc =
   }
   .bullet-list li {
     font-size: 0.85rem;
-    color: var(--color-text-main);
+    color: var(--color-indigo);
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
   .bullet-list li::before {
     content: '✓';
-    color: #10B981;
-    font-weight: 700;
+    color: var(--color-mint);
+    font-weight: 800;
   }
 
   .scope-notice-section {
     padding: 2rem 0;
-    background-color: #F1F5F9;
+    background-color: var(--color-cream-subtle);
   }
   .scope-box {
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    background: #ffffff;
-    border: 1px solid #CBD5E1;
-    border-left: 4px solid var(--color-navy);
-    border-radius: 8px;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-indigo);
+    border-radius: 10px;
     padding: 1.25rem 1.75rem;
   }
   .scope-icon {
@@ -1660,7 +1708,8 @@ const pageDesc =
   }
   .scope-content h4 {
     font-size: 0.95rem;
-    color: var(--color-navy);
+    font-weight: 700;
+    color: var(--color-indigo);
     margin-bottom: 0.25rem;
   }
   .scope-content p {
@@ -1670,13 +1719,13 @@ const pageDesc =
   }
 
   .cta-banner {
-    background-color: var(--color-navy);
+    background-color: var(--color-indigo);
     color: #ffffff;
     padding: 4.5rem 0;
   }
   .cta-banner h2 {
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: 800;
     margin-bottom: 0.75rem;
   }
   .cta-banner p {
@@ -1712,18 +1761,17 @@ const pageDesc =
      SECTION 5: BATTLECARD STYLES
      ========================================================================== */
   .battlecard-section {
-    background-color: #0b0917;
-    color: #ffffff;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: var(--color-cream-subtle);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .battlecard-section .section-title {
-    color: #ffffff;
+    color: var(--color-indigo);
   }
 
   .battlecard-section .section-lead {
-    color: #94A3B8;
+    color: var(--color-text-muted);
   }
 
   .battlecard-container {
@@ -1749,14 +1797,15 @@ const pageDesc =
   }
 
   .battlecard-legacy {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(244, 63, 94, 0.25);
+    background: #FFFFFF;
+    border: 2px solid #FDA4AF;
+    box-shadow: 0 4px 16px rgba(225, 29, 72, 0.05);
   }
 
   .battlecard-altsan {
-    background: linear-gradient(180deg, rgba(30, 27, 56, 0.8) 0%, rgba(18, 16, 36, 0.95) 100%);
-    border: 2px solid rgba(74, 222, 128, 0.4);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    background: var(--color-indigo);
+    border: 2px solid var(--color-mint);
+    box-shadow: 0 20px 40px -10px rgba(27, 24, 55, 0.25);
   }
 
   .battlecard-badge {
@@ -1772,29 +1821,43 @@ const pageDesc =
   }
 
   .legacy-badge {
-    background: rgba(244, 63, 94, 0.15);
-    color: #fda4af;
-    border: 1px solid rgba(244, 63, 94, 0.3);
+    background: #FFE4E6;
+    color: #9F1239;
+    border: 1px solid #FECDD3;
   }
 
   .altsan-badge {
-    background: rgba(74, 222, 128, 0.15);
-    color: #86efac;
-    border: 1px solid rgba(74, 222, 128, 0.3);
+    background: rgba(16, 185, 129, 0.18);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
   }
 
   .battlecard-title {
     font-size: 1.45rem;
-    font-weight: 700;
-    color: #ffffff;
+    font-weight: 800;
     margin-bottom: 0.5rem;
+  }
+
+  .battlecard-legacy .battlecard-title {
+    color: var(--color-indigo);
+  }
+
+  .battlecard-altsan .battlecard-title {
+    color: #FFFFFF;
   }
 
   .battlecard-desc {
     font-size: 0.875rem;
-    color: #94A3B8;
     margin-bottom: 1.75rem;
     line-height: 1.5;
+  }
+
+  .battlecard-legacy .battlecard-desc {
+    color: var(--color-text-muted);
+  }
+
+  .battlecard-altsan .battlecard-desc {
+    color: #CBD5E1;
   }
 
   .battlecard-list {
@@ -1812,15 +1875,26 @@ const pageDesc =
     line-height: 1.55;
   }
 
-  .battlecard-item strong {
+  .battlecard-legacy .battlecard-item strong {
     display: block;
-    color: #f1f5f9;
+    color: var(--color-indigo);
     font-size: 0.925rem;
     margin-bottom: 2px;
   }
 
-  .battlecard-item span {
-    color: #94a3b8;
+  .battlecard-legacy .battlecard-item span {
+    color: var(--color-text-muted);
+  }
+
+  .battlecard-altsan .battlecard-item strong {
+    display: block;
+    color: #FFFFFF;
+    font-size: 0.925rem;
+    margin-bottom: 2px;
+  }
+
+  .battlecard-altsan .battlecard-item span {
+    color: #94A3B8;
   }
 
   .battle-icon {
@@ -1837,20 +1911,20 @@ const pageDesc =
   }
 
   .item-fail .battle-icon {
-    background: rgba(244, 63, 94, 0.15);
-    color: #f43f5e;
+    background: #FFE4E6;
+    color: #E11D48;
   }
 
   .item-pass .battle-icon {
-    background: rgba(74, 222, 128, 0.2);
-    color: #4ade80;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34D399;
   }
 
   /* ==========================================================================
      SECTION 3: 3-WAY OPERATIONS ECOSYSTEM STYLES
      ========================================================================== */
   .ecosystem-section {
-    background-color: #ffffff;
+    background-color: var(--color-cream);
   }
 
   .ecosystem-tabs {
@@ -1867,26 +1941,26 @@ const pageDesc =
     align-items: center;
     gap: 8px;
     padding: 0.85rem 1.5rem;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     font-size: 0.95rem;
     font-weight: 700;
-    color: #475569;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .eco-tab:hover {
-    background: #e2e8f0;
-    color: #1e293b;
+    border-color: #CBD5E1;
+    color: var(--color-indigo);
   }
 
   .eco-tab.active {
-    background: var(--color-navy);
-    color: #ffffff;
-    border-color: var(--color-navy);
-    box-shadow: 0 8px 20px -4px rgba(27, 24, 55, 0.35);
+    background: var(--color-indigo);
+    color: #FFFFFF;
+    border-color: var(--color-indigo);
+    box-shadow: 0 6px 18px rgba(27, 24, 55, 0.25);
   }
 
   .eco-tab-icon {
@@ -1894,10 +1968,11 @@ const pageDesc =
   }
 
   .eco-panel {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
     border-radius: 24px;
     padding: 3rem 2.5rem;
+    box-shadow: 0 8px 30px rgba(27, 24, 55, 0.05);
   }
 
   @media (max-width: 768px) {
@@ -1922,7 +1997,7 @@ const pageDesc =
   .panel-badge {
     display: inline-block;
     background: rgba(255, 107, 107, 0.12);
-    color: #e03131;
+    color: var(--color-coral-dark);
     font-weight: 700;
     font-size: 0.8rem;
     text-transform: uppercase;
@@ -1935,14 +2010,14 @@ const pageDesc =
   .panel-content h3 {
     font-size: 1.85rem;
     font-weight: 800;
-    color: var(--color-navy);
+    color: var(--color-indigo);
     line-height: 1.25;
     margin-bottom: 1rem;
   }
 
   .panel-content p {
     font-size: 1.05rem;
-    color: #475569;
+    color: var(--color-text-muted);
     line-height: 1.6;
     margin-bottom: 1.5rem;
   }
@@ -1957,7 +2032,7 @@ const pageDesc =
 
   .panel-features li {
     font-size: 0.95rem;
-    color: #334155;
+    color: var(--color-text-muted);
     line-height: 1.5;
     padding-left: 1.5rem;
     position: relative;
@@ -1967,30 +2042,30 @@ const pageDesc =
     content: "✓";
     position: absolute;
     left: 0;
-    color: #22c55e;
+    color: var(--color-mint);
     font-weight: 800;
   }
 
   .panel-features strong {
-    color: #0f172a;
+    color: var(--color-indigo);
   }
 
   /* Browser Mockup */
   .browser-window {
-    background: #0f172a;
+    background: #0B0A17;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25);
-    border: 1px solid #334155;
+    box-shadow: 0 20px 40px -10px rgba(27, 24, 55, 0.25);
+    border: 1px solid rgba(27, 24, 55, 0.3);
   }
 
   .browser-bar {
-    background: #1e293b;
+    background: #18152e;
     padding: 10px 14px;
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .browser-dots {
@@ -2006,10 +2081,10 @@ const pageDesc =
 
   .dot.red { background: #ef4444; }
   .dot.yellow { background: #f59e0b; }
-  .dot.green { background: #22c55e; }
+  .dot.green { background: var(--color-mint); }
 
   .browser-url {
-    background: #0f172a;
+    background: #0B0A17;
     padding: 3px 12px;
     border-radius: 6px;
     font-size: 0.75rem;
@@ -2033,8 +2108,8 @@ const pageDesc =
   }
 
   .dash-stat-box {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 10px 8px;
     text-align: center;
@@ -2067,7 +2142,7 @@ const pageDesc =
   }
 
   .dash-log-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 12px;
@@ -2082,7 +2157,7 @@ const pageDesc =
     color: #cbd5e1;
     margin-bottom: 10px;
     padding-bottom: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .dash-pulse-badge {
@@ -2109,12 +2184,12 @@ const pageDesc =
   }
 
   .dash-time {
-    color: #64748b;
+    color: #94a3b8;
     font-size: 0.7rem;
   }
 
   .dash-pill {
-    background: rgba(56, 189, 248, 0.15);
+    background: rgba(56, 189, 248, 0.18);
     color: #38bdf8;
     padding: 2px 6px;
     border-radius: 4px;
@@ -2124,12 +2199,12 @@ const pageDesc =
 
   /* Mini App Mockup */
   .mini-app-card, .supervisor-dash-card {
-    background: #18152e;
+    background: #0B0A17;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 18px;
     padding: 16px;
     color: #ffffff;
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 20px 40px -10px rgba(27, 24, 55, 0.35);
   }
 
   .mini-app-header, .sup-card-header {
@@ -2144,18 +2219,19 @@ const pageDesc =
   }
 
   .badge-online, .badge-active {
-    background: rgba(34, 197, 94, 0.2);
+    background: rgba(16, 185, 129, 0.2);
     color: #4ade80;
     font-size: 0.675rem;
     padding: 2px 8px;
     border-radius: 10px;
+    font-weight: 600;
   }
 
   .mini-worker-banner {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 10px;
     padding: 10px;
     margin-bottom: 12px;
@@ -2165,7 +2241,7 @@ const pageDesc =
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #FF6B6B, #7950F2);
+    background: linear-gradient(135deg, var(--color-coral), var(--color-indigo-light));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2193,19 +2269,19 @@ const pageDesc =
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.04);
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 0.75rem;
   }
 
   .mini-duty.done {
-    border-left: 3px solid #22c55e;
+    border-left: 3px solid var(--color-mint);
   }
 
   .mini-duty.active {
     border-left: 3px solid #f59e0b;
-    background: rgba(245, 158, 11, 0.05);
+    background: rgba(245, 158, 11, 0.08);
   }
 
   .mini-duty strong {
@@ -2229,7 +2305,7 @@ const pageDesc =
 
   /* Supervisor Card */
   .sup-audit-box {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 10px;
     padding: 12px;
     margin-bottom: 12px;
@@ -2254,8 +2330,8 @@ const pageDesc =
   }
 
   .sup-reliever-box {
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
     border-radius: 10px;
     padding: 12px;
   }
@@ -2276,7 +2352,7 @@ const pageDesc =
   }
 
   .badge-done {
-    background: rgba(34, 197, 94, 0.2);
+    background: rgba(16, 185, 129, 0.25);
     color: #4ade80;
     padding: 2px 6px;
     border-radius: 4px;
@@ -2289,7 +2365,7 @@ const pageDesc =
      SECTION 4: CAMPUS HOTSPOT TOUR STYLES
      ========================================================================== */
   .campus-section {
-    background-color: var(--color-bg);
+    background-color: var(--color-cream-subtle);
   }
 
   .campus-zone-selector {
@@ -2306,8 +2382,8 @@ const pageDesc =
   }
 
   .zone-btn {
-    background: #ffffff;
-    border: 2px solid #e2e8f0;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
     border-radius: 16px;
     padding: 1.25rem 1rem;
     text-align: left;
@@ -2316,17 +2392,18 @@ const pageDesc =
     display: flex;
     flex-direction: column;
     gap: 4px;
+    box-shadow: 0 2px 8px rgba(27, 24, 55, 0.03);
   }
 
   .zone-btn:hover {
-    border-color: #cbd5e1;
+    border-color: #CBD5E1;
     transform: translateY(-2px);
   }
 
   .zone-btn.active {
-    border-color: var(--color-coral);
-    box-shadow: 0 10px 25px -5px rgba(255, 107, 107, 0.2);
-    background: #ffffff;
+    border: 2px solid var(--color-indigo);
+    box-shadow: 0 8px 24px rgba(27, 24, 55, 0.08);
+    background: #FFFFFF;
   }
 
   .zone-icon {
@@ -2337,12 +2414,12 @@ const pageDesc =
   .zone-name {
     font-size: 0.95rem;
     font-weight: 800;
-    color: var(--color-navy);
+    color: var(--color-indigo);
   }
 
   .zone-tag {
     font-size: 0.725rem;
-    color: #64748b;
+    color: var(--color-text-muted);
     font-weight: 600;
   }
 
@@ -2351,11 +2428,11 @@ const pageDesc =
   }
 
   .zone-detail-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
     border-radius: 20px;
     padding: 2.5rem;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 30px rgba(27, 24, 55, 0.05);
   }
 
   @media (max-width: 768px) {
@@ -2370,7 +2447,7 @@ const pageDesc =
     justify-content: space-between;
     gap: 1rem;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
     margin-bottom: 1.75rem;
     flex-wrap: wrap;
   }
@@ -2378,23 +2455,24 @@ const pageDesc =
   .zone-title-group h3 {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--color-navy);
+    color: var(--color-indigo);
     margin-bottom: 6px;
   }
 
   .zone-pill {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--color-cream-subtle);
+    color: var(--color-indigo);
     font-size: 0.8rem;
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 20px;
+    border: 1px solid var(--color-border);
   }
 
   .zone-verify-badge {
-    background: rgba(34, 197, 94, 0.12);
-    color: #16a34a;
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.3);
     font-size: 0.8rem;
     font-weight: 700;
     padding: 5px 12px;
@@ -2415,8 +2493,8 @@ const pageDesc =
 
   .zone-col h4 {
     font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--color-navy);
+    font-weight: 800;
+    color: var(--color-indigo);
     margin-bottom: 1rem;
   }
 
@@ -2429,7 +2507,7 @@ const pageDesc =
 
   .zone-list li {
     font-size: 0.9rem;
-    color: #475569;
+    color: var(--color-text-muted);
     line-height: 1.55;
     padding-left: 1.25rem;
     position: relative;
@@ -2445,7 +2523,7 @@ const pageDesc =
   }
 
   .zone-list strong {
-    color: #1e293b;
+    color: var(--color-indigo);
   }
 </style>
 
