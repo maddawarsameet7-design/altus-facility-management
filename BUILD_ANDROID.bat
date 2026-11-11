@@ -2,7 +2,7 @@
 TITLE Altus - Android Build Tool
 SETLOCAL
 
-SET FRONTEND_DIR=frontend-web
+SET FRONTEND_DIR=mobile-app
 
 echo ======================================================
 echo          ALTUS ANDROID BUILD SYSTEM
