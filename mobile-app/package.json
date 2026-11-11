@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",
-    "build": "vite build",
+    "build": "vite build --mode staging",
     "build:staging": "vite build --mode staging",
     "preview": "vite preview",
     "cap:sync": "cap sync android",
