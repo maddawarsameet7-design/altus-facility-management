@@ -38,6 +38,21 @@ const formatDate = (isoString) => {
   return d.toLocaleDateString([], { day: '2-digit', month: 'short' });
 };
 
+const computeDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+};
+
 const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => {
   const { t, getFriendlyError } = useI18n();
 
@@ -62,6 +77,22 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
   // Selfie capture state
   const [capturedSelfie, setCapturedSelfie] = useState(null);
   const [showSelfiePrompt, setShowSelfiePrompt] = useState(false);
+
+  // Live Geofence Distance Calculation
+  const distanceToSite =
+    activeSlot?.site_latitude != null && gpsCoords?.lat != null
+      ? computeDistanceMeters(
+          gpsCoords.lat,
+          gpsCoords.lng,
+          activeSlot.site_latitude,
+          activeSlot.site_longitude
+        )
+      : null;
+
+  const isInsideGeofence =
+    distanceToSite != null && activeSlot?.geofence_radius_m != null
+      ? distanceToSite <= activeSlot.geofence_radius_m
+      : true;
 
   // Persistent storage inspection (Amendment 5)
   useEffect(() => {
@@ -267,8 +298,20 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
   };
 
   const handleClockToggle = () => {
-    if (isClockedIn) handleClockOut();
-    else handleClockIn();
+    if (isClockedIn) {
+      handleClockOut();
+    } else {
+      if (!isInsideGeofence && distanceToSite != null) {
+        setError(`You are ${distanceToSite}m outside the site boundary (Allowed radius: ${activeSlot?.geofence_radius_m || 100}m). Please move inside the property gates to clock in.`);
+        return;
+      }
+      if (!capturedSelfie) {
+        setShowSelfiePrompt(true);
+        handleTakeSelfie();
+      } else {
+        handleClockIn();
+      }
+    }
   };
 
   return (
@@ -334,11 +377,23 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
         </div>
 
         {/* GPS Geofence Status Card */}
-        <section className="location-card">
-          <div className="location-icon">📍</div>
-          <div className="location-info">
-            <span className="label">GPS Status</span>
-            <span className="value">{locationText}</span>
+        <section className={`location-card ${isInsideGeofence ? 'geofence-in' : 'geofence-out'}`}>
+          <div className="location-card-top">
+            <div className="location-status-badge">
+              <span className={`location-dot ${isInsideGeofence ? 'dot-inside' : 'dot-outside'}`} />
+              <strong>{isInsideGeofence ? 'Inside Property Boundary' : 'Outside Boundary'}</strong>
+            </div>
+            <span className="location-accuracy-pill">±{Math.round(gpsCoords.accuracy || 10)}m GPS</span>
+          </div>
+          <div className="location-card-body">
+            <div className="location-coords-line">📍 {locationText}</div>
+            {distanceToSite != null && (
+              <div className={`location-distance-hint ${isInsideGeofence ? 'hint-green' : 'hint-red'}`}>
+                {isInsideGeofence
+                  ? `✓ ${distanceToSite}m from site center (Permitted radius: ${activeSlot?.geofence_radius_m || 100}m)`
+                  : `⚠️ ${distanceToSite}m away (Limit: ${activeSlot?.geofence_radius_m || 100}m) — Move inside society gate to clock in`}
+              </div>
+            )}
           </div>
         </section>
 
@@ -374,64 +429,49 @@ const AttendanceScreen = ({ worker, onTabChange, onLanguageToggle, locale }) => 
 
         {/* Selfie Verification Modal / Trigger */}
         {showSelfiePrompt && !isClockedIn && (
-          <div
-            style={{
-              background: '#10172a',
-              border: '2px solid #3b82f6',
-              borderRadius: '16px',
-              padding: '16px',
-              marginBottom: '16px',
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd', marginBottom: '12px' }}>
-              📸 {t('shift_selfie_prompt')}
-            </p>
+          <div className="selfie-card">
+            <div className="selfie-header">
+              <span className="selfie-title">📸 {t('shift_selfie_prompt')}</span>
+              <p className="selfie-subtext">Biometric photo evidence required for geofenced clock-in.</p>
+            </div>
             {capturedSelfie ? (
-              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '10px' }}>
-                <img
-                  src={capturedSelfie.web_preview}
-                  alt="Selfie"
-                  style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #10b981' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setCapturedSelfie(null)}
-                  style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    right: '-4px',
-                    background: '#dc2626',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '28px',
-                    height: '28px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  ✕
-                </button>
+              <div className="selfie-preview-wrapper">
+                <div className="selfie-circle-box">
+                  <img
+                    src={capturedSelfie.web_preview}
+                    alt="Clock-in Selfie"
+                    className="selfie-img"
+                  />
+                  <div className="selfie-check-icon">✓</div>
+                </div>
+                <div className="selfie-btn-row">
+                  <button
+                    type="button"
+                    onClick={handleTakeSelfie}
+                    className="btn-selfie-retake"
+                  >
+                    🔄 Retake Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClockIn}
+                    disabled={isLoading}
+                    className="btn-selfie-confirm"
+                  >
+                    {isLoading ? 'Saving…' : '✓ Confirm & Clock In'}
+                  </button>
+                </div>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleTakeSelfie}
-                style={{
-                  background: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  minHeight: '48px',
-                }}
-              >
-                🤳 {t('shift_selfie_take')}
-              </button>
+              <div className="selfie-empty-box">
+                <button
+                  type="button"
+                  onClick={handleTakeSelfie}
+                  className="btn-selfie-snap"
+                >
+                  🤳 {t('shift_selfie_take')}
+                </button>
+              </div>
             )}
           </div>
         )}

@@ -718,10 +718,14 @@ class MyScheduleView(APIView):
 
         items = []
         for slot in upcoming_slots:
+            site = slot.post.site if hasattr(slot.post, 'site') else None
             items.append({
                 "roster_entry_id": str(slot.id),
                 "society_name": slot.society.name,
-                "site_name": slot.post.site.name,
+                "site_name": site.name if site else slot.post.name,
+                "site_latitude": float(site.latitude) if site and site.latitude is not None else None,
+                "site_longitude": float(site.longitude) if site and site.longitude is not None else None,
+                "geofence_radius_m": float(site.geofence_radius_m) if site and site.geofence_radius_m is not None else 100.0,
                 "post_name": slot.post.name,
                 "shift_name": slot.shift.name,
                 "date": slot.date.isoformat(),

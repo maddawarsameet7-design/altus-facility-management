@@ -1597,7 +1597,14 @@ export default function SculptureHero(props: SculptureHeroProps) {
     if (!root) return
     let cancelled = false
     const image = new Image()
-    image.crossOrigin = "anonymous"
+    const isExternal =
+      typeof activeSrc === "string" &&
+      (activeSrc.startsWith("http://") || activeSrc.startsWith("https://")) &&
+      typeof window !== "undefined" &&
+      !activeSrc.startsWith(window.location.origin)
+    if (isExternal) {
+      image.crossOrigin = "anonymous"
+    }
     image.decoding = "async"
     const swapping = root.dataset.gl === "on"
     if (swapping) root.dataset.swap = "1"
@@ -1665,7 +1672,24 @@ export default function SculptureHero(props: SculptureHeroProps) {
         </div>
       ) : null}
       <div ref={stageRef} className="sh-stage" aria-hidden="true">
-        <img ref={imgRef} className="sh-fallback" src={activeSrc} alt="" crossOrigin="anonymous" draggable={false} />
+        <img
+          ref={imgRef}
+          className="sh-fallback"
+          src={activeSrc}
+          alt=""
+          crossOrigin={
+            typeof activeSrc === "string" &&
+            (activeSrc.startsWith("http://") || activeSrc.startsWith("https://")) &&
+            typeof window !== "undefined" &&
+            !activeSrc.startsWith(window.location.origin)
+              ? "anonymous"
+              : undefined
+          }
+          onError={(e) => {
+            e.currentTarget.style.display = "none"
+          }}
+          draggable={false}
+        />
       </div>
       <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{imageAlt}</span>
 

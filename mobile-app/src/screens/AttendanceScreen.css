@@ -1,159 +1,504 @@
-.attendance-container {
+/* ==========================================================================
+   ALTSAN MOBILE WORKER APP - ATTENDANCE SCREEN
+   High-contrast sunlight visibility, large touch targets, tactile affordances
+   ========================================================================== */
+
+:root {
+  --mobile-bg: #F8FAFC;
+  --mobile-surface: #FFFFFF;
+  --mobile-border: #E2E8F0;
+  --mobile-text-primary: #0F172A;
+  --mobile-text-secondary: #475569;
+  --mobile-text-muted: #94A3B8;
+  --mobile-green-bg: #ECFDF5;
+  --mobile-green-border: #A7F3D0;
+  --mobile-green-text: #065F46;
+  --mobile-red-bg: #FEF2F2;
+  --mobile-red-border: #FECACA;
+  --mobile-red-text: #991B1B;
+  --mobile-primary: #0F172A;
+  --mobile-accent: #E03131;
+}
+
+.mobile-app-container {
   min-height: 100vh;
-  background-color: var(--bg-main);
-  padding: 32px;
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: var(--mobile-bg);
+  color: var(--mobile-text-primary);
   display: flex;
   flex-direction: column;
-  gap: 32px;
-}
-
-.auth-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.worker-profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar-circle {
-  width: 48px;
-  height: 48px;
-  background: white;
-  border-radius: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-soft);
-  font-weight: 800;
-  color: var(--primary);
-  border: var(--border-glass);
-}
-
-/* Clock Card Overhaul */
-.clock-card {
-  background: white;
-  padding: 48px 32px;
-  border-radius: 32px;
-  text-align: center;
-  border: var(--border-glass);
-  box-shadow: var(--shadow-soft);
   position: relative;
-  overflow: hidden;
+  box-shadow: 0 0 32px rgba(15, 23, 42, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.clock-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-glow) 100%);
-}
-
-.current-time {
-  font-size: 56px;
-  font-weight: 800;
-  letter-spacing: -2px;
-  color: var(--text-main);
-  margin-bottom: 8px;
-}
-
-.current-date {
-  color: var(--text-soft);
-  font-weight: 600;
-  margin-bottom: 48px;
-}
-
-.btn-clock {
-  width: 100%;
-  padding: 24px;
-  border-radius: 20px;
-  font-size: 18px;
-  font-weight: 800;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.btn-clock.clock-in {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-glow) 100%);
-  color: white;
-  box-shadow: 0 16px 32px -8px rgba(99, 102, 241, 0.4);
-}
-
-.btn-clock.clock-out {
-  background: white;
-  color: var(--danger);
-  border: 2px solid var(--danger);
-}
-
-.btn-clock:active {
-  transform: scale(0.96);
-}
-
-.location-marker {
+/* ── Top Header ───────────────────────────────────────────────────────── */
+.mobile-header {
+  height: 60px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--mobile-border);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--text-soft);
-  font-size: 14px;
-  font-weight: 600;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
-/* ── Toast Notifications ─────────────────────────── */
+.header-mini-logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.lang-toggle-btn {
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.lang-toggle-btn:active {
+  transform: scale(0.96);
+  background: #E2E8F0;
+}
+
+/* ── Main Content Area ────────────────────────────────────────────────── */
+.attendance-main {
+  flex: 1;
+  padding: 16px 16px 88px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toasts & Banners ─────────────────────────────────────────────────── */
 .toast {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: 12px;
-  font-size: 14px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
   font-weight: 600;
-  margin-bottom: 8px;
-  animation: slideDown 0.3s ease;
+  line-height: 1.4;
+  animation: slideInDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast-error {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--mobile-red-bg);
+  border: 1px solid var(--mobile-red-border);
+  color: var(--mobile-red-text);
 }
 
 .toast-success {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background: var(--mobile-green-bg);
+  border: 1px solid var(--mobile-green-border);
+  color: var(--mobile-green-text);
 }
 
 .toast-close {
-  background: none;
+  background: transparent;
   border: none;
-  cursor: pointer;
   font-size: 16px;
+  cursor: pointer;
   color: inherit;
-  opacity: 0.6;
-  line-height: 1;
-  padding: 0;
+  padding: 4px;
+  margin-left: 8px;
 }
 
-@keyframes slideDown {
+@keyframes slideInDown {
   from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Spinner ─────────────────────────────────────── */
-.spinner {
+/* ── Digital Clock Display ────────────────────────────────────────────── */
+.time-display {
+  text-align: center;
+  padding: 16px 0 12px;
+}
+
+.time-display h2 {
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-display p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: capitalize;
+}
+
+/* ── Location / Geofence Card ─────────────────────────────────────────── */
+.location-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  border: 1.5px solid var(--mobile-border);
+  transition: all 0.25s ease;
+}
+
+.location-card.geofence-in {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+  border-color: #86EFAC;
+}
+
+.location-card.geofence-out {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FEF2F2 100%);
+  border-color: #FCA5A5;
+}
+
+.location-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.location-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.location-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-inside {
+  background: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.dot-outside {
+  background: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.location-accuracy-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: #F1F5F9;
+  color: #475569;
+  border-radius: 6px;
+}
+
+.location-card-body {
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.location-coords-line {
+  color: #64748B;
+  font-family: monospace;
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+
+.location-distance-hint {
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.hint-green {
+  color: #047857;
+}
+
+.hint-red {
+  color: #B91C1C;
+}
+
+/* ── Job Context Card ─────────────────────────────────────────────────── */
+.job-context-card {
+  background: #FFFFFF;
+  border: 1px solid var(--mobile-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.job-society-badge {
+  display: inline-block;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.job-context-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.job-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.job-primary strong {
+  font-size: 15px;
+  color: #0F172A;
+}
+
+.job-primary span {
+  font-size: 13px;
+  color: #64748B;
+}
+
+.badge-confirmed {
+  display: inline-block;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #065F46;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.badge-unconfirmed {
+  display: inline-block;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #B45309;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.empty-job .job-hint {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* ── Selfie Biometric Verification Card ───────────────────────────────── */
+.selfie-card {
+  background: #FFFFFF;
+  border: 2px solid #0F172A;
+  border-radius: 20px;
+  padding: 18px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12);
+  text-align: center;
+  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.selfie-header {
+  margin-bottom: 14px;
+}
+
+.selfie-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.selfie-subtext {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+.selfie-circle-box {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #10B981;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.selfie-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.selfie-check-icon {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
   width: 28px;
   height: 28px;
-  border: 3px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
+  background: #10B981;
+  color: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  border: 2px solid #FFFFFF;
+}
+
+.selfie-btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn-selfie-retake {
+  flex: 1;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+
+.btn-selfie-confirm {
+  flex: 1.5;
+  background: #10B981;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #FFFFFF;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-selfie-snap {
+  width: 100%;
+  background: #0F172A;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+}
+
+.btn-selfie-snap:active,
+.btn-selfie-confirm:active,
+.btn-selfie-retake:active {
+  transform: scale(0.97);
+}
+
+/* ── Main Big Clock Action Button ─────────────────────────────────────── */
+.clock-action {
+  margin: 12px 0 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.clock-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-radius: 24px;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  touch-action: manipulation;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clock-btn.in {
+  background: #0F172A;
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.35);
+}
+
+.clock-btn.in:hover {
+  background: #1E293B;
+}
+
+.clock-btn.out {
+  background: #DC2626;
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px -4px rgba(220, 38, 38, 0.35);
+}
+
+.clock-btn.out:hover {
+  background: #B91C1C;
+}
+
+.clock-btn:active {
+  transform: scale(0.97);
+}
+
+.clock-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-circle svg {
+  width: 22px;
+  height: 22px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -162,68 +507,139 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Loading state ───────────────────────────────── */
-.clock-btn.loading {
-  opacity: 0.75;
-  cursor: not-allowed;
-}
-
-/* ── Live badge ──────────────────────────────────── */
-.live-badge {
-  color: #16a34a;
+.clock-hint {
+  margin: 10px 0 0;
   font-size: 13px;
-  font-weight: 700;
-  margin-top: 6px;
+  font-weight: 600;
+  color: #64748B;
+  text-align: center;
 }
 
-/* ── Shift count ─────────────────────────────────── */
+/* ── Attendance History Section ───────────────────────────────────────── */
+.attendance-history {
+  background: #FFFFFF;
+  border: 1px solid var(--mobile-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.history-header h3 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
 .shift-count {
   font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 3px 10px;
-  border-radius: 100px;
-}
-
-/* ── Empty state ─────────────────────────────────── */
-.empty-state {
-  color: #9ca3af;
-  font-size: 14px;
-  text-align: center;
-  padding: 20px 0;
-}
-
-/* ── Active shift row ────────────────────────────── */
-.history-item .total.active {
-  color: #16a34a;
   font-weight: 700;
+  color: #64748B;
+  background: #F1F5F9;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-/* ── Multi-Tenancy Society Badges ────────────────── */
-.job-society-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #eff6ff;
-  color: #2563eb;
-  border-radius: 8px;
-  font-size: 12px;
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #F8FAFC;
+  font-size: 13px;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item .date {
   font-weight: 700;
-  margin-bottom: 8px;
+  color: #0F172A;
 }
 
 .history-society {
   font-size: 11px;
-  color: #6b7280;
-  font-weight: 600;
+  color: #64748B;
   margin-top: 2px;
 }
 
-.header-mini-logo {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
-  flex-shrink: 0;
+.history-item .hours {
+  color: #475569;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.history-item .total {
+  font-weight: 800;
+  color: #0F172A;
+  font-size: 13px;
+}
+
+.history-item .total.active {
+  color: #059669;
+}
+
+.empty-state {
+  margin: 12px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #94A3B8;
+}
+
+/* ── Bottom Mobile Tab Bar ────────────────────────────────────────────── */
+.mobile-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 64px;
+  background: #FFFFFF;
+  border-top: 1px solid var(--mobile-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  height: 100%;
+  cursor: pointer;
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.tab-item.active {
+  color: #0F172A;
+}
+
+.tab-icon {
+  font-size: 18px;
+  line-height: 1;
 }
