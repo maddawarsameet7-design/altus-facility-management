@@ -256,9 +256,13 @@ void main(){
   vHalfLen = len*0.5;
   vR = r;
   vec3 col = cl.rgb*uTint;
+  // High-contrast vibrance & saturation boost
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lum), col, 1.45);
+  col = clamp((col - 0.5) * 1.35 + 0.5, 0.0, 1.0);
   // fast material catches the light, like liquid metal
   float glint = smoothstep(2.0, 16.0, sp);
-  col = mix(col, min(col*1.18 + vec3(0.07,0.075,0.085), vec3(1.0)), glint*0.75);
+  col = mix(col, min(col*1.22 + vec3(0.08,0.085,0.095), vec3(1.0)), glint*0.75);
   vCol = col;
   vA = a;
 }
@@ -324,6 +328,10 @@ void main(){
   vec2 suv = uv + disp/size;
   vec4 tx = texture(uImg, suv);
   vec3 col = tx.rgb;
+  // High-contrast vibrance & saturation boost
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lum), col, 1.45);
+  col = clamp((col - 0.5) * 1.35 + 0.5, 0.0, 1.0);
   vec2 e = smoothstep(vec2(0.0), vec2(0.004,0.01), suv) * smoothstep(vec2(1.0), vec2(0.996,0.99), suv);
   // cut-out images carry their own alpha; flat-background images are keyed by colour
   float key = uAlphaMode > 0.5 ? tx.a : smoothstep(0.012, 0.05, length(col-uImgBg));
