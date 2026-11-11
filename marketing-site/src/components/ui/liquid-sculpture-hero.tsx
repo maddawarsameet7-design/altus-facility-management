@@ -1194,7 +1194,7 @@ const CSS = `
 .sh-root[data-swap="1"] .sh-canvas{opacity:0;transition-duration:.25s}
 .sh-root[data-swap="1"] .sh-fallback{opacity:0;transition-duration:.25s}
 .sh-backdrop{position:absolute;left:50%;z-index:0;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;user-select:none;
-  font-family:var(--sh-head);font-weight:600;letter-spacing:-.06em;line-height:.8;color:color-mix(in srgb,var(--sh-fg) 5%,transparent)}
+  font-family:var(--sh-head);font-weight:800;letter-spacing:-.05em;line-height:.8;color:color-mix(in srgb,var(--sh-fg) 14%,transparent)}
 .sh-nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:24px;
   padding:26px clamp(20px,3.2cqw,48px) 0}
 .sh-brand{font-family:var(--sh-head);font-weight:600;font-size:17px;letter-spacing:-.02em;color:inherit;text-decoration:none}
@@ -1216,23 +1216,24 @@ const CSS = `
 .sh-spacer{flex:1 1 auto;min-height:0}
 .sh-content{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);align-items:end;
   gap:clamp(24px,4cqw,72px);padding:0 clamp(20px,3.2cqw,48px) clamp(28px,3.4cqw,52px)}
-.sh-eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.62;margin:0 0 clamp(14px,1.6cqw,22px);
-  display:flex;align-items:center;gap:12px}
-.sh-eyebrow::before{content:"";width:28px;height:1px;background:currentColor;opacity:.7}
-.sh-h1{font-family:var(--sh-head);font-weight:500;font-size:clamp(40px,min(6.6cqw,11.5cqh),124px);line-height:.92;letter-spacing:-.045em;margin:0;
+.sh-eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:1;margin:0 0 clamp(14px,1.6cqw,22px);
+  display:flex;align-items:center;gap:12px;font-weight:700;color:var(--sh-acc)}
+.sh-eyebrow::before{content:"";width:28px;height:2px;background:var(--sh-acc);opacity:1}
+.sh-h1{font-family:var(--sh-head);font-weight:700;font-size:clamp(40px,min(6.6cqw,11.5cqh),124px);line-height:.94;letter-spacing:-.045em;margin:0;color:var(--sh-fg);
   text-wrap:balance}
 .sh-h1 .sh-line{display:block}
-.sh-accent{font-family:var(--sh-accent);font-style:italic;font-weight:400;letter-spacing:-.02em;color:var(--sh-acc)}
+.sh-accent{font-family:var(--sh-accent);font-style:italic;font-weight:600;letter-spacing:-.02em;color:var(--sh-acc)}
 .sh-aside{max-width:400px;justify-self:end;padding-bottom:.6em}
-.sh-body{font-size:clamp(15px,1.1cqw,17px);line-height:1.5;letter-spacing:-.01em;margin:0 0 26px;opacity:.78;text-wrap:pretty}
-.sh-ctas{display:flex;flex-wrap:wrap;align-items:center;gap:22px}
-.sh-btn{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 22px;border-radius:999px;background:var(--sh-fg);
-  color:var(--sh-bg);text-decoration:none;font-size:14.5px;font-weight:500;letter-spacing:-.01em;transition:transform .3s cubic-bezier(.2,.7,.2,1),opacity .2s}
-.sh-btn:hover{transform:translateY(-1px)}
+.sh-body{font-size:clamp(15px,1.1cqw,17px);line-height:1.55;letter-spacing:-.01em;margin:0 0 26px;color:#1E293B;font-weight:500;opacity:1;text-wrap:pretty}
+.sh-ctas{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
+.sh-btn{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 24px;border-radius:999px;background:#E03131;
+  color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;letter-spacing:-.01em;box-shadow:0 4px 14px rgba(224,49,49,.35);border:1px solid #C92A2A;transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .2s,background .2s}
+.sh-btn:hover{background:#C92A2A;box-shadow:0 6px 20px rgba(224,49,49,.45);transform:translateY(-1px)}
 .sh-btn svg,.sh-txt svg{transition:transform .3s cubic-bezier(.2,.7,.2,1)}
 .sh-btn:hover svg,.sh-txt:hover svg{transform:translateX(3px)}
-.sh-txt{display:inline-flex;align-items:center;gap:8px;color:inherit;text-decoration:none;font-size:14.5px;font-weight:500;
-  letter-spacing:-.01em;padding:4px 0;border-bottom:1px solid color-mix(in srgb,var(--sh-fg) 30%,transparent)}
+.sh-txt{display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 22px;border-radius:999px;background:#FFFFFF;color:#0F172A;
+  text-decoration:none;font-size:15px;font-weight:700;letter-spacing:-.01em;border:1.5px solid #CBD5E1;box-shadow:0 1px 3px rgba(15,23,42,.08);transition:all .2s ease}
+.sh-txt:hover{border-color:#0F172A;background:#F8FAFC;transform:translateY(-1px)}
 .sh-root a:focus-visible{outline:2px solid var(--sh-fg);outline-offset:4px}
 .sh-credit{position:absolute;z-index:2;right:clamp(20px,3.2cqw,48px);bottom:10px;font-size:10px;letter-spacing:.06em;
   color:inherit;opacity:.38;text-decoration:none}
