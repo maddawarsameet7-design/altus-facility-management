@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { siteConfig } from '../config/site';
+import SculptureHero from '../components/ui/liquid-sculpture-hero';
 
 const pageTitle = `Managed Facility Staffing & Housekeeping Operations | ${siteConfig.name}`;
 const pageDesc =
@@ -8,6 +9,30 @@ const pageDesc =
 ---
 
 <Layout title={pageTitle} description={pageDesc} canonicalPath="/">
+  <!-- Liquid Particle Sculpture Hero -->
+  <div class="liquid-hero-wrapper">
+    <SculptureHero
+      client:load
+      showNav={false}
+      showCredit={false}
+      theme="light"
+      themeToggle={false}
+      backdropText="ALTSAN"
+      eyebrow="Pune & PCMC Verified Operations"
+      headline={"Facility intelligence that\nmoves like clockwork."}
+      headlineAccent="clockwork."
+      body="We deploy dedicated, KYC-onboarded cleaning personnel to housing societies, clinics, and commercial premises. Every shift is tracked with hardware geofencing, real-time selfie check-ins, and timestamped photo task checklists."
+      primaryCta={{ label: "Request Staffing Proposal", href: "/contact" }}
+      secondaryCta={{ label: "Launch Web App", href: siteConfig.appUrl }}
+      background="#F8FAFC"
+      darkBackground="#0F172A"
+      textColor="#0F172A"
+      accentColor="#E03131"
+      height="72svh"
+      sculptureScale={1.15}
+    />
+  </div>
+
   <!-- Hero Section -->
   <section class="hero-section">
     <div class="container">
@@ -866,6 +891,17 @@ const pageDesc =
 </Layout>
 
 <style>
+  /* ==========================================================================
+     LIQUID SCULPTURE HERO
+     ========================================================================== */
+  .liquid-hero-wrapper {
+    position: relative;
+    width: 100%;
+    border-bottom: 1px solid var(--color-border);
+    overflow: hidden;
+    background-color: var(--color-bg);
+  }
+
   /* ==========================================================================
      HERO SECTION (Crisp White Canvas & High-Contrast Slate Typography)
      ========================================================================== */
